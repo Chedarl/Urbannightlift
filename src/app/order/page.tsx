@@ -1,5 +1,6 @@
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { ServiceSelection } from "@/components/customer/ServiceSelection";
+import { BottomNav } from "@/components/customer/BottomNav";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default function ServiceSelectionPage() {
       <main>
         <ServiceSelection />
       </main>
+      <BottomNav />
     </>
   );
 }

@@ -2,16 +2,18 @@
 
 @theme {
   /* Urban Night Lift brand — deep black, purple, gold */
-  --color-ink-950: #0a0710;
-  --color-ink-900: #130d1f;
-  --color-ink-800: #1c1430;
-  --color-ink-700: #2a2040;
+  --color-ink-950: #08060e;
+  --color-ink-900: #110b1c;
+  --color-ink-800: #1a1130;
+  --color-ink-700: #271a44;
+  --color-ink-600: #362356;
 
   --color-violet-950: #2e0f52;
   --color-violet-900: #3c1361;
   --color-violet-700: #5b1e8c;
   --color-violet-600: #7b2cbf;
   --color-violet-500: #9645de;
+  --color-violet-400: #ac66ec;
   --color-violet-300: #c6a6ef;
 
   --color-gold-600: #96751f;
@@ -20,9 +22,9 @@
   --color-gold-300: #e4c765;
   --color-gold-200: #f1d97a;
 
-  --color-mist-100: #f5f3f7;
+  --color-mist-100: #f6f4fb;
   --color-mist-300: #cfc6db;
-  --color-mist-500: #948aa6;
+  --color-mist-500: #9a8fb0;
 
   --color-safe: #2fae60;
   --color-caution: #d4af37;
@@ -31,6 +33,44 @@
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-pulse-glow: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -38,12 +78,19 @@ body {
   color: var(--color-mist-100);
   font-family: var(--font-body);
   min-height: 100dvh;
+  /* Futuristic night backdrop: layered purple/gold glows over deep black */
+  background-image:
+    radial-gradient(60% 40% at 15% 0%, rgba(123, 44, 191, 0.22), transparent 70%),
+    radial-gradient(50% 35% at 100% 8%, rgba(212, 175, 55, 0.12), transparent 70%),
+    radial-gradient(70% 50% at 50% 100%, rgba(59, 19, 97, 0.35), transparent 75%);
+  background-attachment: fixed;
 }
 
 h1,
 h2,
 h3 {
   font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 ::selection {
@@ -55,4 +102,36 @@ input,
 select,
 textarea {
   color-scheme: dark;
+}
+
+/* Reusable glass surface */
+.glass {
+  background: linear-gradient(180deg, rgba(26, 17, 48, 0.72), rgba(17, 11, 28, 0.72));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(198, 166, 239, 0.12);
+}
+
+/* Gold gradient text */
+.text-gradient-gold {
+  background: linear-gradient(100deg, #f1d97a, #d4af37 45%, #96751f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-violet {
+  background: linear-gradient(100deg, #c6a6ef, #9645de);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hide scrollbar for horizontal chip rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
