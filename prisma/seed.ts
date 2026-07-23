@@ -13,6 +13,15 @@
 import { PrismaClient, SafetyLevel, MerchantCategory, UserRole } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 
+// @supabase/supabase-js builds a realtime client at construction time, which
+// needs a WebSocket constructor to exist (native on Node 22+, absent on older
+// Node). The seed only uses the Auth admin + Storage REST APIs and never opens
+// a realtime connection, so a harmless stub is enough when none is present.
+const g = globalThis as { WebSocket?: unknown };
+if (typeof g.WebSocket === "undefined") {
+  g.WebSocket = class {};
+}
+
 const prisma = new PrismaClient();
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
