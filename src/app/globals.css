@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  /* Urban Night Lift brand — deep black, purple, gold */
+  --color-ink-950: #0a0710;
+  --color-ink-900: #130d1f;
+  --color-ink-800: #1c1430;
+  --color-ink-700: #2a2040;
+
+  --color-violet-950: #2e0f52;
+  --color-violet-900: #3c1361;
+  --color-violet-700: #5b1e8c;
+  --color-violet-600: #7b2cbf;
+  --color-violet-500: #9645de;
+  --color-violet-300: #c6a6ef;
+
+  --color-gold-600: #96751f;
+  --color-gold-500: #c9a227;
+  --color-gold-400: #d4af37;
+  --color-gold-300: #e4c765;
+  --color-gold-200: #f1d97a;
+
+  --color-mist-100: #f5f3f7;
+  --color-mist-300: #cfc6db;
+  --color-mist-500: #948aa6;
+
+  --color-safe: #2fae60;
+  --color-caution: #d4af37;
+  --color-restricted: #e0522f;
+  --color-danger: #c0392b;
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-mist-100);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background-color: var(--color-violet-600);
+  color: var(--color-mist-100);
+}
+
+input,
+select,
+textarea {
+  color-scheme: dark;
+}
