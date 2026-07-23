@@ -1,0 +1,39 @@
+name: DB setup
+
+# One-click database setup for the real Supabase project.
+# Runs from GitHub's network (which can reach Supabase Postgres) so no local
+# dev environment is needed. Applies the Prisma schema and the idempotent seed
+# (zones, merchants, operating settings, and the staff User rows the app matches
+# on login). Safe to re-run — the seed upserts and skips anything that exists.
+#
+# Before running, add these as repository secrets
+# (Settings -> Secrets and variables -> Actions):
+#   DATABASE_URL, DIRECT_URL,
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SECRET_KEY,
+#   SEED_ADMIN_PASSWORD, SEED_RIDER_PASSWORD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  db-setup:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+      SEED_RIDER_PASSWORD: ${{ secrets.SEED_RIDER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply schema
+        run: npx prisma migrate deploy
+      - name: Seed data
+        run: npx prisma db seed
