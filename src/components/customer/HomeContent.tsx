@@ -86,16 +86,14 @@ export function HomeContent({ mode }: { mode: OperatingMode }) {
 
       {/* Hero */}
       <section className="animate-fade-up mt-6">
-        <h1 className="font-display text-[2.6rem] font-bold leading-[1.05]">
-          Urban Night
-          <br />
-          <span className="text-gradient-gold">Lift</span>
-        </h1>
-        <p className="mt-2 text-[13px] font-semibold uppercase tracking-[0.2em] text-gold-400/90">
-          {locale === "fr" ? "Livraison en toute assurance" : "Delivery you can trust"}
-        </p>
-        <p className="mt-3 text-[15px] leading-relaxed text-mist-300">{t("home.heroCtaSub")}</p>
-        <p className="mt-1 flex items-center gap-1.5 text-sm text-mist-500">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="Urban Night Lift — livraison en toute assurance"
+          className="w-[86%] max-w-[330px] drop-shadow-[0_8px_40px_rgba(123,44,191,0.35)]"
+        />
+        <p className="mt-5 text-[15px] leading-relaxed text-mist-300">{t("home.heroCtaSub")}</p>
+        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-mist-500">
           <MapPin className="h-4 w-4 text-violet-400" /> {t("home.zone")} · {t("home.serviceArea")}
         </p>
       </section>
