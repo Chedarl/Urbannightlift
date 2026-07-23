@@ -1,4 +1,10 @@
 {
+  "nav": {
+    "home": "Home",
+    "order": "Order",
+    "track": "Track",
+    "help": "Help"
+  },
   "common": {
     "brand": "Urban Night Lift",
     "loading": "Loading…",
@@ -41,9 +47,26 @@
     "serviceArea": "Currently serving selected areas in Yaoundé 6.",
     "safetyPositioning": "Verified pickups. Controlled zones. Delivery proof. Prepayment only.",
     "launchNote": "Launching in selected zones first — not yet available everywhere.",
-    "openNow": "Open now",
+    "openNow": "Open now · taking orders",
     "pausedNow": "New orders paused",
-    "closedNow": "Currently closed"
+    "closedNow": "Currently closed",
+    "heroCtaSub": "Food, medicine, groceries & more — to your door, tonight.",
+    "deliverTitle": "What do you need tonight?",
+    "browseAll": "See all services",
+    "howItWorksTitle": "How it works",
+    "step1Title": "Tell us what you need",
+    "step1Body": "Pick a service and share pickup, drop-off and item details in under a minute.",
+    "step2Title": "We pick it up safely",
+    "step2Body": "A verified rider collects your order from approved pickup points.",
+    "step3Title": "Delivered with proof",
+    "step3Body": "Track your rider and confirm delivery with a one-time code or photo.",
+    "trustTitle": "Built for safe nights",
+    "trustVerified": "Verified pickups",
+    "trustProof": "Delivery proof",
+    "trustPrepay": "Prepayment only",
+    "trustInsured": "Insured to XAF 25,000",
+    "eta": "8 PM – 12 AM",
+    "zone": "Yaoundé 6"
   },
   "services": {
     "title": "What do you need tonight?",

@@ -1,39 +1,54 @@
+"use client";
+
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand mark. Echoes the official Urban Night Lift logo: a purple "road" curve
- * with speed lines and a gold upward arrow (night lift), gold + purple wordmark.
- * To use the exact raster logo instead, drop the PNG at public/logo.png and
- * swap the <svg> below for <img src="/logo.png" .../>.
+ * Brand logo. Prefers the real uploaded raster at /public/logo.png; if that
+ * file isn't present it falls back to an on-brand SVG mark (purple road curve
+ * with speed lines + a gold upward "lift" arrow) plus the wordmark.
+ *
+ * To use the official logo: upload it to the repo as `public/logo.png`.
  */
-export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function Logo({
+  className,
+  compact = false,
+  height = 36,
+}: {
+  className?: string;
+  compact?: boolean;
+  height?: number;
+}) {
+  const [imgOk, setImgOk] = useState(true);
+
+  if (imgOk) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/logo.png"
+        alt="Urban Night Lift"
+        style={{ height }}
+        className={cn("w-auto select-none", className)}
+        onError={() => setImgOk(false)}
+      />
+    );
+  }
+
+  // Fallback SVG mark + wordmark
   return (
-    <span className={cn("inline-flex items-center gap-2 select-none", className)}>
-      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-black ring-1 ring-gold-400/50">
-        <svg viewBox="0 0 40 40" fill="none" className="h-7 w-7" aria-hidden>
-          {/* purple road curve */}
-          <path
-            d="M9 27c0-7 4-12 10-12s9 4 9 9"
-            stroke="#7B2CBF"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          {/* speed lines trailing the road */}
-          <path d="M6 30h7M8 33h6M11 36h4" stroke="#7B2CBF" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-          {/* gold upward arrow (the lift) */}
-          <path
-            d="M28 30V12"
-            stroke="#D4AF37"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          <path d="M23 17l5-6 5 6" stroke="#D4AF37" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <span className={cn("inline-flex items-center gap-2.5 select-none", className)}>
+      <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-ink-800 to-black ring-1 ring-gold-400/40 shadow-[0_0_20px_-4px_rgba(212,175,55,0.4)]">
+        <svg viewBox="0 0 40 40" fill="none" className="h-6 w-6" aria-hidden>
+          <path d="M8 28c0-8 5-13 11-13s10 4 10 10" stroke="#7B2CBF" strokeWidth="4.5" strokeLinecap="round" />
+          <path d="M5 31h7M7 34.5h6M10.5 38h4" stroke="#9645DE" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+          <path d="M29 30V12" stroke="#D4AF37" strokeWidth="4.5" strokeLinecap="round" />
+          <path d="M23.5 17.5 29 11l5.5 6.5" stroke="#D4AF37" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
       {!compact && (
-        <span className="font-display font-bold leading-tight tracking-tight">
-          <span className="text-mist-100">Urban Night</span>{" "}
-          <span className="text-gold-400">Lift</span>
+        <span className="font-display text-lg font-bold leading-none tracking-tight">
+          <span className="text-mist-100">Urban Night </span>
+          <span className="text-gradient-gold">Lift</span>
         </span>
       )}
     </span>

@@ -42,3 +42,5 @@ next-env.d.ts
 
 # nested next build artifacts
 **/.next/
+*.mjs
+/shot*.mjs

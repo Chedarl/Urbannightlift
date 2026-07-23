@@ -1,4 +1,10 @@
 {
+  "nav": {
+    "home": "Accueil",
+    "order": "Commander",
+    "track": "Suivre",
+    "help": "Aide"
+  },
   "common": {
     "brand": "Urban Night Lift",
     "loading": "Chargement…",
@@ -41,9 +47,26 @@
     "serviceArea": "Actuellement disponible dans certains quartiers de Yaoundé 6.",
     "safetyPositioning": "Récupérations vérifiées. Zones contrôlées. Preuve de livraison. Prépaiement uniquement.",
     "launchNote": "Lancement d'abord dans certaines zones — pas encore disponible partout.",
-    "openNow": "Ouvert maintenant",
+    "openNow": "Ouvert · commandes acceptées",
     "pausedNow": "Nouvelles commandes en pause",
-    "closedNow": "Actuellement fermé"
+    "closedNow": "Actuellement fermé",
+    "heroCtaSub": "Repas, médicaments, courses et plus — chez vous, ce soir.",
+    "deliverTitle": "De quoi avez-vous besoin ce soir ?",
+    "browseAll": "Voir tous les services",
+    "howItWorksTitle": "Comment ça marche",
+    "step1Title": "Dites-nous ce qu'il vous faut",
+    "step1Body": "Choisissez un service et indiquez récupération, livraison et détails en moins d'une minute.",
+    "step2Title": "Nous récupérons en sécurité",
+    "step2Body": "Un livreur vérifié récupère votre commande aux points de retrait approuvés.",
+    "step3Title": "Livré avec preuve",
+    "step3Body": "Suivez votre livreur et confirmez la livraison par code unique ou photo.",
+    "trustTitle": "Conçu pour des nuits sûres",
+    "trustVerified": "Récupérations vérifiées",
+    "trustProof": "Preuve de livraison",
+    "trustPrepay": "Prépaiement uniquement",
+    "trustInsured": "Assuré jusqu'à 25 000 XAF",
+    "eta": "20h – minuit",
+    "zone": "Yaoundé 6"
   },
   "services": {
     "title": "De quoi avez-vous besoin ce soir ?",
