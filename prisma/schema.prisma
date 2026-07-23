@@ -1,0 +1,363 @@
+// Urban Night Lift — MVP data model
+// Postgres via Supabase in production (DATABASE_URL = transaction pooler,
+// DIRECT_URL = session pooler for migrations).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  OWNER
+  DISPATCHER
+  RIDER
+  SUPPORT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PreferredLanguage {
+  EN
+  FR
+}
+
+enum ServiceType {
+  FOOD_PICKUP
+  MEDICINE_PICKUP
+  GROCERY_PICKUP
+  SMALL_PARCEL
+  URGENT_ITEM
+  CUSTOM_ERRAND
+  MERCHANT_DELIVERY
+}
+
+enum PrescriptionRequired {
+  YES
+  NO
+  NOT_SURE
+}
+
+enum PaymentMethod {
+  MTN_MOMO
+  ORANGE_MONEY
+}
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_CUSTOMER_PAYMENT
+  SUBMITTED_UNVERIFIED
+  VERIFIED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// WEBHOOK is reserved for a future payment-API integration; MVP only uses MANUAL.
+enum VerificationMethod {
+  MANUAL
+  WEBHOOK
+}
+
+enum OrderStatus {
+  NEW_REQUEST
+  AWAITING_DISPATCHER_REVIEW
+  APPROVED
+  REJECTED
+  AWAITING_PAYMENT
+  PAYMENT_SUBMITTED
+  PAYMENT_VERIFIED
+  RIDER_ASSIGNED
+  RIDER_GOING_TO_PICKUP
+  RIDER_ARRIVED_AT_PICKUP
+  ITEM_COLLECTED
+  RIDER_GOING_TO_DELIVERY
+  RIDER_ARRIVED_AT_DELIVERY
+  DELIVERY_PROOF_SUBMITTED
+  DELIVERED
+  CLOSED
+  CANCELLED_BY_CUSTOMER
+  CANCELLED_BY_UNL
+  FAILED_DELIVERY
+  CUSTOMER_UNREACHABLE
+  MERCHANT_UNAVAILABLE
+  SAFETY_HOLD
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum SafetyLevel {
+  SAFE
+  CAUTION
+  RESTRICTED
+  NO_GO
+}
+
+enum MerchantCategory {
+  FOOD
+  PHARMACY
+  GROCERY
+  GENERAL_STORE
+  OTHER
+}
+
+enum IncidentType {
+  CUSTOMER_COMPLAINT
+  RIDER_ISSUE
+  MERCHANT_ISSUE
+  PAYMENT_ISSUE
+  DAMAGED_ITEM
+  MISSING_ITEM
+  LATE_DELIVERY
+  SAFETY_CONCERN
+  WRONG_ADDRESS
+  CUSTOMER_UNREACHABLE
+}
+
+enum IncidentResolutionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum ResponsibleParty {
+  RIDER
+  CUSTOMER
+  MERCHANT
+  DISPATCH
+  UNKNOWN
+}
+
+enum OperatingMode {
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+enum ProofMethod {
+  OTP
+  PHOTO
+  BOTH
+}
+
+enum ProofStage {
+  PICKUP
+  DELIVERY
+}
+
+// ---------- Models ----------
+
+model User {
+  id         String     @id @default(cuid())
+  authUserId String     @unique // Supabase auth.users.id
+  fullName   String
+  phone      String?
+  email      String     @unique
+  role       UserRole
+  status     UserStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  assignedOrders Order[] @relation("RiderOrders")
+}
+
+model Customer {
+  id                String            @id @default(cuid())
+  fullName          String
+  whatsappNumber    String
+  alternativePhone  String?
+  preferredLanguage PreferredLanguage @default(EN)
+  totalOrders       Int               @default(0)
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  orders   Order[]
+  payments Payment[]
+
+  @@index([whatsappNumber])
+}
+
+model Zone {
+  id                 String      @id @default(cuid())
+  zoneName           String      @unique
+  description        String?
+  feeXaf             Int // same-zone base fee
+  nearbyFeeXaf       Int?
+  extendedFeeXaf     Int?
+  nightUrgencyFeeXaf Int         @default(0)
+  medicineFeeXaf     Int         @default(0)
+  waitingFeeXaf      Int         @default(0)
+  safetyLevel        SafetyLevel @default(SAFE)
+  active             Boolean     @default(true)
+  notes              String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  pickupOrders   Order[] @relation("PickupZone")
+  deliveryOrders Order[] @relation("DeliveryZone")
+}
+
+model Merchant {
+  id             String           @id @default(cuid())
+  merchantName   String
+  category       MerchantCategory
+  whatsappNumber String
+  phone          String?
+  address        String
+  landmark       String?
+  openingHours   String?
+  notes          String?
+  verified       Boolean          @default(false)
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  orders Order[]
+}
+
+model Order {
+  id                      String                @id @default(cuid())
+  orderCode               String                @unique
+  customerId              String
+  customer                Customer              @relation(fields: [customerId], references: [id])
+  serviceType             ServiceType
+  pickupLocation          String
+  pickupLandmark          String?
+  pickupZoneId            String?
+  pickupZone              Zone?                 @relation("PickupZone", fields: [pickupZoneId], references: [id])
+  deliveryLocation        String
+  deliveryLandmark        String?
+  deliveryZoneId          String?
+  deliveryZone            Zone?                 @relation("DeliveryZone", fields: [deliveryZoneId], references: [id])
+  merchantId              String?
+  merchant                Merchant?             @relation(fields: [merchantId], references: [id])
+  itemDescription         String
+  quantity                Int                   @default(1)
+  declaredValueXaf        Int
+  isFragile               Boolean               @default(false)
+  needsTemperatureCare    Boolean               @default(false)
+  isMedicine              Boolean               @default(false)
+  prescriptionRequired    PrescriptionRequired?
+  itemAlreadyPaid         Boolean               @default(false)
+  riderPaysAtPickup       Boolean               @default(false)
+  preferredDeliveryTime   String?
+  specialInstructions     String?
+  estimatedDeliveryFeeXaf Int?
+  finalDeliveryFeeXaf     Int?
+  totalAmountDueXaf       Int?
+  paymentMethod           PaymentMethod
+  paymentStatus           PaymentStatus         @default(PENDING)
+  orderStatus             OrderStatus           @default(NEW_REQUEST)
+  assignedRiderId         String?
+  assignedRider           User?                 @relation("RiderOrders", fields: [assignedRiderId], references: [id])
+  riskFlag                Boolean               @default(false)
+  highValueFlag           Boolean               @default(false)
+  rejectionReason         String?
+  adminNotes              String?
+  customerVisibleNotes    String?
+  screenshotUrl           String? // Supabase Storage path (optional customer upload)
+  otpCode                 String? // delivery OTP shown to customer once rider is assigned
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  completedAt             DateTime?
+
+  statusHistory  OrderStatusHistory[]
+  payments       Payment[]
+  deliveryProofs DeliveryProof[]
+  incidents      Incident[]
+
+  @@index([orderStatus])
+  @@index([createdAt])
+  @@index([assignedRiderId])
+}
+
+model Payment {
+  id                   String             @id @default(cuid())
+  orderId              String
+  order                Order              @relation(fields: [orderId], references: [id])
+  customerId           String
+  customer             Customer           @relation(fields: [customerId], references: [id])
+  paymentMethod        PaymentMethod
+  amountXaf            Int
+  paymentPhone         String?
+  transactionReference String?
+  providerReference    String? // reserved for future payment-API integration
+  status               PaymentStatus      @default(PENDING)
+  verificationMethod   VerificationMethod @default(MANUAL)
+  verifiedById         String? // User.id of the staff member who verified
+  verifiedAt           DateTime?
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([orderId])
+}
+
+model OrderStatusHistory {
+  id              String       @id @default(cuid())
+  orderId         String
+  order           Order        @relation(fields: [orderId], references: [id])
+  fromStatus      OrderStatus?
+  toStatus        OrderStatus
+  changedByUserId String?
+  changedByRole   String? // SYSTEM / CUSTOMER / OWNER / DISPATCHER / RIDER / SUPPORT
+  note            String?
+  createdAt       DateTime     @default(now())
+
+  @@index([orderId])
+}
+
+model DeliveryProof {
+  id                String      @id @default(cuid())
+  orderId           String
+  order             Order       @relation(fields: [orderId], references: [id])
+  stage             ProofStage
+  proofMethod       ProofMethod
+  otpEntered        String?
+  photoUrl          String? // Supabase Storage path
+  riderNote         String?
+  submittedByUserId String?
+  createdAt         DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+model Incident {
+  id               String                   @id @default(cuid())
+  orderId          String?
+  order            Order?                   @relation(fields: [orderId], references: [id])
+  incidentType     IncidentType
+  description      String
+  responsibleParty ResponsibleParty         @default(UNKNOWN)
+  resolutionStatus IncidentResolutionStatus @default(OPEN)
+  internalNotes    String?
+  reportedByUserId String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([resolutionStatus])
+}
+
+// Singleton row (id = 1). App always upserts/reads id = 1.
+model OperatingSettings {
+  id                 Int           @id @default(1)
+  mode               OperatingMode @default(CLOSED)
+  operatingStartHour Int           @default(20)
+  operatingEndHour   Int           @default(24)
+  zoneNoticeEn       String?
+  zoneNoticeFr       String?
+  updatedByUserId    String?
+  updatedAt          DateTime      @updatedAt
+}
