@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Copy, Check, Wallet } from "lucide-react";
+import { Phone, Copy, Check, Wallet, ImageUp } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildUssd, ussdTelHref } from "@/lib/payments/momo";
 import { formatXaf, cn } from "@/lib/utils";
@@ -23,6 +23,9 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
   const { t } = useTranslation();
   const [reference, setReference] = useState("");
   const [phone, setPhone] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(
@@ -57,13 +60,36 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
 
   if (!code) return null;
 
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) return;
+    setUploading(true);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bucket: "order-screenshots", fileName: file.name, orderCode: info.orderCode }),
+      });
+      if (!res.ok) throw new Error();
+      const { signedUrl, path } = await res.json();
+      const put = await fetch(signedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      if (!put.ok) throw new Error();
+      setScreenshotUrl(path);
+      setUploadedName(file.name);
+    } catch {
+      setUploadedName(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function submit() {
-    if (reference.trim().length < 2) return;
+    // Accept either a transaction reference or an uploaded payment screenshot.
+    if (reference.trim().length < 2 && !screenshotUrl) return;
     setSubmitting(true);
     const res = await fetch(`/api/track/${info.orderCode}/payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reference, paymentPhone: phone }),
+      body: JSON.stringify({ reference, paymentPhone: phone, screenshotUrl }),
     });
     setSubmitting(false);
     if (res.ok) setDone(true);
@@ -124,7 +150,13 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-          <Button size="md" disabled={submitting || reference.trim().length < 2} onClick={submit} className={cn("w-full")}>
+          {/* Upload the MoMo / Orange payment screenshot as proof */}
+          <label className={cn("flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-gold-400/40 bg-gold-400/[0.05] px-3 py-2.5 text-sm", uploadedName ? "text-safe" : "text-mist-400")}>
+            <ImageUp className="h-4 w-4" />
+            {uploading ? t("pay.uploading") : uploadedName ? `${t("pay.screenshotAdded")}: ${uploadedName}` : t("pay.uploadScreenshot")}
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </label>
+          <Button size="md" disabled={submitting || (reference.trim().length < 2 && !screenshotUrl)} onClick={submit} className={cn("w-full")}>
             {submitting ? t("pay.submitting") : t("pay.submit")}
           </Button>
         </div>

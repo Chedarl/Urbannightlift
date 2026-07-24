@@ -260,6 +260,9 @@
     "submitting": "Sending…",
     "submitted": "Thanks! We'll confirm your payment shortly.",
     "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code.",
+    "uploadScreenshot": "Upload payment screenshot",
+    "screenshotAdded": "Screenshot added",
+    "uploading": "Uploading…",
     "cashTitle": "Cash on delivery",
     "cashNote": "Pay the delivery fee in cash to the rider when your order arrives. Please have the exact amount ready."
   },

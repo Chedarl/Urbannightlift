@@ -11,6 +11,7 @@ import {
   UserCheck,
   Wallet,
   StickyNote,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
@@ -81,6 +82,7 @@ export interface OrderDetailData {
   paymentMethod: PaymentMethod;
   paymentPhone: string | null;
   transactionReference: string | null;
+  paymentProofUrl: string | null;
   estimatedDeliveryFeeXaf: number | null;
   finalDeliveryFeeXaf: number | null;
   totalAmountDueXaf: number | null;
@@ -401,6 +403,16 @@ export function OrderDetail({
             <Row label={t("orderForm.paymentMethod")} value={order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : "Cash on delivery"} />
             <Row label={t("orderForm.paymentPhone")} value={order.paymentPhone} />
             <Row label={t("orderForm.transactionReference")} value={order.transactionReference} />
+            {order.paymentProofUrl && (
+              <Row
+                label="Payment proof"
+                value={
+                  <a href={`/api/media?path=${encodeURIComponent(order.paymentProofUrl)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-gold-400/15 px-2.5 py-1 text-xs font-semibold text-gold-300">
+                    <ImageIcon className="h-3.5 w-3.5" /> View screenshot
+                  </a>
+                }
+              />
+            )}
             <div className="mt-2 flex flex-col gap-2">
               <Button
                 size="sm"

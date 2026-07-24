@@ -71,6 +71,7 @@ export default async function AdminOrderPage({
         paymentMethod: order.paymentMethod,
         paymentPhone: order.payments[0]?.paymentPhone ?? null,
         transactionReference: order.payments[0]?.transactionReference ?? null,
+        paymentProofUrl: order.payments[0]?.proofScreenshotUrl ?? null,
         estimatedDeliveryFeeXaf: order.estimatedDeliveryFeeXaf,
         finalDeliveryFeeXaf: order.finalDeliveryFeeXaf,
         totalAmountDueXaf: order.totalAmountDueXaf,
