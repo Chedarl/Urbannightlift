@@ -25,6 +25,7 @@ import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
+import { FoodForm } from "@/components/customer/order/forms/FoodForm";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Button } from "@/components/shared/Button";
 import { formatXaf, cn } from "@/lib/utils";
@@ -504,6 +505,7 @@ function OrderFormDispatch({ merchants }: { merchants: MerchantOption[] }) {
     ? (searchParams.get("service") as ServiceType)
     : "FOOD_PICKUP";
   if (service === "MEDICINE_PICKUP") return <MedicineForm />;
+  if (service === "FOOD_PICKUP") return <FoodForm />;
   return <OrderFormInner merchants={merchants} />;
 }
 
