@@ -24,6 +24,7 @@ import { getExperience } from "@/lib/services/experiences";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Button } from "@/components/shared/Button";
 import { formatXaf, cn } from "@/lib/utils";
@@ -496,10 +497,20 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   );
 }
 
+/** Dispatch to a bespoke per-service form where one exists, else the shared engine. */
+function OrderFormDispatch({ merchants }: { merchants: MerchantOption[] }) {
+  const searchParams = useSearchParams();
+  const service = (SERVICE_TYPES as string[]).includes(searchParams.get("service") ?? "")
+    ? (searchParams.get("service") as ServiceType)
+    : "FOOD_PICKUP";
+  if (service === "MEDICINE_PICKUP") return <MedicineForm />;
+  return <OrderFormInner merchants={merchants} />;
+}
+
 export function OrderForm({ merchants }: { merchants: MerchantOption[] }) {
   return (
     <Suspense>
-      <OrderFormInner merchants={merchants} />
+      <OrderFormDispatch merchants={merchants} />
     </Suspense>
   );
 }
