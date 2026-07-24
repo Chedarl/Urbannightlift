@@ -81,6 +81,8 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const [pickupSel, setPickupSel] = useState<SelectedLocation | null>(null);
   const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
   const [sameLocError, setSameLocError] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
+  const [blockedNotice, setBlockedNotice] = useState(false);
 
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
@@ -183,14 +185,20 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const applyDelivery = (loc: SelectedLocation | null) => applySelection("delivery", loc);
 
   function onSubmit(data: OrderInput) {
+    setMissing([]);
+    setBlockedNotice(false);
     // Guard: pickup and delivery must not be the same confirmed point.
     if (pickupSel && deliverySel && Math.abs(pickupSel.latitude - deliverySel.latitude) < 1e-4 && Math.abs(pickupSel.longitude - deliverySel.longitude) < 1e-4) {
       setSameLocError(true);
+      document.querySelector("form")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     // Guard: never accept a blocked/unavailable location.
     for (const sel of [pickupSel, deliverySel]) {
-      if (sel && SERVICE_STATUS_META[sel.serviceStatus] && !SERVICE_STATUS_META[sel.serviceStatus].ok) return;
+      if (sel && SERVICE_STATUS_META[sel.serviceStatus] && !SERVICE_STATUS_META[sel.serviceStatus].ok) {
+        setBlockedNotice(true);
+        return;
+      }
     }
 
     const pickupLoc = selectedMerchant
@@ -220,8 +228,23 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     router.push("/order/review");
   }
 
-  function onInvalid() {
-    // Surface the first missing field so the user isn't stuck silently.
+  function onInvalid(errs: typeof errors) {
+    // Build a plain-language list of what still needs attention so the user is
+    // never stuck on a silent submit.
+    const labelFor: Partial<Record<keyof OrderInput, string>> = {
+      fullName: t("orderForm.fullName"),
+      whatsappNumber: t("orderForm.whatsappNumber"),
+      itemDescription: t("exp.detailsTitle"),
+      pickupLocation: LOC_LABELS[service].pickup[locale === "fr" ? "fr" : "en"],
+      deliveryLocation: LOC_LABELS[service].delivery[locale === "fr" ? "fr" : "en"],
+      quantity: t("orderForm.quantity"),
+      declaredValueXaf: t("orderForm.declaredValue"),
+      acceptedTerms: t("orderForm.acceptTerms"),
+    };
+    const list = (Object.keys(errs) as (keyof OrderInput)[])
+      .map((k) => labelFor[k])
+      .filter((v): v is string => Boolean(v));
+    setMissing(list.length ? list : [t("orderForm.fillRequired")]);
     const el = document.querySelector("[data-error='true']") || document.querySelector("form");
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -432,7 +455,23 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
             onChange={(e) => setValue("acceptedTerms", (e.target.checked ? true : undefined) as unknown as true)} />
           {t("orderForm.acceptTerms")}
         </label>
-        {errors.acceptedTerms && <p className="text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
+        {errors.acceptedTerms && <p className="text-xs text-restricted">{locale === "fr" ? "Veuillez accepter les conditions." : "Please accept the terms."}</p>}
+
+        {/* What still needs attention (so the CTA never fails silently) */}
+        {(missing.length > 0 || blockedNotice) && (
+          <div data-error="true" className="rounded-2xl border border-restricted/40 bg-restricted/10 p-4 text-sm text-restricted">
+            {blockedNotice ? (
+              <p>{locale === "fr" ? "Un lieu sélectionné n'est pas desservi. Veuillez en choisir un autre." : "A selected location isn't serviceable. Please choose another."}</p>
+            ) : (
+              <>
+                <p className="mb-1 font-semibold">{locale === "fr" ? "À compléter avant de continuer :" : "Please complete before continuing:"}</p>
+                <ul className="list-disc pl-5 text-xs">
+                  {missing.map((m) => <li key={m}>{m}</li>)}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4 text-xs leading-relaxed text-gold-200">
           {getDisclaimer(locale)}
@@ -448,7 +487,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
               {estimatedFee != null ? formatXaf(estimatedFee) : "—"}
             </p>
           </div>
-          <Button type="submit" size="lg" disabled={acceptedTerms !== true} className="ml-auto shrink-0" style={{ background: exp.accent, color: "#0a0710" }}>
+          <Button type="submit" size="lg" className="ml-auto shrink-0" style={{ background: exp.accent, color: "#0a0710" }}>
             {t("exp.reviewSummary")} <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

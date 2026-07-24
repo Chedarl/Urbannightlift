@@ -15,10 +15,19 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://urbannighlift.com"),
   title: "Urban Night Lift — Night delivery in Yaoundé",
   description:
     "Safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands across Yaoundé. 6:00 PM to 4:00 AM.",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Urban Night Lift — Night delivery in Yaoundé",
+    description: "Your city. Our ride. Night delivered — across Yaoundé, 6 PM to 4 AM.",
+    url: "https://urbannighlift.com",
+    siteName: "Urban Night Lift",
+    locale: "en",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {

@@ -115,22 +115,33 @@ async function ensureAuthUser(
     console.warn(`! Supabase env missing — skipping auth user for ${email}`);
     return null;
   }
-  const admin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  // Look up by email first so re-running the seed never duplicates.
-  const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (listErr) throw listErr;
-  const existing = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-  if (existing) return existing.id;
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName },
-  });
-  if (error) throw error;
-  return data.user.id;
+  try {
+    const admin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    // Look up by email first so re-running the seed never duplicates.
+    const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (listErr) throw listErr;
+    const existing = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (existing) {
+      // Keep the password in sync so the owner always has known credentials.
+      await admin.auth.admin.updateUserById(existing.id, { password });
+      return existing.id;
+    }
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
+    });
+    if (error) throw error;
+    return data.user.id;
+  } catch (err) {
+    // Supabase Auth is optional at seed time — a bad/rotated service key must
+    // never block the (already-committed) data seed. Warn and fall back.
+    console.warn(`! Supabase Auth unavailable for ${email} (${(err as Error).message}). Skipping auth-user provisioning.`);
+    return null;
+  }
 }
 
 async function seedUsers() {
