@@ -36,15 +36,15 @@
     "notFound": "Introuvable"
   },
   "home": {
-    "tagline": "Livraison de nuit à Yaoundé 6",
+    "tagline": "Livraison de nuit à Yaoundé",
     "brandTagline": "Livraison en toute assurance",
     "services": "Repas • Médicaments • Courses • Articles urgents • Commissions",
-    "promise": "Urban Night Lift vous aide à obtenir ce dont vous avez besoin la nuit sans quitter votre domicile. Nous assurons la récupération et la livraison nocturne sécurisée de repas, médicaments, courses, articles urgents et commissions approuvées dans Yaoundé 6.",
+    "promise": "Urban Night Lift vous aide à obtenir ce dont vous avez besoin la nuit sans quitter votre domicile. Nous assurons la récupération et la livraison nocturne sécurisée de repas, médicaments, courses, articles urgents et commissions approuvées dans Yaoundé.",
     "placeOrder": "Passer une commande",
     "trackOrder": "Suivre ma commande",
     "chatWhatsApp": "Discuter sur WhatsApp",
     "operatingHours": "Nous opérons de 20h00 à minuit.",
-    "serviceArea": "Actuellement disponible dans certains quartiers de Yaoundé 6.",
+    "serviceArea": "Actuellement disponible dans certains quartiers de Yaoundé.",
     "safetyPositioning": "Récupérations vérifiées. Zones contrôlées. Preuve de livraison. Prépaiement uniquement.",
     "launchNote": "Lancement d'abord dans certaines zones — pas encore disponible partout.",
     "openNow": "Ouvert · commandes acceptées",
@@ -66,7 +66,7 @@
     "trustPrepay": "Prépaiement uniquement",
     "trustInsured": "Assuré jusqu'à 25 000 XAF",
     "eta": "20h – minuit",
-    "zone": "Yaoundé 6"
+    "zone": "Yaoundé"
   },
   "services": {
     "title": "De quoi avez-vous besoin ce soir ?",
@@ -78,6 +78,21 @@
     "URGENT_ITEM": { "name": "Récupération d'article urgent", "description": "Vous avez oublié quelque chose d'important ? Nous récupérons et livrons rapidement les petits articles urgents." },
     "CUSTOM_ERRAND": { "name": "Commission personnalisée", "description": "Dites-nous ce dont vous avez besoin et le dispatcher confirmera si nous pouvons le faire." },
     "MERCHANT_DELIVERY": { "name": "Livraison marchand", "description": "Livraison pré-arrangée depuis l'un de nos marchands partenaires vérifiés jusqu'à votre porte." }
+  },
+  "exp": {
+    "locationTitle": "Où ?",
+    "detailsTitle": "Les détails",
+    "priceEstimate": "Livraison estimée",
+    "priceHint": "Frais définitifs confirmés par le dispatch avant récupération.",
+    "setLocations": "Placez récupération et livraison sur la carte pour voir le prix.",
+    "continue": "Vérifier la commande",
+    "FOOD_PICKUP": { "title": "Une envie ce soir ?", "tagline": "Nous récupérons votre repas et vous l'apportons chaud.", "lead": "Quel plat, et d'où ? (ex. poisson braisé chez Maman)" },
+    "MEDICINE_PICKUP": { "title": "Pharmacie de nuit", "tagline": "Récupération discrète de médicaments et articles approuvés.", "lead": "Quels médicaments ou articles ? À préciser au pharmacien ?" },
+    "GROCERY_PICKUP": { "title": "Vos courses, livrées", "tagline": "Vos essentiels depuis un magasin ou marché.", "lead": "Listez ce qu'il vous faut (un article par ligne)" },
+    "SMALL_PARCEL": { "title": "Envoyer un colis", "tagline": "Articles sûrs, légaux et déclarés dans Yaoundé.", "lead": "Que contient le colis ? Décrivez-le." },
+    "URGENT_ITEM": { "title": "Besoin urgent", "tagline": "Un oubli ? Nous vous l'apportons ce soir.", "lead": "De quoi avez-vous besoin en urgence, et pourquoi ?" },
+    "CUSTOM_ERRAND": { "title": "Votre commission", "tagline": "Décrivez-la — le dispatcher confirme si possible.", "lead": "Avec vos mots, que faut-il faire ce soir ?" },
+    "MERCHANT_DELIVERY": { "title": "Commander chez un partenaire", "tagline": "Livraison pré-arrangée d'un marchand vérifié.", "lead": "Quelque chose à ajouter pour le marchand ?" }
   },
   "orderForm": {
     "title": "Détails de la commande",
@@ -173,6 +188,22 @@
     "whatsappNumber": "Numéro WhatsApp",
     "find": "Suivre la commande",
     "notFound": "Aucune commande trouvée avec ce code et ce numéro. Vérifiez et réessayez."
+  },
+  "pay": {
+    "title": "Payer la livraison",
+    "amountDue": "Montant dû",
+    "payTo": "Payez à notre code marchand {method}",
+    "code": "Code marchand",
+    "dial": "Composer",
+    "copy": "Copier",
+    "copied": "Copié",
+    "steps": "Composez le code, confirmez le montant avec votre code PIN Mobile Money, puis entrez votre référence de transaction ci-dessous.",
+    "reference": "Référence de transaction / ID de confirmation",
+    "phone": "Téléphone de paiement (facultatif)",
+    "submit": "J'ai payé",
+    "submitting": "Envoi…",
+    "submitted": "Merci ! Nous confirmerons votre paiement sous peu.",
+    "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret."
   },
   "customerStatus": {
     "received": "Demande reçue",

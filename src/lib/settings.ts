@@ -11,8 +11,8 @@ export async function getOperatingSettings(): Promise<OperatingSettings> {
       mode: "CLOSED",
       operatingStartHour: 20,
       operatingEndHour: 24,
-      zoneNoticeEn: "Currently serving selected areas in Yaoundé 6.",
-      zoneNoticeFr: "Actuellement disponible dans certains quartiers de Yaoundé 6.",
+      zoneNoticeEn: "Currently serving selected areas in Yaoundé.",
+      zoneNoticeFr: "Actuellement disponible dans certains quartiers de Yaoundé.",
     },
   });
 }

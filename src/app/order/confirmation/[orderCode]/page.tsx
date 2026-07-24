@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { OrderConfirmation } from "@/components/customer/OrderConfirmation";
 import { prisma } from "@/lib/prisma";
+import { getOperatingSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +12,10 @@ export default async function ConfirmationPage({
   params: Promise<{ orderCode: string }>;
 }) {
   const { orderCode } = await params;
-  const order = await prisma.order.findUnique({
-    where: { orderCode: orderCode.toUpperCase() },
-    include: { customer: true },
-  });
+  const [order, settings] = await Promise.all([
+    prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true } }),
+    getOperatingSettings(),
+  ]);
   if (!order) notFound();
 
   return (
@@ -44,6 +45,16 @@ export default async function ConfirmationPage({
             specialInstructions: order.specialInstructions,
             customerVisibleNotes: order.customerVisibleNotes,
             otpCode: order.otpCode,
+          }}
+          payment={{
+            orderCode: order.orderCode,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            amountXaf: order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
+            mtnMerchantCode: settings.mtnMerchantCode,
+            mtnUssdTemplate: settings.mtnUssdTemplate,
+            orangeMerchantCode: settings.orangeMerchantCode,
+            orangeUssdTemplate: settings.orangeUssdTemplate,
           }}
         />
       </main>

@@ -6,6 +6,7 @@ import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check } from "lucide
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
+import { RiderLocationShare } from "@/components/rider/RiderLocationShare";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
 import { formatXaf, normalizePhone } from "@/lib/utils";
@@ -153,6 +154,8 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
       </div>
 
       {error && <p className="rounded-xl bg-restricted/10 px-3 py-2 text-sm text-restricted">{error}</p>}
+
+      <RiderLocationShare orderId={order.id} />
 
       {order.safetyNotes && (
         <div className="flex items-start gap-2 rounded-xl border border-caution/40 bg-caution/10 p-3 text-xs text-caution">

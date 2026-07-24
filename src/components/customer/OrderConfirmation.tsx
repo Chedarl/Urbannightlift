@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { MessageCircle, RefreshCw, Check } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -7,6 +8,9 @@ import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER, ADMIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { CUSTOMER_STATUS_KEY, CUSTOMER_TIMELINE } from "@/lib/orders/statusLabels";
 import { Button, LinkButton } from "@/components/shared/Button";
+import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
+
+const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
 import type { OrderStatus, PaymentMethod, PreferredLanguage, PrescriptionRequired, ServiceType } from "@prisma/client";
 
@@ -34,13 +38,14 @@ export interface ConfirmationOrder {
   otpCode: string | null;
 }
 
-export function OrderConfirmation({ order }: { order: ConfirmationOrder }) {
+export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder; payment: PaymentInfo }) {
   const { t } = useTranslation();
   const router = useRouter();
 
   const statusKey = CUSTOMER_STATUS_KEY[order.orderStatus];
   const isCancelled = statusKey === "cancelled";
   const currentIdx = CUSTOMER_TIMELINE.indexOf(statusKey);
+  const showPayment = !isCancelled && payment.paymentStatus !== "VERIFIED";
 
   const waMessage = buildOrderMessage({
     orderCode: order.orderCode,
@@ -86,6 +91,12 @@ export function OrderConfirmation({ order }: { order: ConfirmationOrder }) {
           <p className="mt-1 text-xs text-mist-500">{t("confirmation.otpHint")}</p>
         </div>
       )}
+
+      {/* Pay for delivery (merchant code) */}
+      {showPayment && <PaymentCard info={payment} />}
+
+      {/* Live tracking map (renders once locations/rider are known) */}
+      {!isCancelled && <LiveTrackMap orderCode={order.orderCode} />}
 
       {/* Status timeline */}
       <div className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
@@ -146,15 +157,6 @@ export function OrderConfirmation({ order }: { order: ConfirmationOrder }) {
           size="lg"
         >
           <MessageCircle className="h-5 w-5" /> {t("confirmation.sendWhatsApp")}
-        </LinkButton>
-        <LinkButton
-          href={buildWaLink(ADMIN_WHATSAPP_NUMBER, waMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="outline"
-          size="md"
-        >
-          {t("confirmation.sendCopyAdmin")}
         </LinkButton>
         <LinkButton
           href={buildWaLink(

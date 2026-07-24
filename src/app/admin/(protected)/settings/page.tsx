@@ -13,6 +13,10 @@ export default async function SettingsPage() {
         operatingEndHour: settings.operatingEndHour,
         zoneNoticeEn: settings.zoneNoticeEn ?? "",
         zoneNoticeFr: settings.zoneNoticeFr ?? "",
+        mtnMerchantCode: settings.mtnMerchantCode ?? "",
+        mtnUssdTemplate: settings.mtnUssdTemplate ?? "",
+        orangeMerchantCode: settings.orangeMerchantCode ?? "",
+        orangeUssdTemplate: settings.orangeUssdTemplate ?? "",
       }}
     />
   );
