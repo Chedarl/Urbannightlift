@@ -12,7 +12,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   const body = await req.json().catch(() => ({}));
   const reference = typeof body.reference === "string" ? body.reference.trim().slice(0, 100) : "";
   const paymentPhone = typeof body.paymentPhone === "string" ? body.paymentPhone.trim().slice(0, 20) : "";
-  if (!reference) return NextResponse.json({ error: "reference required" }, { status: 400 });
+  const screenshotUrl = typeof body.screenshotUrl === "string" ? body.screenshotUrl.trim().slice(0, 500) : "";
+  // Accept the submission if the customer gives EITHER a reference OR a screenshot.
+  if (!reference && !screenshotUrl) return NextResponse.json({ error: "reference or screenshot required" }, { status: 400 });
 
   const order = await prisma.order.findUnique({
     where: { orderCode: orderCode.toUpperCase() },
@@ -24,8 +26,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "SUBMITTED_UNVERIFIED" } });
     const payment = await tx.payment.findFirst({ where: { orderId: order.id }, orderBy: { createdAt: "desc" } });
     const data = {
-      transactionReference: reference,
+      transactionReference: reference || undefined,
       paymentPhone: paymentPhone || undefined,
+      proofScreenshotUrl: screenshotUrl || undefined,
       status: "SUBMITTED_UNVERIFIED" as const,
     };
     if (payment) await tx.payment.update({ where: { id: payment.id }, data });

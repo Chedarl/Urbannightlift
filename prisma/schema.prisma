@@ -369,6 +369,7 @@ model Payment {
   amountXaf            Int
   paymentPhone         String?
   transactionReference String?
+  proofScreenshotUrl   String? // customer-uploaded MoMo/Orange payment screenshot (private)
   providerReference    String? // reserved for future payment-API integration
   status               PaymentStatus      @default(PENDING)
   verificationMethod   VerificationMethod @default(MANUAL)

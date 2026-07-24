@@ -260,6 +260,9 @@
     "submitting": "Envoi…",
     "submitted": "Merci ! Nous confirmerons votre paiement sous peu.",
     "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret.",
+    "uploadScreenshot": "Joindre la capture du paiement",
+    "screenshotAdded": "Capture ajoutée",
+    "uploading": "Téléversement…",
     "cashTitle": "Paiement à la livraison",
     "cashNote": "Payez les frais de livraison en espèces au livreur à l'arrivée de votre commande. Merci de préparer le montant exact."
   },
