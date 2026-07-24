@@ -1,19 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+const CANONICAL_HOST = "urbannighlift.com";
+
 /**
- * Coarse gate: /admin/** and /rider/** require an authenticated Supabase
- * session (login pages excluded). Fine-grained role/status checks happen in
- * the route-group layouts via requireRole() (Prisma is not edge-compatible).
+ * 1) Canonical host: any request arriving on a *.vercel.app build URL is
+ *    permanently redirected to the owner's domain, so only urbannighlift.com is
+ *    ever used publicly.
+ * 2) Coarse auth gate: /admin/** and /rider/** require an authenticated
+ *    Supabase session (login pages excluded). Fine-grained role/status checks
+ *    happen in the route-group layouts via requireRole() (Prisma is not
+ *    edge-compatible).
  */
 export async function middleware(request: NextRequest) {
-  const { response, authUserId } = await updateSession(request);
+  const host = request.headers.get("host") ?? "";
+  if (host.endsWith(".vercel.app")) {
+    const url = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, `https://${CANONICAL_HOST}`);
+    return NextResponse.redirect(url, 308);
+  }
+
   const { pathname } = request.nextUrl;
-
-  const isLogin = pathname === "/admin/login" || pathname === "/rider/login";
   const isGated = pathname.startsWith("/admin") || pathname.startsWith("/rider");
+  if (!isGated) return NextResponse.next();
 
-  if (isGated && !isLogin && !authUserId) {
+  const { response, authUserId } = await updateSession(request);
+  const isLogin = pathname === "/admin/login" || pathname === "/rider/login";
+
+  if (!isLogin && !authUserId) {
     const loginPath = pathname.startsWith("/rider") ? "/rider/login" : "/admin/login";
     const url = request.nextUrl.clone();
     url.pathname = loginPath;
@@ -25,5 +38,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/rider/:path*"],
+  // Run on every route except Next internals and static files, so the
+  // canonical-host redirect applies site-wide (auth still only gates /admin,/rider).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.[^/]+$).*)"],
 };
