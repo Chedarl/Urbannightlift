@@ -144,6 +144,54 @@ async function ensureAuthUser(
   }
 }
 
+/**
+ * Guarantee a Supabase Auth user exists with a known password, using a DIRECT
+ * SQL write to `auth.users`. This works even when the Supabase service key is
+ * rotated/invalid (the Admin API is unavailable), because it only needs the
+ * Postgres connection (DATABASE_URL), which the data seed already uses. Returns
+ * the auth user id, or null if the DB write path is unavailable.
+ *
+ * Note: sign-in still requires a valid public (anon) key for the GoTrue REST
+ * endpoint; this only fixes the password/account, not a broken anon key.
+ */
+async function ensureAuthUserViaSql(email: string, password: string): Promise<string | null> {
+  const cryptVariants = [
+    { c: "crypt", g: "gen_salt" },
+    { c: "extensions.crypt", g: "extensions.gen_salt" },
+  ];
+  for (const { c, g } of cryptVariants) {
+    try {
+      // Update the password on an existing auth user.
+      const updated = await prisma.$executeRawUnsafe(
+        `UPDATE auth.users SET encrypted_password = ${c}($1, ${g}('bf')), email_confirmed_at = COALESCE(email_confirmed_at, now()), updated_at = now() WHERE email = $2`,
+        password,
+        email,
+      );
+      if (updated > 0) {
+        const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(`SELECT id::text FROM auth.users WHERE email = $1 LIMIT 1`, email);
+        console.log(`✓ reset password for ${email} via SQL`);
+        return rows[0]?.id ?? null;
+      }
+      // No existing row — create a minimal, password-login-ready auth user.
+      const created = await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `INSERT INTO auth.users
+           (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change_token_new, email_change)
+         VALUES
+           ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', $1, ${c}($2, ${g}('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}', '', '', '', '')
+         RETURNING id::text`,
+        email,
+        password,
+      );
+      console.log(`✓ created auth user ${email} via SQL`);
+      return created[0]?.id ?? null;
+    } catch {
+      // try the next crypt() schema variant
+    }
+  }
+  console.warn(`! SQL auth provisioning unavailable for ${email}`);
+  return null;
+}
+
 async function seedUsers() {
   const staff: Array<{ email: string; fullName: string; phone: string; role: UserRole; password: string }> = [
     {
@@ -162,13 +210,43 @@ async function seedUsers() {
     },
   ];
   for (const s of staff) {
-    const authUserId = (await ensureAuthUser(s.email, s.password, s.fullName)) ?? `local-${s.email}`;
+    // Prefer the Supabase Admin API; if its key is broken, fall back to a
+    // direct SQL write so the account + password are always provisioned.
+    const authUserId =
+      (await ensureAuthUser(s.email, s.password, s.fullName)) ??
+      (await ensureAuthUserViaSql(s.email, s.password)) ??
+      `local-${s.email}`;
     await prisma.user.upsert({
       where: { email: s.email },
       update: { authUserId },
       create: { email: s.email, fullName: s.fullName, phone: s.phone, role: s.role, authUserId },
     });
     console.log(`✓ user ${s.email} (${s.role})`);
+  }
+}
+
+/** Post-seed diagnostic: attempt a real admin sign-in with the public (anon)
+ *  key so the Action log reveals whether login works end-to-end. Non-fatal. */
+async function verifyAdminLogin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const email = "admin@urbannightlift.cm";
+  const password = process.env.SEED_ADMIN_PASSWORD ?? "change-me-now";
+  if (!url || !anon) {
+    console.warn("! admin login self-check skipped (missing URL/anon key)");
+    return;
+  }
+  try {
+    const client = createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.warn(`! ADMIN LOGIN SELF-CHECK FAILED: ${error.message} (status ${error.status ?? "?"})`);
+      console.warn("  → If this says 'Invalid API key', refresh NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel. Otherwise the password/account needs attention.");
+    } else if (data.user) {
+      console.log(`✓ ADMIN LOGIN SELF-CHECK OK — ${email} can sign in.`);
+    }
+  } catch (e) {
+    console.warn(`! admin login self-check error: ${(e as Error).message}`);
   }
 }
 
@@ -334,6 +412,7 @@ async function main() {
   await seedUsers();
   await seedMerchants();
   await ensureStorageBuckets();
+  await verifyAdminLogin();
   console.log("\nSeed complete.");
   console.log("Staff logins (passwords from SEED_ADMIN_PASSWORD / SEED_RIDER_PASSWORD env):");
   console.log("  Owner/Dispatcher: admin@urbannightlift.cm");
