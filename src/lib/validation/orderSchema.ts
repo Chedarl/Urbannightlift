@@ -35,6 +35,10 @@ export const orderSchema = z.object({
   deliveryLat: z.coerce.number().optional().nullable(),
   deliveryLng: z.coerce.number().optional().nullable(),
   itemDescription: z.string().trim().min(3).max(1000),
+  // Structured per-service payload (food/medicine/grocery item lists, parcel
+  // dimensions, urgency reason, errand steps…). Shape varies by service; stored
+  // as JSON. Kept loose here — each service form validates its own shape client-side.
+  serviceDetails: z.record(z.string(), z.unknown()).optional().nullable(),
   quantity: z.coerce.number().int().min(1).max(99),
   declaredValueXaf: z.coerce.number().int().min(0).max(10_000_000),
   preferredDeliveryTime: z.string().trim().max(100).optional().or(z.literal("")),

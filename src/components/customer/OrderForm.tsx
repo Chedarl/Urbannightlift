@@ -22,6 +22,8 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, TIER_META, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { getExperience } from "@/lib/services/experiences";
+import { Stepper } from "@/components/customer/order/Stepper";
+import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { Button } from "@/components/shared/Button";
 import { formatXaf, cn } from "@/lib/utils";
 import type { PickedPoint } from "@/components/customer/LocationPicker";
@@ -76,7 +78,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   }, []);
 
   const {
-    register, handleSubmit, watch, setValue,
+    register, handleSubmit, watch, setValue, control,
     formState: { errors },
   } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -177,11 +179,11 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   }
 
   const merchantLayout = exp.layout === "merchant";
-  const conversational = exp.layout === "conversational";
   const focusRing = { "--tw-ring-color": `${exp.accent}66` } as React.CSSProperties;
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-28" noValidate>
+      <Stepper current={1} />
       {/* Themed hero */}
       <div className={cn("relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b px-5 pb-8 pt-10", exp.gradient)}>
         <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl" style={{ backgroundColor: `${exp.accent}33` }} />
@@ -224,17 +226,24 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
           </section>
         )}
 
-        {/* Lead field — the star of each service */}
-        <section>
-          <label className={labelCls}>{t(exp.leadFieldKey)}</label>
-          <textarea
-            className={cn(inputCls, conversational ? "min-h-32" : "min-h-24", "resize-y")}
-            style={focusRing}
-            placeholder={t(exp.leadFieldKey)}
-            {...register("itemDescription")}
-          />
-          {errors.itemDescription && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
-        </section>
+        {/* Service-specific fields — genuinely different per service */}
+        <ServiceSection
+          service={service}
+          exp={exp}
+          control={control}
+          register={register}
+          watch={watch}
+          setValue={setValue}
+          errors={errors}
+          t={t}
+          locale={locale === "fr" ? "fr" : "en"}
+          inputCls={inputCls}
+          labelCls={labelCls}
+          focusRing={focusRing}
+          uploadedName={uploadedName}
+          uploading={uploading}
+          handleFile={handleFile}
+        />
 
         {/* Locations — type or select an area, or pin on the map */}
         <section className="flex flex-col gap-3">
@@ -370,20 +379,6 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
               </button>
             ))}
           </div>
-          {isMedicine && (
-            <div>
-              <label className={labelCls}>{t("orderForm.prescriptionRequired")}</label>
-              <div className="flex gap-2">
-                {(["YES", "NO", "NOT_SURE"] as const).map((v) => (
-                  <button key={v} type="button" onClick={() => setValue("prescriptionRequired", v)}
-                    className={cn("flex-1 rounded-xl border px-2 py-2 text-xs font-medium", watch("prescriptionRequired") === v ? "border-transparent text-ink-950" : "border-ink-700 bg-ink-800 text-mist-400")}
-                    style={watch("prescriptionRequired") === v ? { backgroundColor: exp.accent } : undefined}>
-                    {v === "YES" ? t("common.yes") : v === "NO" ? t("common.no") : t("common.notSure")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           <input className={inputCls} style={focusRing} placeholder={t("orderForm.preferredDeliveryTime")} {...register("preferredDeliveryTime")} />
           <label className={cn("flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-ink-700 bg-ink-800 px-3 py-3 text-sm", uploadedName ? "text-safe" : "text-mist-500")}>
             <ImageUp className="h-5 w-5" />
@@ -443,12 +438,23 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
         </label>
         {errors.acceptedTerms && <p className="text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
 
-        <Button type="submit" size="lg" disabled={acceptedTerms !== true} style={{ background: exp.accent, color: "#0a0710" }}>
-          {t("exp.continue")} <ArrowRight className="h-5 w-5" />
-        </Button>
-
         <div className="rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4 text-xs leading-relaxed text-gold-200">
           {getDisclaimer(locale)}
+        </div>
+      </div>
+
+      {/* Sticky "Review order summary" CTA */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] text-mist-500">{t("exp.priceEstimate")}</p>
+            <p className="truncate font-display text-lg font-bold" style={{ color: dominantTier ? TIER_META[dominantTier].hex : "#d4af37" }}>
+              {estimatedFee != null ? formatXaf(estimatedFee) : "—"}
+            </p>
+          </div>
+          <Button type="submit" size="lg" disabled={acceptedTerms !== true} className="ml-auto shrink-0" style={{ background: exp.accent, color: "#0a0710" }}>
+            {t("exp.reviewSummary")} <ArrowRight className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </form>

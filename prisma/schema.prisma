@@ -261,6 +261,7 @@ model Order {
   merchantId              String?
   merchant                Merchant?             @relation(fields: [merchantId], references: [id])
   itemDescription         String
+  serviceDetails          Json? // structured per-service payload (items list, dims, etc.)
   quantity                Int                   @default(1)
   declaredValueXaf        Int
   isFragile               Boolean               @default(false)

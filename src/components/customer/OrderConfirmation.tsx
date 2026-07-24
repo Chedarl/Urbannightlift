@@ -7,6 +7,10 @@ import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER, ADMIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { CUSTOMER_STATUS_KEY, CUSTOMER_TIMELINE } from "@/lib/orders/statusLabels";
+import { getLegalNotice } from "@/lib/i18n/legal";
+import { Stepper } from "@/components/customer/order/Stepper";
+import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
+import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 
@@ -23,6 +27,10 @@ export interface ConfirmationOrder {
   preferredLanguage: PreferredLanguage;
   serviceType: ServiceType;
   itemDescription: string;
+  serviceDetails: Record<string, unknown> | null;
+  estimatedFeeXaf: number | null;
+  pickupZoneName: string | null;
+  deliveryZoneName: string | null;
   quantity: number;
   declaredValueXaf: number;
   isFragile: boolean;
@@ -67,8 +75,30 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
     paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : order.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
   });
 
+  const fr = order.preferredLanguage === "FR";
+  const pdfData: OrderPdfData = {
+    orderCode: order.orderCode,
+    createdAt: new Date(order.createdAt),
+    locale: fr ? "fr" : "en",
+    customerName: order.customerName,
+    customerWhatsapp: order.customerWhatsapp,
+    serviceLabel: t(`services.${order.serviceType}.name`),
+    itemDescription: order.itemDescription,
+    serviceDetails: order.serviceDetails,
+    quantity: order.quantity,
+    declaredValueXaf: order.declaredValueXaf,
+    pickupLocation: order.pickupLocation,
+    pickupZoneName: order.pickupZoneName ?? undefined,
+    deliveryLocation: order.deliveryLocation,
+    deliveryZoneName: order.deliveryZoneName ?? undefined,
+    estimatedFeeXaf: order.estimatedFeeXaf,
+    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery",
+    legalNotice: getLegalNotice(fr ? "fr" : "en"),
+  };
+
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-16 pt-8">
+    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-16">
+      {!isCancelled && <Stepper current={3} />}
       <div>
         <h1 className="font-display text-2xl font-bold">{t("confirmation.title")}</h1>
         <p className="mt-2 text-sm leading-relaxed text-mist-300">{t("confirmation.message")}</p>
@@ -80,6 +110,7 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
           {order.orderCode}
         </p>
         <p className="mt-1 text-xs text-mist-500">{t("confirmation.keepCode")}</p>
+        <DownloadPdfButton data={pdfData} label={t("confirmation.downloadPdf")} className="mx-auto mt-3" />
       </div>
 
       {order.otpCode && !isCancelled && (
