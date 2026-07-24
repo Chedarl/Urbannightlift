@@ -13,7 +13,7 @@ export default async function ConfirmationPage({
 }) {
   const { orderCode } = await params;
   const [order, settings] = await Promise.all([
-    prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true } }),
+    prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true, pickupZone: true, deliveryZone: true } }),
     getOperatingSettings(),
   ]);
   if (!order) notFound();
@@ -32,6 +32,10 @@ export default async function ConfirmationPage({
             preferredLanguage: order.customer.preferredLanguage,
             serviceType: order.serviceType,
             itemDescription: order.itemDescription,
+            serviceDetails: (order.serviceDetails ?? null) as Record<string, unknown> | null,
+            estimatedFeeXaf: order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
+            pickupZoneName: order.pickupZone?.zoneName ?? null,
+            deliveryZoneName: order.deliveryZone?.zoneName ?? null,
             quantity: order.quantity,
             declaredValueXaf: order.declaredValueXaf,
             isFragile: order.isFragile,

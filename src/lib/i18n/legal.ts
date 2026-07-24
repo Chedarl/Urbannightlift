@@ -31,10 +31,10 @@ export const RESTRICTED_ZONE_NOTICE_FR =
   "Les commandes hors des zones d'opération sûres peuvent être refusées pour la sécurité du livreur et du client.";
 
 export const CLOSED_NOTICE_EN =
-  "Urban Night Lift is currently closed. We operate from 8:00 PM to 12:00 midnight. You may still submit a request for review, but immediate delivery is not guaranteed.";
+  "Urban Night Lift is currently closed. We operate from 6:00 PM to 4:00 AM. You may still submit a request for review, but immediate delivery is not guaranteed.";
 
 export const CLOSED_NOTICE_FR =
-  "Urban Night Lift est actuellement fermé. Nous opérons de 20h00 à minuit. Vous pouvez toujours soumettre une demande pour examen, mais la livraison immédiate n'est pas garantie.";
+  "Urban Night Lift est actuellement fermé. Nous opérons de 18h00 à 4h00. Vous pouvez toujours soumettre une demande pour examen, mais la livraison immédiate n'est pas garantie.";
 
 export const INSURED_VALUE_CAP_XAF = 25000;
 

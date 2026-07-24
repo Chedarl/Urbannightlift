@@ -57,6 +57,7 @@ export default async function AdminOrderPage({
         merchantName: order.merchant?.merchantName ?? null,
         merchantWhatsapp: order.merchant?.whatsappNumber ?? null,
         itemDescription: order.itemDescription,
+        serviceDetails: (order.serviceDetails ?? null) as Record<string, unknown> | null,
         quantity: order.quantity,
         declaredValueXaf: order.declaredValueXaf,
         isFragile: order.isFragile,

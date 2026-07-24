@@ -43,7 +43,7 @@
     "placeOrder": "Place an Order",
     "trackOrder": "Track My Order",
     "chatWhatsApp": "Chat on WhatsApp",
-    "operatingHours": "We operate from 8:00 PM to 12:00 midnight.",
+    "operatingHours": "We operate from 6:00 PM to 4:00 AM.",
     "serviceArea": "Currently serving selected areas in Yaoundé.",
     "safetyPositioning": "Verified pickups. Controlled zones. Delivery proof. Prepayment only.",
     "launchNote": "Launching in selected zones first — not yet available everywhere.",
@@ -65,19 +65,40 @@
     "trustProof": "Delivery proof",
     "trustPrepay": "Prepayment only",
     "trustInsured": "Insured to XAF 25,000",
-    "eta": "8 PM – 12 AM",
+    "eta": "6 PM – 4 AM",
     "zone": "Yaoundé"
   },
   "services": {
     "title": "What do you need tonight?",
     "subtitle": "Choose a service to start your order.",
-    "FOOD_PICKUP": { "name": "Food pickup", "description": "We pick up your food order from a restaurant or vendor and deliver it to you at night." },
-    "MEDICINE_PICKUP": { "name": "Medicine / pharmacy pickup", "description": "We help collect approved medicine or pharmacy items. Prescription-sensitive items may require verification." },
-    "GROCERY_PICKUP": { "name": "Grocery pickup", "description": "We collect groceries and everyday essentials from a store or market vendor near you." },
-    "SMALL_PARCEL": { "name": "Small parcel delivery", "description": "For small, safe, legal, declared items only." },
-    "URGENT_ITEM": { "name": "Urgent item pickup", "description": "Forgot something important? We pick up and deliver urgent small items fast." },
-    "CUSTOM_ERRAND": { "name": "Custom errand request", "description": "Tell us what you need and the dispatcher will confirm if we can handle it." },
-    "MERCHANT_DELIVERY": { "name": "Merchant delivery", "description": "Pre-arranged delivery from one of our verified partner merchants to your door." }
+    "FOOD_PICKUP": {
+      "name": "Food pickup",
+      "description": "We pick up your food order from a restaurant or vendor and deliver it to you at night."
+    },
+    "MEDICINE_PICKUP": {
+      "name": "Medicine / pharmacy pickup",
+      "description": "We help collect approved medicine or pharmacy items. Prescription-sensitive items may require verification."
+    },
+    "GROCERY_PICKUP": {
+      "name": "Grocery pickup",
+      "description": "We collect groceries and everyday essentials from a store or market vendor near you."
+    },
+    "SMALL_PARCEL": {
+      "name": "Small parcel delivery",
+      "description": "For small, safe, legal, declared items only."
+    },
+    "URGENT_ITEM": {
+      "name": "Urgent item pickup",
+      "description": "Forgot something important? We pick up and deliver urgent small items fast."
+    },
+    "CUSTOM_ERRAND": {
+      "name": "Custom errand request",
+      "description": "Tell us what you need and the dispatcher will confirm if we can handle it."
+    },
+    "MERCHANT_DELIVERY": {
+      "name": "Merchant delivery",
+      "description": "Pre-arranged delivery from one of our verified partner merchants to your door."
+    }
   },
   "exp": {
     "locationTitle": "Where to?",
@@ -86,13 +107,42 @@
     "priceHint": "Final fee confirmed by dispatch before pickup.",
     "setLocations": "Set pickup & delivery on the map to see your price.",
     "continue": "Continue to review",
-    "FOOD_PICKUP": { "title": "What are you craving?", "tagline": "We'll grab your food and bring it hot to your door.", "lead": "What food, and from where? (e.g. grilled fish from Chez Maman)" },
-    "MEDICINE_PICKUP": { "title": "Night pharmacy run", "tagline": "Discreet pickup of approved medicine & pharmacy items.", "lead": "Which medicine or items? Anything the pharmacist should know?" },
-    "GROCERY_PICKUP": { "title": "Groceries, delivered", "tagline": "Your essentials from a shop or market, brought to you.", "lead": "List what you need (one item per line)" },
-    "SMALL_PARCEL": { "title": "Send a small parcel", "tagline": "Safe, legal, declared items across Yaoundé.", "lead": "What's inside? Describe the parcel." },
-    "URGENT_ITEM": { "title": "Need it now", "tagline": "Forgot something? We'll rush it to you tonight.", "lead": "What do you urgently need, and why the rush?" },
-    "CUSTOM_ERRAND": { "title": "Tell us your errand", "tagline": "Describe it — our dispatcher confirms if we can handle it.", "lead": "In your own words, what do you need done tonight?" },
-    "MERCHANT_DELIVERY": { "title": "Order from a partner", "tagline": "Pre-arranged delivery from a verified merchant.", "lead": "Anything to add for the merchant?" }
+    "FOOD_PICKUP": {
+      "title": "What are you craving?",
+      "tagline": "We'll grab your food and bring it hot to your door.",
+      "lead": "What food, and from where? (e.g. grilled fish from Chez Maman)"
+    },
+    "MEDICINE_PICKUP": {
+      "title": "Night pharmacy run",
+      "tagline": "Discreet pickup of approved medicine & pharmacy items.",
+      "lead": "Which medicine or items? Anything the pharmacist should know?"
+    },
+    "GROCERY_PICKUP": {
+      "title": "Groceries, delivered",
+      "tagline": "Your essentials from a shop or market, brought to you.",
+      "lead": "List what you need (one item per line)"
+    },
+    "SMALL_PARCEL": {
+      "title": "Send a small parcel",
+      "tagline": "Safe, legal, declared items across Yaoundé.",
+      "lead": "What's inside? Describe the parcel."
+    },
+    "URGENT_ITEM": {
+      "title": "Need it now",
+      "tagline": "Forgot something? We'll rush it to you tonight.",
+      "lead": "What do you urgently need, and why the rush?"
+    },
+    "CUSTOM_ERRAND": {
+      "title": "Tell us your errand",
+      "tagline": "Describe it — our dispatcher confirms if we can handle it.",
+      "lead": "In your own words, what do you need done tonight?"
+    },
+    "MERCHANT_DELIVERY": {
+      "title": "Order from a partner",
+      "tagline": "Pre-arranged delivery from a verified merchant.",
+      "lead": "Anything to add for the merchant?"
+    },
+    "reviewSummary": "Review order summary"
   },
   "orderForm": {
     "title": "Order details",
@@ -121,7 +171,7 @@
     "declaredValue": "Estimated item value (XAF)",
     "declaredValueHint": "Items are insured up to XAF 25,000. Higher values must be declared and approved.",
     "preferredDeliveryTime": "Preferred delivery time",
-    "preferredDeliveryTimeHint": "Between 8:00 PM and 12:00 midnight",
+    "preferredDeliveryTimeHint": "Between 6:00 PM and 4:00 AM",
     "specialInstructions": "Special instructions",
     "itemAlreadyPaid": "Is the item already paid for?",
     "riderPaysAtPickup": "Should the rider pay at pickup?",
@@ -137,6 +187,7 @@
     "paymentMethod": "Payment method",
     "mtnMomo": "MTN Mobile Money",
     "orangeMoney": "Orange Money",
+    "cashOnDelivery": "Cash on delivery",
     "paymentPhone": "Payment phone number",
     "transactionReference": "Transaction reference",
     "paymentStatusPending": "Payment status: pending verification after review.",
@@ -164,7 +215,11 @@
     "submitOrder": "Submit Order",
     "sendWhatsApp": "Send to WhatsApp",
     "submitting": "Submitting…",
-    "expired": "Your draft order expired. Please fill the form again."
+    "expired": "Your draft order expired. Please fill the form again.",
+    "downloadPdf": "Download PDF confirmation",
+    "pendingBanner": "This is an order review. It is not confirmed until our team accepts it and payment is arranged.",
+    "pendingBadge": "Pending confirmation and payment",
+    "details": "Order details"
   },
   "confirmation": {
     "title": "Order received",
@@ -179,7 +234,8 @@
     "sendWhatsApp": "Send order to WhatsApp",
     "sendCopyAdmin": "Send copy to Admin WhatsApp",
     "whatsappHint": "Sending your order on WhatsApp helps us confirm it faster.",
-    "refresh": "Refresh status"
+    "refresh": "Refresh status",
+    "downloadPdf": "Download PDF"
   },
   "track": {
     "title": "Track my order",
@@ -203,7 +259,9 @@
     "submit": "I've paid",
     "submitting": "Sending…",
     "submitted": "Thanks! We'll confirm your payment shortly.",
-    "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code."
+    "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code.",
+    "cashTitle": "Cash on delivery",
+    "cashNote": "Pay the delivery fee in cash to the rider when your order arrives. Please have the exact amount ready."
   },
   "customerStatus": {
     "received": "Request received",
@@ -351,7 +409,12 @@
       "medicineFee": "Medicine pickup fee",
       "waitingFee": "Waiting fee",
       "safety": "Safety level",
-      "safetyLevels": { "SAFE": "Safe", "CAUTION": "Caution", "RESTRICTED": "Restricted", "NO_GO": "No-go" },
+      "safetyLevels": {
+        "SAFE": "Safe",
+        "CAUTION": "Caution",
+        "RESTRICTED": "Restricted",
+        "NO_GO": "No-go"
+      },
       "active": "Active",
       "notes": "Notes",
       "ownerOnly": "Only the owner can edit zones and pricing."
@@ -361,7 +424,13 @@
       "add": "Add merchant",
       "name": "Merchant name",
       "category": "Category",
-      "categories": { "FOOD": "Food", "PHARMACY": "Pharmacy", "GROCERY": "Grocery", "GENERAL_STORE": "General store", "OTHER": "Other" },
+      "categories": {
+        "FOOD": "Food",
+        "PHARMACY": "Pharmacy",
+        "GROCERY": "Grocery",
+        "GENERAL_STORE": "General store",
+        "OTHER": "Other"
+      },
       "whatsapp": "WhatsApp number",
       "phone": "Phone number",
       "address": "Address",
@@ -389,9 +458,21 @@
       },
       "description": "Description",
       "responsible": "Responsible party",
-      "parties": { "RIDER": "Rider", "CUSTOMER": "Customer", "MERCHANT": "Merchant", "DISPATCH": "Dispatch", "UNKNOWN": "Unknown" },
+      "parties": {
+        "RIDER": "Rider",
+        "CUSTOMER": "Customer",
+        "MERCHANT": "Merchant",
+        "DISPATCH": "Dispatch",
+        "UNKNOWN": "Unknown"
+      },
       "resolution": "Resolution status",
-      "resolutions": { "OPEN": "Open", "IN_PROGRESS": "In progress", "RESOLVED": "Resolved", "ESCALATED": "Escalated", "CLOSED": "Closed" },
+      "resolutions": {
+        "OPEN": "Open",
+        "IN_PROGRESS": "In progress",
+        "RESOLVED": "Resolved",
+        "ESCALATED": "Escalated",
+        "CLOSED": "Closed"
+      },
       "internalNotes": "Internal notes",
       "orderCode": "Order code",
       "empty": "No incidents recorded."
@@ -403,7 +484,12 @@
       "email": "Email",
       "phone": "Phone",
       "role": "Role",
-      "roles": { "OWNER": "Owner", "DISPATCHER": "Dispatcher", "RIDER": "Rider", "SUPPORT": "Support" },
+      "roles": {
+        "OWNER": "Owner",
+        "DISPATCHER": "Dispatcher",
+        "RIDER": "Rider",
+        "SUPPORT": "Support"
+      },
       "password": "Temporary password",
       "statusActive": "Active",
       "statusSuspended": "Suspended",
@@ -422,7 +508,9 @@
     }
   },
   "rider": {
-    "nav": { "dashboard": "My orders" },
+    "nav": {
+      "dashboard": "My orders"
+    },
     "dashboard": {
       "title": "Tonight's deliveries",
       "assigned": "Assigned tonight",
@@ -473,6 +561,76 @@
         "CUSTOMER_COMPLAINT": "Other"
       },
       "issueSent": "Issue reported to dispatch."
+    }
+  },
+  "steps": {
+    "details": "Details",
+    "review": "Review",
+    "checkout": "Checkout"
+  },
+  "svc": {
+    "food": {
+      "cravingTitle": "What are you craving?",
+      "addDish": "Add a dish",
+      "whereTitle": "Where should we buy it?",
+      "anyPlace": "Any good spot",
+      "specificPlace": "A specific place",
+      "restaurant": "Restaurant / spot name"
+    },
+    "medicine": {
+      "privacy": "Your health details stay private and are shared only with the assigned rider.",
+      "listTitle": "What do you need?",
+      "addMed": "Add a medicine",
+      "pharmacyTitle": "Which pharmacy?",
+      "nearestOpen": "Nearest open pharmacy",
+      "specificPharmacy": "A specific pharmacy",
+      "pharmacyName": "Pharmacy name",
+      "patientNote": "Note for the pharmacist (optional)",
+      "patientNoteHint": "Allergies, patient age, substitutions…",
+      "uploadPrescription": "Upload prescription (optional)",
+      "prescriptionPrivacy": "Kept private — never shown in the shared PDF or public links."
+    },
+    "grocery": {
+      "listTitle": "Your shopping list",
+      "addItem": "Add an item",
+      "budget": "Budget cap",
+      "store": "Preferred store",
+      "substituteOk": "Substitutions are OK if an item is unavailable"
+    },
+    "parcel": {
+      "sizeTitle": "Package size",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "weightHint": "Approx. weight helps us assign the right rider",
+      "weight": "Approx. weight (e.g. 2 kg)",
+      "contents": "What is inside?",
+      "contentsHint": "Declare the contents (no cash, no illegal items)",
+      "uploadPhoto": "Upload parcel photo (optional)",
+      "photoPrivacy": "Kept private — never shown in the shared PDF or public links.",
+      "sender": "Sender",
+      "recipient": "Recipient",
+      "name": "Name",
+      "phone": "Phone"
+    },
+    "urgent": {
+      "banner": "Priority night run — tell us exactly what and where, fast.",
+      "whatTitle": "What do you need, and from where?",
+      "whatHint": "e.g. Pick up a charger from a friend at Mendong and bring it to me",
+      "deadline": "Needed by",
+      "reason": "Why urgent"
+    },
+    "errand": {
+      "tellTitle": "Tell us what you need",
+      "tellHint": "Describe the errand in your own words — we will handle it.",
+      "budget": "Budget (optional)",
+      "riderPays": "Rider pays at destination"
+    },
+    "merchant": {
+      "hint": "Pick the merchant above, then tell us your order.",
+      "orderTitle": "Your order",
+      "orderHint": "What should we collect from this merchant?",
+      "counterRef": "Order / counter reference (optional)"
     }
   }
 }

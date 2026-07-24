@@ -16,6 +16,7 @@ import { Float } from "@/components/shared/motion";
 export function NightSceneHero() {
   const reduce = useReducedMotion();
   const [hasCharacter, setHasCharacter] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
 
   // Probe for optional character art without a broken-image flash.
   useEffect(() => {
@@ -23,6 +24,10 @@ export function NightSceneHero() {
     img.onload = () => setHasCharacter(true);
     img.src = "/hero-character.png";
   }, []);
+
+  // Branded landing animation plays over the coded scene when available;
+  // if it can't load (or reduced-motion is on) we fall back to the SVG scene.
+  const showVideo = !videoFailed;
 
   const stars = Array.from({ length: 26 }, (_, i) => ({
     cx: (i * 53) % 100,
@@ -125,6 +130,20 @@ export function NightSceneHero() {
           </radialGradient>
         </defs>
       </svg>
+
+      {/* Branded landing animation (overlays the coded scene when it loads) */}
+      {showVideo && (
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          src="/home-hero.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          onError={() => setVideoFailed(true)}
+        />
+      )}
 
       {/* Optional African-anime character art (drop-in) */}
       {hasCharacter && (

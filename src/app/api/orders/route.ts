@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
         deliveryAddressLabel: input.deliveryLocation ?? null,
         merchantId: merchant?.id ?? null,
         itemDescription: input.itemDescription,
+        serviceDetails: (input.serviceDetails ?? undefined) as object | undefined,
         quantity: input.quantity,
         declaredValueXaf: input.declaredValueXaf,
         isFragile: input.isFragile,

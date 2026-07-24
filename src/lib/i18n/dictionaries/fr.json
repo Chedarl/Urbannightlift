@@ -43,7 +43,7 @@
     "placeOrder": "Passer une commande",
     "trackOrder": "Suivre ma commande",
     "chatWhatsApp": "Discuter sur WhatsApp",
-    "operatingHours": "Nous opérons de 20h00 à minuit.",
+    "operatingHours": "Nous opérons de 18h00 à 4h00.",
     "serviceArea": "Actuellement disponible dans certains quartiers de Yaoundé.",
     "safetyPositioning": "Récupérations vérifiées. Zones contrôlées. Preuve de livraison. Prépaiement uniquement.",
     "launchNote": "Lancement d'abord dans certaines zones — pas encore disponible partout.",
@@ -65,19 +65,40 @@
     "trustProof": "Preuve de livraison",
     "trustPrepay": "Prépaiement uniquement",
     "trustInsured": "Assuré jusqu'à 25 000 XAF",
-    "eta": "20h – minuit",
+    "eta": "18h – 4h",
     "zone": "Yaoundé"
   },
   "services": {
     "title": "De quoi avez-vous besoin ce soir ?",
     "subtitle": "Choisissez un service pour commencer votre commande.",
-    "FOOD_PICKUP": { "name": "Récupération de repas", "description": "Nous récupérons votre commande de repas auprès d'un restaurant ou d'un vendeur et vous la livrons la nuit." },
-    "MEDICINE_PICKUP": { "name": "Récupération de médicaments / pharmacie", "description": "Nous aidons à récupérer des médicaments ou articles de pharmacie approuvés. Les articles sous ordonnance peuvent nécessiter une vérification." },
-    "GROCERY_PICKUP": { "name": "Récupération de courses", "description": "Nous récupérons vos courses et produits essentiels auprès d'un magasin ou d'un vendeur proche de chez vous." },
-    "SMALL_PARCEL": { "name": "Livraison de petit colis", "description": "Uniquement pour les petits articles sûrs, légaux et déclarés." },
-    "URGENT_ITEM": { "name": "Récupération d'article urgent", "description": "Vous avez oublié quelque chose d'important ? Nous récupérons et livrons rapidement les petits articles urgents." },
-    "CUSTOM_ERRAND": { "name": "Commission personnalisée", "description": "Dites-nous ce dont vous avez besoin et le dispatcher confirmera si nous pouvons le faire." },
-    "MERCHANT_DELIVERY": { "name": "Livraison marchand", "description": "Livraison pré-arrangée depuis l'un de nos marchands partenaires vérifiés jusqu'à votre porte." }
+    "FOOD_PICKUP": {
+      "name": "Récupération de repas",
+      "description": "Nous récupérons votre commande de repas auprès d'un restaurant ou d'un vendeur et vous la livrons la nuit."
+    },
+    "MEDICINE_PICKUP": {
+      "name": "Récupération de médicaments / pharmacie",
+      "description": "Nous aidons à récupérer des médicaments ou articles de pharmacie approuvés. Les articles sous ordonnance peuvent nécessiter une vérification."
+    },
+    "GROCERY_PICKUP": {
+      "name": "Récupération de courses",
+      "description": "Nous récupérons vos courses et produits essentiels auprès d'un magasin ou d'un vendeur proche de chez vous."
+    },
+    "SMALL_PARCEL": {
+      "name": "Livraison de petit colis",
+      "description": "Uniquement pour les petits articles sûrs, légaux et déclarés."
+    },
+    "URGENT_ITEM": {
+      "name": "Récupération d'article urgent",
+      "description": "Vous avez oublié quelque chose d'important ? Nous récupérons et livrons rapidement les petits articles urgents."
+    },
+    "CUSTOM_ERRAND": {
+      "name": "Commission personnalisée",
+      "description": "Dites-nous ce dont vous avez besoin et le dispatcher confirmera si nous pouvons le faire."
+    },
+    "MERCHANT_DELIVERY": {
+      "name": "Livraison marchand",
+      "description": "Livraison pré-arrangée depuis l'un de nos marchands partenaires vérifiés jusqu'à votre porte."
+    }
   },
   "exp": {
     "locationTitle": "Où ?",
@@ -86,13 +107,42 @@
     "priceHint": "Frais définitifs confirmés par le dispatch avant récupération.",
     "setLocations": "Placez récupération et livraison sur la carte pour voir le prix.",
     "continue": "Vérifier la commande",
-    "FOOD_PICKUP": { "title": "Une envie ce soir ?", "tagline": "Nous récupérons votre repas et vous l'apportons chaud.", "lead": "Quel plat, et d'où ? (ex. poisson braisé chez Maman)" },
-    "MEDICINE_PICKUP": { "title": "Pharmacie de nuit", "tagline": "Récupération discrète de médicaments et articles approuvés.", "lead": "Quels médicaments ou articles ? À préciser au pharmacien ?" },
-    "GROCERY_PICKUP": { "title": "Vos courses, livrées", "tagline": "Vos essentiels depuis un magasin ou marché.", "lead": "Listez ce qu'il vous faut (un article par ligne)" },
-    "SMALL_PARCEL": { "title": "Envoyer un colis", "tagline": "Articles sûrs, légaux et déclarés dans Yaoundé.", "lead": "Que contient le colis ? Décrivez-le." },
-    "URGENT_ITEM": { "title": "Besoin urgent", "tagline": "Un oubli ? Nous vous l'apportons ce soir.", "lead": "De quoi avez-vous besoin en urgence, et pourquoi ?" },
-    "CUSTOM_ERRAND": { "title": "Votre commission", "tagline": "Décrivez-la — le dispatcher confirme si possible.", "lead": "Avec vos mots, que faut-il faire ce soir ?" },
-    "MERCHANT_DELIVERY": { "title": "Commander chez un partenaire", "tagline": "Livraison pré-arrangée d'un marchand vérifié.", "lead": "Quelque chose à ajouter pour le marchand ?" }
+    "FOOD_PICKUP": {
+      "title": "Une envie ce soir ?",
+      "tagline": "Nous récupérons votre repas et vous l'apportons chaud.",
+      "lead": "Quel plat, et d'où ? (ex. poisson braisé chez Maman)"
+    },
+    "MEDICINE_PICKUP": {
+      "title": "Pharmacie de nuit",
+      "tagline": "Récupération discrète de médicaments et articles approuvés.",
+      "lead": "Quels médicaments ou articles ? À préciser au pharmacien ?"
+    },
+    "GROCERY_PICKUP": {
+      "title": "Vos courses, livrées",
+      "tagline": "Vos essentiels depuis un magasin ou marché.",
+      "lead": "Listez ce qu'il vous faut (un article par ligne)"
+    },
+    "SMALL_PARCEL": {
+      "title": "Envoyer un colis",
+      "tagline": "Articles sûrs, légaux et déclarés dans Yaoundé.",
+      "lead": "Que contient le colis ? Décrivez-le."
+    },
+    "URGENT_ITEM": {
+      "title": "Besoin urgent",
+      "tagline": "Un oubli ? Nous vous l'apportons ce soir.",
+      "lead": "De quoi avez-vous besoin en urgence, et pourquoi ?"
+    },
+    "CUSTOM_ERRAND": {
+      "title": "Votre commission",
+      "tagline": "Décrivez-la — le dispatcher confirme si possible.",
+      "lead": "Avec vos mots, que faut-il faire ce soir ?"
+    },
+    "MERCHANT_DELIVERY": {
+      "title": "Commander chez un partenaire",
+      "tagline": "Livraison pré-arrangée d'un marchand vérifié.",
+      "lead": "Quelque chose à ajouter pour le marchand ?"
+    },
+    "reviewSummary": "Vérifier la commande"
   },
   "orderForm": {
     "title": "Détails de la commande",
@@ -121,7 +171,7 @@
     "declaredValue": "Valeur estimée de l'article (XAF)",
     "declaredValueHint": "Les articles sont assurés jusqu'à 25 000 XAF. Les valeurs supérieures doivent être déclarées et approuvées.",
     "preferredDeliveryTime": "Heure de livraison souhaitée",
-    "preferredDeliveryTimeHint": "Entre 20h00 et minuit",
+    "preferredDeliveryTimeHint": "Entre 18h00 et 4h00",
     "specialInstructions": "Instructions spéciales",
     "itemAlreadyPaid": "L'article est-il déjà payé ?",
     "riderPaysAtPickup": "Le livreur doit-il payer à la récupération ?",
@@ -137,6 +187,7 @@
     "paymentMethod": "Mode de paiement",
     "mtnMomo": "MTN Mobile Money",
     "orangeMoney": "Orange Money",
+    "cashOnDelivery": "Paiement à la livraison",
     "paymentPhone": "Numéro de téléphone de paiement",
     "transactionReference": "Référence de transaction",
     "paymentStatusPending": "Statut du paiement : en attente de vérification après examen.",
@@ -164,7 +215,11 @@
     "submitOrder": "Envoyer la commande",
     "sendWhatsApp": "Envoyer sur WhatsApp",
     "submitting": "Envoi en cours…",
-    "expired": "Votre brouillon de commande a expiré. Veuillez remplir à nouveau le formulaire."
+    "expired": "Votre brouillon de commande a expiré. Veuillez remplir à nouveau le formulaire.",
+    "downloadPdf": "Télécharger la confirmation PDF",
+    "pendingBanner": "Ceci est un récapitulatif de commande. Elle n'est pas confirmée tant que notre équipe ne l'a pas acceptée et que le paiement n'est pas organisé.",
+    "pendingBadge": "En attente de confirmation et de paiement",
+    "details": "Détails de la commande"
   },
   "confirmation": {
     "title": "Commande reçue",
@@ -179,7 +234,8 @@
     "sendWhatsApp": "Envoyer la commande sur WhatsApp",
     "sendCopyAdmin": "Envoyer une copie à l'admin WhatsApp",
     "whatsappHint": "Envoyer votre commande sur WhatsApp nous aide à la confirmer plus rapidement.",
-    "refresh": "Actualiser le statut"
+    "refresh": "Actualiser le statut",
+    "downloadPdf": "Télécharger le PDF"
   },
   "track": {
     "title": "Suivre ma commande",
@@ -203,7 +259,9 @@
     "submit": "J'ai payé",
     "submitting": "Envoi…",
     "submitted": "Merci ! Nous confirmerons votre paiement sous peu.",
-    "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret."
+    "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret.",
+    "cashTitle": "Paiement à la livraison",
+    "cashNote": "Payez les frais de livraison en espèces au livreur à l'arrivée de votre commande. Merci de préparer le montant exact."
   },
   "customerStatus": {
     "received": "Demande reçue",
@@ -351,7 +409,12 @@
       "medicineFee": "Frais récupération médicaments",
       "waitingFee": "Frais d'attente",
       "safety": "Niveau de sécurité",
-      "safetyLevels": { "SAFE": "Sûre", "CAUTION": "Prudence", "RESTRICTED": "Restreinte", "NO_GO": "Interdite" },
+      "safetyLevels": {
+        "SAFE": "Sûre",
+        "CAUTION": "Prudence",
+        "RESTRICTED": "Restreinte",
+        "NO_GO": "Interdite"
+      },
       "active": "Active",
       "notes": "Notes",
       "ownerOnly": "Seul le propriétaire peut modifier les zones et tarifs."
@@ -361,7 +424,13 @@
       "add": "Ajouter un marchand",
       "name": "Nom du marchand",
       "category": "Catégorie",
-      "categories": { "FOOD": "Restauration", "PHARMACY": "Pharmacie", "GROCERY": "Épicerie", "GENERAL_STORE": "Magasin général", "OTHER": "Autre" },
+      "categories": {
+        "FOOD": "Restauration",
+        "PHARMACY": "Pharmacie",
+        "GROCERY": "Épicerie",
+        "GENERAL_STORE": "Magasin général",
+        "OTHER": "Autre"
+      },
       "whatsapp": "Numéro WhatsApp",
       "phone": "Numéro de téléphone",
       "address": "Adresse",
@@ -389,9 +458,21 @@
       },
       "description": "Description",
       "responsible": "Partie responsable",
-      "parties": { "RIDER": "Livreur", "CUSTOMER": "Client", "MERCHANT": "Marchand", "DISPATCH": "Dispatch", "UNKNOWN": "Inconnu" },
+      "parties": {
+        "RIDER": "Livreur",
+        "CUSTOMER": "Client",
+        "MERCHANT": "Marchand",
+        "DISPATCH": "Dispatch",
+        "UNKNOWN": "Inconnu"
+      },
       "resolution": "Statut de résolution",
-      "resolutions": { "OPEN": "Ouvert", "IN_PROGRESS": "En cours", "RESOLVED": "Résolu", "ESCALATED": "Escaladé", "CLOSED": "Fermé" },
+      "resolutions": {
+        "OPEN": "Ouvert",
+        "IN_PROGRESS": "En cours",
+        "RESOLVED": "Résolu",
+        "ESCALATED": "Escaladé",
+        "CLOSED": "Fermé"
+      },
       "internalNotes": "Notes internes",
       "orderCode": "Code de commande",
       "empty": "Aucun incident enregistré."
@@ -403,7 +484,12 @@
       "email": "Email",
       "phone": "Téléphone",
       "role": "Rôle",
-      "roles": { "OWNER": "Propriétaire", "DISPATCHER": "Dispatcher", "RIDER": "Livreur", "SUPPORT": "Support" },
+      "roles": {
+        "OWNER": "Propriétaire",
+        "DISPATCHER": "Dispatcher",
+        "RIDER": "Livreur",
+        "SUPPORT": "Support"
+      },
       "password": "Mot de passe temporaire",
       "statusActive": "Actif",
       "statusSuspended": "Suspendu",
@@ -422,7 +508,9 @@
     }
   },
   "rider": {
-    "nav": { "dashboard": "Mes commandes" },
+    "nav": {
+      "dashboard": "Mes commandes"
+    },
     "dashboard": {
       "title": "Livraisons de ce soir",
       "assigned": "Assignées ce soir",
@@ -473,6 +561,76 @@
         "CUSTOMER_COMPLAINT": "Autre"
       },
       "issueSent": "Problème signalé au dispatch."
+    }
+  },
+  "steps": {
+    "details": "Détails",
+    "review": "Révision",
+    "checkout": "Paiement"
+  },
+  "svc": {
+    "food": {
+      "cravingTitle": "Quelle est votre envie ?",
+      "addDish": "Ajouter un plat",
+      "whereTitle": "Où devons-nous acheter ?",
+      "anyPlace": "Un bon endroit",
+      "specificPlace": "Un endroit précis",
+      "restaurant": "Nom du restaurant / lieu"
+    },
+    "medicine": {
+      "privacy": "Vos informations de santé restent privées et ne sont partagées qu’avec le livreur assigné.",
+      "listTitle": "De quoi avez-vous besoin ?",
+      "addMed": "Ajouter un médicament",
+      "pharmacyTitle": "Quelle pharmacie ?",
+      "nearestOpen": "Pharmacie de garde la plus proche",
+      "specificPharmacy": "Une pharmacie précise",
+      "pharmacyName": "Nom de la pharmacie",
+      "patientNote": "Note pour le pharmacien (optionnel)",
+      "patientNoteHint": "Allergies, âge du patient, substitutions…",
+      "uploadPrescription": "Joindre l’ordonnance (optionnel)",
+      "prescriptionPrivacy": "Gardée privée — jamais affichée dans le PDF partagé ni les liens publics."
+    },
+    "grocery": {
+      "listTitle": "Votre liste de courses",
+      "addItem": "Ajouter un article",
+      "budget": "Budget maximum",
+      "store": "Magasin préféré",
+      "substituteOk": "Les substitutions sont acceptées si un article est indisponible"
+    },
+    "parcel": {
+      "sizeTitle": "Taille du colis",
+      "small": "Petit",
+      "medium": "Moyen",
+      "large": "Grand",
+      "weightHint": "Le poids approximatif nous aide à assigner le bon livreur",
+      "weight": "Poids approx. (ex. 2 kg)",
+      "contents": "Que contient le colis ?",
+      "contentsHint": "Déclarez le contenu (pas d’espèces, rien d’illégal)",
+      "uploadPhoto": "Joindre une photo du colis (optionnel)",
+      "photoPrivacy": "Gardée privée — jamais affichée dans le PDF partagé ni les liens publics.",
+      "sender": "Expéditeur",
+      "recipient": "Destinataire",
+      "name": "Nom",
+      "phone": "Téléphone"
+    },
+    "urgent": {
+      "banner": "Course de nuit prioritaire — dites-nous vite quoi et où.",
+      "whatTitle": "De quoi avez-vous besoin, et d’où ?",
+      "whatHint": "ex. Récupérer un chargeur chez un ami à Mendong et me l’apporter",
+      "deadline": "Requis avant",
+      "reason": "Pourquoi urgent"
+    },
+    "errand": {
+      "tellTitle": "Dites-nous ce qu’il vous faut",
+      "tellHint": "Décrivez la course avec vos mots — nous nous en occupons.",
+      "budget": "Budget (optionnel)",
+      "riderPays": "Le livreur paie à destination"
+    },
+    "merchant": {
+      "hint": "Choisissez le commerçant ci-dessus, puis indiquez votre commande.",
+      "orderTitle": "Votre commande",
+      "orderHint": "Que devons-nous récupérer chez ce commerçant ?",
+      "counterRef": "Référence commande / comptoir (optionnel)"
     }
   }
 }

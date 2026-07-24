@@ -67,6 +67,7 @@ export interface OrderDetailData {
   merchantName: string | null;
   merchantWhatsapp: string | null;
   itemDescription: string;
+  serviceDetails: Record<string, unknown> | null;
   quantity: number;
   declaredValueXaf: number;
   isFragile: boolean;
@@ -161,7 +162,7 @@ export function OrderDetail({
     pickupLandmark: order.pickupLandmark,
     deliveryLocation: order.deliveryLocation,
     deliveryLandmark: order.deliveryLandmark,
-    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : "ORANGE MONEY",
+    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : order.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
     paymentPhone: order.paymentPhone,
     transactionReference: order.transactionReference,
     specialInstructions: order.specialInstructions,
@@ -236,6 +237,19 @@ export function OrderDetail({
             <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">{t("admin.order.orderInfo")}</h2>
             <Row label={t("orderForm.serviceType")} value={t(`services.${order.serviceType}.name`)} />
             <Row label={t("orderForm.itemDescription")} value={order.itemDescription} />
+            {order.serviceDetails && (
+              <Row
+                label="Service details"
+                value={
+                  <span className="whitespace-pre-line text-right text-xs">
+                    {Object.entries(order.serviceDetails)
+                      .filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0))
+                      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.map((o) => (typeof o === "object" && o ? Object.values(o as object).filter(Boolean).join(" ") : String(o))).join("; ") : typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+                      .join("\n")}
+                  </span>
+                }
+              />
+            )}
             <Row label={t("orderForm.quantity")} value={order.quantity} />
             <Row label={t("review.declaredValue")} value={formatXaf(order.declaredValueXaf)} />
             <Row label={t("orderForm.isFragile")} value={order.isFragile ? t("common.yes") : t("common.no")} />
@@ -384,7 +398,7 @@ export function OrderDetail({
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
               <Wallet className="h-4 w-4" /> {t("admin.order.payment")}
             </h2>
-            <Row label={t("orderForm.paymentMethod")} value={order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : "Orange Money"} />
+            <Row label={t("orderForm.paymentMethod")} value={order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : "Cash on delivery"} />
             <Row label={t("orderForm.paymentPhone")} value={order.paymentPhone} />
             <Row label={t("orderForm.transactionReference")} value={order.transactionReference} />
             <div className="mt-2 flex flex-col gap-2">

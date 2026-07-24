@@ -29,11 +29,31 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
     info.paymentStatus === "SUBMITTED_UNVERIFIED" || info.paymentStatus === "VERIFIED"
   );
 
+  const isCash = info.paymentMethod === "CASH";
   const isMtn = info.paymentMethod === "MTN_MOMO";
   const methodLabel = isMtn ? "MTN MoMo" : "Orange Money";
   const code = isMtn ? info.mtnMerchantCode : info.orangeMerchantCode;
   const ussd = buildUssd(isMtn ? info.mtnUssdTemplate : info.orangeUssdTemplate, info.amountXaf);
   const tel = ussdTelHref(ussd);
+
+  // Cash on delivery — no merchant code / USSD; pay the rider in person.
+  if (isCash) {
+    return (
+      <div className="rounded-2xl border border-gold-400/30 bg-gradient-to-b from-gold-400/[0.08] to-transparent p-4">
+        <div className="flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-gold-400" />
+          <h2 className="font-display text-base font-semibold">{t("pay.cashTitle")}</h2>
+        </div>
+        {info.amountXaf != null && (
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-sm text-mist-400">{t("pay.amountDue")}</span>
+            <span className="font-display text-2xl font-bold text-gold-400">{formatXaf(info.amountXaf)}</span>
+          </div>
+        )}
+        <p className="mt-2 text-sm leading-relaxed text-mist-300">{t("pay.cashNote")}</p>
+      </div>
+    );
+  }
 
   if (!code) return null;
 
