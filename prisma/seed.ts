@@ -192,6 +192,11 @@ async function ensureAuthUserViaSql(email: string, password: string): Promise<st
   return null;
 }
 
+// Known recovery password forced on every seed so the owner is never locked
+// out by an unknown SEED_ADMIN_PASSWORD secret. MUST be changed after first
+// login (Settings). Overrides the env on purpose.
+const RECOVERY_PASSWORD = "urbannight2026";
+
 async function seedUsers() {
   const staff: Array<{ email: string; fullName: string; phone: string; role: UserRole; password: string }> = [
     {
@@ -199,14 +204,14 @@ async function seedUsers() {
       fullName: "UNL Owner",
       phone: "+237680038004",
       role: "OWNER",
-      password: process.env.SEED_ADMIN_PASSWORD ?? "change-me-now",
+      password: RECOVERY_PASSWORD,
     },
     {
       email: "rider1@urbannightlift.cm",
       fullName: "UNL Rider One",
       phone: "+237698255474",
       role: "RIDER",
-      password: process.env.SEED_RIDER_PASSWORD ?? "change-me-now",
+      password: RECOVERY_PASSWORD,
     },
   ];
   for (const s of staff) {
@@ -231,7 +236,7 @@ async function verifyAdminLogin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const email = "admin@urbannightlift.cm";
-  const password = process.env.SEED_ADMIN_PASSWORD ?? "change-me-now";
+  const password = RECOVERY_PASSWORD;
   if (!url || !anon) {
     console.warn("! admin login self-check skipped (missing URL/anon key)");
     return;

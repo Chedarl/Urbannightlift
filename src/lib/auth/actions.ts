@@ -14,8 +14,8 @@ export interface SignInResult {
  * row, never from Supabase metadata alone.
  */
 export async function signInAction(_prev: SignInResult, formData: FormData): Promise<SignInResult> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "").trim();
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
