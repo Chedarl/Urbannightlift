@@ -26,6 +26,9 @@ import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
 import { FoodForm } from "@/components/customer/order/forms/FoodForm";
+import { GroceryForm } from "@/components/customer/order/forms/GroceryForm";
+import { ParcelForm } from "@/components/customer/order/forms/ParcelForm";
+import { ErrandForm } from "@/components/customer/order/forms/ErrandForm";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Button } from "@/components/shared/Button";
 import { formatXaf, cn } from "@/lib/utils";
@@ -506,6 +509,9 @@ function OrderFormDispatch({ merchants }: { merchants: MerchantOption[] }) {
     : "FOOD_PICKUP";
   if (service === "MEDICINE_PICKUP") return <MedicineForm />;
   if (service === "FOOD_PICKUP") return <FoodForm />;
+  if (service === "GROCERY_PICKUP") return <GroceryForm />;
+  if (service === "SMALL_PARCEL") return <ParcelForm />;
+  if (service === "CUSTOM_ERRAND") return <ErrandForm />;
   return <OrderFormInner merchants={merchants} />;
 }
 
