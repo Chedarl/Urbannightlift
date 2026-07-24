@@ -15,9 +15,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Urban Night Lift — Night delivery in Yaoundé 6",
+  title: "Urban Night Lift — Night delivery in Yaoundé",
   description:
-    "Safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands within Yaoundé 6. 8:00 PM to midnight.",
+    "Safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands across Yaoundé. 8:00 PM to midnight.",
   manifest: "/manifest.json",
 };
 

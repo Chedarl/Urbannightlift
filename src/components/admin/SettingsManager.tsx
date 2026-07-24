@@ -20,6 +20,10 @@ export function SettingsManager({
     operatingEndHour: number;
     zoneNoticeEn: string;
     zoneNoticeFr: string;
+    mtnMerchantCode: string;
+    mtnUssdTemplate: string;
+    orangeMerchantCode: string;
+    orangeUssdTemplate: string;
   };
 }) {
   const { t } = useTranslation();
@@ -38,6 +42,10 @@ export function SettingsManager({
         operatingEndHour: form.operatingEndHour,
         zoneNoticeEn: form.zoneNoticeEn,
         zoneNoticeFr: form.zoneNoticeFr,
+        mtnMerchantCode: form.mtnMerchantCode,
+        mtnUssdTemplate: form.mtnUssdTemplate,
+        orangeMerchantCode: form.orangeMerchantCode,
+        orangeUssdTemplate: form.orangeUssdTemplate,
       }),
     });
     setSaved(true);
@@ -72,6 +80,29 @@ export function SettingsManager({
           {t("admin.settings.noticeFr")}
           <input className={inputCls} value={form.zoneNoticeFr} onChange={(e) => setForm({ ...form, zoneNoticeFr: e.target.value })} />
         </label>
+
+        <div className="mt-2 border-t border-ink-700 pt-3">
+          <p className="mb-2 font-display text-sm font-semibold text-gold-300">Mobile Money merchant</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-mist-500">
+              MTN merchant code
+              <input className={inputCls} value={form.mtnMerchantCode} onChange={(e) => setForm({ ...form, mtnMerchantCode: e.target.value })} placeholder="653077160" />
+            </label>
+            <label className="text-xs text-mist-500">
+              MTN USSD template ({"{amount}"})
+              <input className={inputCls} value={form.mtnUssdTemplate} onChange={(e) => setForm({ ...form, mtnUssdTemplate: e.target.value })} placeholder="*126*4*857539*{amount}#" />
+            </label>
+            <label className="text-xs text-mist-500">
+              Orange merchant code
+              <input className={inputCls} value={form.orangeMerchantCode} onChange={(e) => setForm({ ...form, orangeMerchantCode: e.target.value })} />
+            </label>
+            <label className="text-xs text-mist-500">
+              Orange USSD template ({"{amount}"})
+              <input className={inputCls} value={form.orangeUssdTemplate} onChange={(e) => setForm({ ...form, orangeUssdTemplate: e.target.value })} placeholder="#150*..." />
+            </label>
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={save} disabled={pending}>
             <Save className="h-4 w-4" /> {t("common.save")}

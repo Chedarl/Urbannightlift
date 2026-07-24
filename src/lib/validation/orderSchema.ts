@@ -29,6 +29,11 @@ export const orderSchema = z.object({
   deliveryLandmark: z.string().trim().max(300).optional().or(z.literal("")),
   pickupZoneId: z.string().optional().or(z.literal("")),
   deliveryZoneId: z.string().optional().or(z.literal("")),
+  // Map-picked coordinates (optional — free-text fallback still allowed)
+  pickupLat: z.coerce.number().optional().nullable(),
+  pickupLng: z.coerce.number().optional().nullable(),
+  deliveryLat: z.coerce.number().optional().nullable(),
+  deliveryLng: z.coerce.number().optional().nullable(),
   itemDescription: z.string().trim().min(3).max(1000),
   quantity: z.coerce.number().int().min(1).max(99),
   declaredValueXaf: z.coerce.number().int().min(0).max(10_000_000),

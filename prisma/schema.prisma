@@ -102,6 +102,13 @@ enum SafetyLevel {
   NO_GO
 }
 
+// Accessibility/price tier — GREEN easy access, YELLOW harder, RED far/difficult.
+enum ZoneTier {
+  GREEN
+  YELLOW
+  RED
+}
+
 enum MerchantCategory {
   FOOD
   PHARMACY
@@ -199,6 +206,9 @@ model Zone {
   nightUrgencyFeeXaf Int         @default(0)
   medicineFeeXaf     Int         @default(0)
   waitingFeeXaf      Int         @default(0)
+  tier               ZoneTier    @default(GREEN)
+  centroidLat        Float?
+  centroidLng        Float?
   safetyLevel        SafetyLevel @default(SAFE)
   active             Boolean     @default(true)
   notes              String?
@@ -237,10 +247,16 @@ model Order {
   pickupLandmark          String?
   pickupZoneId            String?
   pickupZone              Zone?                 @relation("PickupZone", fields: [pickupZoneId], references: [id])
+  pickupLat               Float?
+  pickupLng               Float?
+  pickupAddressLabel      String?
   deliveryLocation        String
   deliveryLandmark        String?
   deliveryZoneId          String?
   deliveryZone            Zone?                 @relation("DeliveryZone", fields: [deliveryZoneId], references: [id])
+  deliveryLat             Float?
+  deliveryLng             Float?
+  deliveryAddressLabel    String?
   merchantId              String?
   merchant                Merchant?             @relation(fields: [merchantId], references: [id])
   itemDescription         String
@@ -269,6 +285,9 @@ model Order {
   customerVisibleNotes    String?
   screenshotUrl           String? // Supabase Storage path (optional customer upload)
   otpCode                 String? // delivery OTP shown to customer once rider is assigned
+  riderLat                Float? // last known live rider position
+  riderLng                Float?
+  riderLocationAt         DateTime?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
   completedAt             DateTime?
@@ -358,6 +377,10 @@ model OperatingSettings {
   operatingEndHour   Int           @default(24)
   zoneNoticeEn       String?
   zoneNoticeFr       String?
+  mtnMerchantCode    String? // customer-facing MTN MoMo merchant number
+  mtnUssdTemplate    String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
+  orangeMerchantCode String? // customer-facing Orange Money merchant number
+  orangeUssdTemplate String?
   updatedByUserId    String?
   updatedAt          DateTime      @updatedAt
 }

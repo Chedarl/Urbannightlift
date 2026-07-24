@@ -36,15 +36,15 @@
     "notFound": "Not found"
   },
   "home": {
-    "tagline": "Night delivery in Yaoundé 6",
+    "tagline": "Night delivery in Yaoundé",
     "brandTagline": "Delivery you can trust",
     "services": "Food • Medicine • Groceries • Urgent items • Errands",
-    "promise": "Urban Night Lift helps you get what you need at night without leaving your home. We handle safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands within Yaoundé 6.",
+    "promise": "Urban Night Lift helps you get what you need at night without leaving your home. We handle safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands within Yaoundé.",
     "placeOrder": "Place an Order",
     "trackOrder": "Track My Order",
     "chatWhatsApp": "Chat on WhatsApp",
     "operatingHours": "We operate from 8:00 PM to 12:00 midnight.",
-    "serviceArea": "Currently serving selected areas in Yaoundé 6.",
+    "serviceArea": "Currently serving selected areas in Yaoundé.",
     "safetyPositioning": "Verified pickups. Controlled zones. Delivery proof. Prepayment only.",
     "launchNote": "Launching in selected zones first — not yet available everywhere.",
     "openNow": "Open now · taking orders",
@@ -66,7 +66,7 @@
     "trustPrepay": "Prepayment only",
     "trustInsured": "Insured to XAF 25,000",
     "eta": "8 PM – 12 AM",
-    "zone": "Yaoundé 6"
+    "zone": "Yaoundé"
   },
   "services": {
     "title": "What do you need tonight?",
@@ -78,6 +78,21 @@
     "URGENT_ITEM": { "name": "Urgent item pickup", "description": "Forgot something important? We pick up and deliver urgent small items fast." },
     "CUSTOM_ERRAND": { "name": "Custom errand request", "description": "Tell us what you need and the dispatcher will confirm if we can handle it." },
     "MERCHANT_DELIVERY": { "name": "Merchant delivery", "description": "Pre-arranged delivery from one of our verified partner merchants to your door." }
+  },
+  "exp": {
+    "locationTitle": "Where to?",
+    "detailsTitle": "The details",
+    "priceEstimate": "Estimated delivery",
+    "priceHint": "Final fee confirmed by dispatch before pickup.",
+    "setLocations": "Set pickup & delivery on the map to see your price.",
+    "continue": "Continue to review",
+    "FOOD_PICKUP": { "title": "What are you craving?", "tagline": "We'll grab your food and bring it hot to your door.", "lead": "What food, and from where? (e.g. grilled fish from Chez Maman)" },
+    "MEDICINE_PICKUP": { "title": "Night pharmacy run", "tagline": "Discreet pickup of approved medicine & pharmacy items.", "lead": "Which medicine or items? Anything the pharmacist should know?" },
+    "GROCERY_PICKUP": { "title": "Groceries, delivered", "tagline": "Your essentials from a shop or market, brought to you.", "lead": "List what you need (one item per line)" },
+    "SMALL_PARCEL": { "title": "Send a small parcel", "tagline": "Safe, legal, declared items across Yaoundé.", "lead": "What's inside? Describe the parcel." },
+    "URGENT_ITEM": { "title": "Need it now", "tagline": "Forgot something? We'll rush it to you tonight.", "lead": "What do you urgently need, and why the rush?" },
+    "CUSTOM_ERRAND": { "title": "Tell us your errand", "tagline": "Describe it — our dispatcher confirms if we can handle it.", "lead": "In your own words, what do you need done tonight?" },
+    "MERCHANT_DELIVERY": { "title": "Order from a partner", "tagline": "Pre-arranged delivery from a verified merchant.", "lead": "Anything to add for the merchant?" }
   },
   "orderForm": {
     "title": "Order details",
@@ -173,6 +188,22 @@
     "whatsappNumber": "WhatsApp number",
     "find": "Track order",
     "notFound": "No order found with that code and number. Check and try again."
+  },
+  "pay": {
+    "title": "Pay for delivery",
+    "amountDue": "Amount due",
+    "payTo": "Pay to our {method} merchant code",
+    "code": "Merchant code",
+    "dial": "Tap to dial",
+    "copy": "Copy",
+    "copied": "Copied",
+    "steps": "Dial the code, confirm the amount with your Mobile Money PIN, then enter your transaction reference below.",
+    "reference": "Transaction reference / confirmation ID",
+    "phone": "Payment phone (optional)",
+    "submit": "I've paid",
+    "submitting": "Sending…",
+    "submitted": "Thanks! We'll confirm your payment shortly.",
+    "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code."
   },
   "customerStatus": {
     "received": "Request received",

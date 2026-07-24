@@ -30,6 +30,10 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.operatingEndHour === "number") data.operatingEndHour = body.operatingEndHour;
   if (typeof body.zoneNoticeEn === "string") data.zoneNoticeEn = body.zoneNoticeEn;
   if (typeof body.zoneNoticeFr === "string") data.zoneNoticeFr = body.zoneNoticeFr;
+  if (typeof body.mtnMerchantCode === "string") data.mtnMerchantCode = body.mtnMerchantCode || null;
+  if (typeof body.mtnUssdTemplate === "string") data.mtnUssdTemplate = body.mtnUssdTemplate || null;
+  if (typeof body.orangeMerchantCode === "string") data.orangeMerchantCode = body.orangeMerchantCode || null;
+  if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
 
   await getOperatingSettings(); // ensure the singleton exists
   const settings = await prisma.operatingSettings.update({ where: { id: 1 }, data });
