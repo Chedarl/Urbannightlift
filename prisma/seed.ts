@@ -155,6 +155,18 @@ async function ensureAuthUser(
  * endpoint; this only fixes the password/account, not a broken anon key.
  */
 async function ensureAuthUserViaSql(email: string, password: string): Promise<string | null> {
+  // Remove any duplicate auth.users rows for this email (a stray duplicate makes
+  // GoTrue return "Invalid login credentials"). Keep the earliest; cascades to
+  // auth.identities. Then re-point the app User row to the survivor below.
+  try {
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM auth.users WHERE email = $1 AND id <> (SELECT id FROM auth.users WHERE email = $1 ORDER BY created_at ASC LIMIT 1)`,
+      email,
+    );
+  } catch {
+    /* no duplicates or insufficient perms — safe to ignore */
+  }
+
   const cryptVariants = [
     { c: "crypt", g: "gen_salt" },
     { c: "extensions.crypt", g: "extensions.gen_salt" },
@@ -215,11 +227,13 @@ async function seedUsers() {
     },
   ];
   for (const s of staff) {
-    // Prefer the Supabase Admin API; if its key is broken, fall back to a
-    // direct SQL write so the account + password are always provisioned.
+    // Prefer the direct SQL password reset — it is deterministic and proven to
+    // work with GoTrue sign-in. The Supabase Admin API is unreliable with the
+    // current key (intermittent ES256 errors; "successful" updates that don't
+    // stick), so it is only a last-resort fallback.
     const authUserId =
-      (await ensureAuthUser(s.email, s.password, s.fullName)) ??
       (await ensureAuthUserViaSql(s.email, s.password)) ??
+      (await ensureAuthUser(s.email, s.password, s.fullName)) ??
       `local-${s.email}`;
     await prisma.user.upsert({
       where: { email: s.email },
