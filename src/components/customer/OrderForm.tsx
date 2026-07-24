@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,15 +23,23 @@ import { saveDraft } from "@/lib/orders/draft";
 import { getExperience } from "@/lib/services/experiences";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
+import { LocationField } from "@/components/customer/location/LocationField";
+import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Button } from "@/components/shared/Button";
 import { formatXaf, cn } from "@/lib/utils";
 import type { PickedPoint } from "@/components/customer/LocationPicker";
 import type { MerchantCategory, ServiceType } from "@prisma/client";
 
-const LocationPicker = dynamic(() => import("@/components/customer/LocationPicker").then((m) => m.LocationPicker), {
-  ssr: false,
-  loading: () => <div className="h-[360px] animate-pulse rounded-2xl border border-ink-700 bg-ink-900/50" />,
-});
+/** Per-service pickup/delivery field labels (bilingual), reusing one picker. */
+const LOC_LABELS: Record<ServiceType, { pickup: { en: string; fr: string }; delivery: { en: string; fr: string } }> = {
+  FOOD_PICKUP: { pickup: { en: "Restaurant / vendor location", fr: "Lieu du restaurant / vendeur" }, delivery: { en: "Delivery location", fr: "Lieu de livraison" } },
+  MEDICINE_PICKUP: { pickup: { en: "Pharmacy location", fr: "Lieu de la pharmacie" }, delivery: { en: "Delivery location", fr: "Lieu de livraison" } },
+  GROCERY_PICKUP: { pickup: { en: "Store / market location", fr: "Lieu du magasin / marché" }, delivery: { en: "Delivery location", fr: "Lieu de livraison" } },
+  SMALL_PARCEL: { pickup: { en: "Sender pickup location", fr: "Lieu de ramassage (expéditeur)" }, delivery: { en: "Receiver drop-off location", fr: "Lieu de dépôt (destinataire)" } },
+  URGENT_ITEM: { pickup: { en: "Urgent pickup location", fr: "Lieu de ramassage urgent" }, delivery: { en: "Urgent delivery location", fr: "Lieu de livraison urgent" } },
+  CUSTOM_ERRAND: { pickup: { en: "Starting location", fr: "Point de départ" }, delivery: { en: "Destination", fr: "Destination" } },
+  MERCHANT_DELIVERY: { pickup: { en: "Merchant location", fr: "Lieu du commerçant" }, delivery: { en: "Customer delivery location", fr: "Lieu de livraison client" } },
+};
 
 const ICONS: Record<string, React.ElementType> = {
   UtensilsCrossed, Pill, ShoppingBasket, Package, Zap, ClipboardList, Store,
@@ -71,7 +78,9 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const [uploading, setUploading] = useState(false);
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantOption | null>(null);
   const [zones, setZones] = useState<{ id: string; zoneName: string; tier: ZoneTier; feeXaf: number; medicineFeeXaf: number }[]>([]);
-  const [showMap, setShowMap] = useState(false);
+  const [pickupSel, setPickupSel] = useState<SelectedLocation | null>(null);
+  const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
+  const [sameLocError, setSameLocError] = useState(false);
 
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
@@ -144,7 +153,46 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     }
   }
 
+  // Apply a confirmed picker selection → pricing state + registered form fields.
+  function applySelection(which: "pickup" | "delivery", loc: SelectedLocation | null) {
+    const point: PickedPoint | null = loc
+      ? { lat: loc.latitude, lng: loc.longitude, label: loc.primaryName, zoneId: loc.zoneId, zoneName: loc.zoneName, tier: loc.tier, feeXaf: loc.feeXaf }
+      : null;
+    const landmark = loc ? [loc.landmark, loc.directions].filter(Boolean).join(" — ") : "";
+    const locationText = loc ? `${loc.primaryName}${loc.neighbourhood ? ` — ${loc.neighbourhood}` : ""}` : "";
+    if (which === "pickup") {
+      setPickupSel(loc);
+      setPickup(point);
+      setValue("pickupLocation", locationText, { shouldValidate: true });
+      setValue("pickupLandmark", landmark);
+      setValue("pickupZoneId", loc?.zoneId ?? "");
+      setValue("pickupLat", loc?.latitude ?? null);
+      setValue("pickupLng", loc?.longitude ?? null);
+    } else {
+      setDeliverySel(loc);
+      setDelivery(point);
+      setValue("deliveryLocation", locationText, { shouldValidate: true });
+      setValue("deliveryLandmark", landmark);
+      setValue("deliveryZoneId", loc?.zoneId ?? "");
+      setValue("deliveryLat", loc?.latitude ?? null);
+      setValue("deliveryLng", loc?.longitude ?? null);
+    }
+    setSameLocError(false);
+  }
+  const applyPickup = (loc: SelectedLocation | null) => applySelection("pickup", loc);
+  const applyDelivery = (loc: SelectedLocation | null) => applySelection("delivery", loc);
+
   function onSubmit(data: OrderInput) {
+    // Guard: pickup and delivery must not be the same confirmed point.
+    if (pickupSel && deliverySel && Math.abs(pickupSel.latitude - deliverySel.latitude) < 1e-4 && Math.abs(pickupSel.longitude - deliverySel.longitude) < 1e-4) {
+      setSameLocError(true);
+      return;
+    }
+    // Guard: never accept a blocked/unavailable location.
+    for (const sel of [pickupSel, deliverySel]) {
+      if (sel && SERVICE_STATUS_META[sel.serviceStatus] && !SERVICE_STATUS_META[sel.serviceStatus].ok) return;
+    }
+
     const pickupLoc = selectedMerchant
       ? `${selectedMerchant.merchantName} — ${selectedMerchant.address}`
       : data.pickupLocation;
@@ -245,84 +293,32 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
           handleFile={handleFile}
         />
 
-        {/* Locations — type or select an area, or pin on the map */}
+        {/* Locations — citywide Yaoundé search / browse / GPS / map picker */}
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-sm font-semibold" style={{ color: exp.accent }}>
             {t("exp.locationTitle")}
           </h2>
 
-          <datalist id="unl-areas">
-            {zones.map((z) => (
-              <option key={z.id} value={z.zoneName} />
-            ))}
-          </datalist>
-
           {!merchantLayout && (
-            <div>
-              <label className={labelCls}>{t("orderForm.pickupLocation")} <span className="text-restricted">*</span></label>
-              <input
-                className={inputCls}
-                style={focusRing}
-                list="unl-areas"
-                placeholder={locale === "fr" ? "Quartier ou adresse (ex. Biyem-Assi)" : "Area or address (e.g. Biyem-Assi)"}
-                data-error={errors.pickupLocation ? "true" : undefined}
-                {...register("pickupLocation")}
-              />
-              {errors.pickupLocation && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
-              <input className={cn(inputCls, "mt-2")} style={focusRing} placeholder={t("orderForm.pickupLandmark")} {...register("pickupLandmark")} />
-            </div>
+            <LocationField
+              label={LOC_LABELS[service].pickup[locale === "fr" ? "fr" : "en"]}
+              accent={exp.accent}
+              value={pickupSel}
+              error={!!errors.pickupLocation}
+              onChange={applyPickup}
+            />
           )}
 
-          <div>
-            <label className={labelCls}>{t("orderForm.deliveryLocation")} <span className="text-restricted">*</span></label>
-            <input
-              className={inputCls}
-              style={focusRing}
-              list="unl-areas"
-              placeholder={locale === "fr" ? "Quartier ou adresse (ex. Mendong)" : "Area or address (e.g. Mendong)"}
-              data-error={errors.deliveryLocation ? "true" : undefined}
-              {...register("deliveryLocation")}
-            />
-            {errors.deliveryLocation && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
-            <input className={cn(inputCls, "mt-2")} style={focusRing} placeholder={t("orderForm.deliveryLandmark")} {...register("deliveryLandmark")} />
-          </div>
+          <LocationField
+            label={LOC_LABELS[service].delivery[locale === "fr" ? "fr" : "en"]}
+            accent={exp.accent}
+            value={deliverySel}
+            error={!!errors.deliveryLocation}
+            onChange={applyDelivery}
+          />
 
-          {/* Delivery zone → drives the price when typing an address */}
-          <div>
-            <label className={labelCls}>{t("orderForm.deliveryZone")}</label>
-            <select className={inputCls} style={focusRing} {...register("deliveryZoneId")}>
-              <option value="">{t("orderForm.selectZone")}</option>
-              {zones.map((z) => (
-                <option key={z.id} value={z.id}>
-                  {z.zoneName} · {locale === "fr" ? TIER_META[z.tier].labelFr : TIER_META[z.tier].label} · {formatXaf(z.feeXaf)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Optional precise map pin */}
-          <button
-            type="button"
-            onClick={() => setShowMap((v) => !v)}
-            className="self-start rounded-xl border border-ink-700 bg-ink-800 px-3 py-2 text-xs font-medium text-mist-300"
-          >
-            {showMap ? (locale === "fr" ? "Masquer la carte" : "Hide map") : locale === "fr" ? "📍 Choisir sur la carte" : "📍 Pin on map"}
-          </button>
-          {showMap && (
-            <LocationPicker
-              accent={exp.accent}
-              pickup={pickup}
-              delivery={delivery}
-              onChange={(w, p) => {
-                if (w === "pickup") {
-                  setPickup(p);
-                  if (p) { setValue("pickupLocation", p.label); if (p.zoneId) setValue("pickupZoneId", p.zoneId); }
-                } else {
-                  setDelivery(p);
-                  if (p) { setValue("deliveryLocation", p.label); if (p.zoneId) setValue("deliveryZoneId", p.zoneId); }
-                }
-              }}
-            />
+          {sameLocError && (
+            <p className="text-xs text-restricted">{locale === "fr" ? "Le ramassage et la livraison ne peuvent pas être identiques." : "Pickup and delivery cannot be the same location."}</p>
           )}
         </section>
 

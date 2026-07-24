@@ -45,8 +45,8 @@ export const SERVICE_EXPERIENCES: Record<ServiceType, ServiceExperience> = {
   },
   GROCERY_PICKUP: {
     service: "GROCERY_PICKUP",
-    accent: "#84cc16",
-    gradient: "from-lime-500/30 via-green-600/10 to-transparent",
+    accent: "#22c55e",
+    gradient: "from-green-500/30 via-emerald-600/10 to-transparent",
     icon: "ShoppingBasket",
     layout: "standard",
     titleKey: "exp.GROCERY_PICKUP.title",
@@ -56,8 +56,8 @@ export const SERVICE_EXPERIENCES: Record<ServiceType, ServiceExperience> = {
   },
   SMALL_PARCEL: {
     service: "SMALL_PARCEL",
-    accent: "#38bdf8",
-    gradient: "from-sky-500/30 via-blue-600/10 to-transparent",
+    accent: "#3b82f6",
+    gradient: "from-blue-500/30 via-indigo-600/10 to-transparent",
     icon: "Package",
     layout: "standard",
     titleKey: "exp.SMALL_PARCEL.title",
@@ -67,8 +67,8 @@ export const SERVICE_EXPERIENCES: Record<ServiceType, ServiceExperience> = {
   },
   URGENT_ITEM: {
     service: "URGENT_ITEM",
-    accent: "#fb7185",
-    gradient: "from-rose-500/30 via-red-600/15 to-transparent",
+    accent: "#ef4444",
+    gradient: "from-red-500/30 via-amber-500/15 to-transparent",
     icon: "Zap",
     layout: "standard",
     titleKey: "exp.URGENT_ITEM.title",
@@ -89,8 +89,8 @@ export const SERVICE_EXPERIENCES: Record<ServiceType, ServiceExperience> = {
   },
   MERCHANT_DELIVERY: {
     service: "MERCHANT_DELIVERY",
-    accent: "#f472b6",
-    gradient: "from-pink-500/30 via-rose-600/10 to-transparent",
+    accent: "#d946ef",
+    gradient: "from-fuchsia-500/30 via-purple-600/10 to-transparent",
     icon: "Store",
     layout: "merchant",
     titleKey: "exp.MERCHANT_DELIVERY.title",

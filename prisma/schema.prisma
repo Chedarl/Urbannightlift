@@ -216,8 +216,63 @@ model Zone {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  pickupOrders   Order[] @relation("PickupZone")
-  deliveryOrders Order[] @relation("DeliveryZone")
+  pickupOrders     Order[]           @relation("PickupZone")
+  deliveryOrders   Order[]           @relation("DeliveryZone")
+  serviceLocations ServiceLocation[]
+}
+
+enum Arrondissement {
+  YAOUNDE_I
+  YAOUNDE_II
+  YAOUNDE_III
+  YAOUNDE_IV
+  YAOUNDE_V
+  YAOUNDE_VI
+  YAOUNDE_VII
+  YAOUNDE_PERIPHERY
+}
+
+enum LocationServiceStatus {
+  PRIORITY
+  STANDARD
+  EXTENDED
+  REVIEW_REQUIRED
+  TEMPORARILY_UNAVAILABLE
+  BLOCKED
+}
+
+/// Locally verified Yaoundé location catalogue (all arrondissements + approved
+/// periphery). Powers the customer location search/browse ahead of any external
+/// map provider. Serviceability is decided from coordinates + zones, not names.
+model ServiceLocation {
+  id               String                @id @default(cuid())
+  primaryName      String
+  nameEn           String?
+  nameFr           String?
+  aliases          String[] // recognized alternate spellings/nicknames
+  arrondissement   Arrondissement
+  neighbourhood    String
+  sector           String?
+  landmark         String?
+  formattedAddress String?
+  googlePlaceId    String?
+  plusCode         String?
+  latitude         Float
+  longitude        Float
+  zoneId           String?
+  zone             Zone?                 @relation(fields: [zoneId], references: [id])
+  serviceStatus    LocationServiceStatus @default(STANDARD)
+  verified         Boolean               @default(true)
+  active           Boolean               @default(true)
+  popularityRank   Int                   @default(0)
+  source           String                @default("admin") // admin | google | customer_verified | import
+  searchKey        String // normalized primaryName + aliases for fuzzy search
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([arrondissement])
+  @@index([active])
+  @@index([popularityRank])
 }
 
 model Merchant {

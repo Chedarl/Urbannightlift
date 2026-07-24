@@ -185,6 +185,118 @@ async function seedMerchants() {
   console.log(`✓ ${merchants.length} merchants`);
 }
 
+function locSearchKey(primary: string, aliases: string[]): string {
+  const norm = (s: string) =>
+    s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/['`’.]/g, "").replace(/[^a-z0-9]+/g, "");
+  return [primary, ...aliases].map(norm).filter(Boolean).join(" ");
+}
+
+async function seedLocations() {
+  type Arr =
+    | "YAOUNDE_I" | "YAOUNDE_II" | "YAOUNDE_III" | "YAOUNDE_IV"
+    | "YAOUNDE_V" | "YAOUNDE_VI" | "YAOUNDE_VII" | "YAOUNDE_PERIPHERY";
+  type Status = "PRIORITY" | "STANDARD" | "EXTENDED" | "REVIEW_REQUIRED" | "TEMPORARILY_UNAVAILABLE" | "BLOCKED";
+  type L = {
+    primaryName: string; aliases: string[]; arrondissement: Arr; neighbourhood: string;
+    lat: number; lng: number; serviceStatus: Status; popularityRank: number; landmark?: string;
+  };
+
+  const locs: L[] = [
+    // ── Yaoundé VI — PRIORITY (Biyem-Assi & surrounds; principal operating area) ──
+    { primaryName: "Biyem-Assi", aliases: ["Biyem Assi", "Biyemassi", "Biyem-Assie"], arrondissement: "YAOUNDE_VI", neighbourhood: "Biyem-Assi", lat: 3.8421, lng: 11.4921, serviceStatus: "PRIORITY", popularityRank: 100 },
+    { primaryName: "Rond-Point Express Biyem-Assi", aliases: ["Rond Point Express", "Express Biyem Assi", "Express", "Carrefour Express"], arrondissement: "YAOUNDE_VI", neighbourhood: "Biyem-Assi", lat: 3.8440, lng: 11.4948, serviceStatus: "PRIORITY", popularityRank: 99, landmark: "Rond-Point Express" },
+    { primaryName: "Carrefour Biyem-Assi", aliases: ["Carrefour Biyem", "Carrefour Biyemassi"], arrondissement: "YAOUNDE_VI", neighbourhood: "Biyem-Assi", lat: 3.8435, lng: 11.4930, serviceStatus: "PRIORITY", popularityRank: 95 },
+    { primaryName: "Mendong", aliases: ["Mendong Yaounde"], arrondissement: "YAOUNDE_VI", neighbourhood: "Mendong", lat: 3.8331, lng: 11.4785, serviceStatus: "PRIORITY", popularityRank: 94 },
+    { primaryName: "Mendong Camp SIC", aliases: ["Camp SIC Mendong", "Camp SIC", "Cite SIC Mendong"], arrondissement: "YAOUNDE_VI", neighbourhood: "Mendong", lat: 3.8300, lng: 11.4750, serviceStatus: "PRIORITY", popularityRank: 84 },
+    { primaryName: "Acacias", aliases: ["Acacia", "Les Acacias"], arrondissement: "YAOUNDE_VI", neighbourhood: "Biyem-Assi", lat: 3.8455, lng: 11.4905, serviceStatus: "PRIORITY", popularityRank: 88, landmark: "Marché Acacias" },
+    { primaryName: "Etoug-Ebe", aliases: ["Etoug Ebe", "Etougebe", "Etoug-Ebé"], arrondissement: "YAOUNDE_VI", neighbourhood: "Etoug-Ebe", lat: 3.8480, lng: 11.4892, serviceStatus: "PRIORITY", popularityRank: 90 },
+    { primaryName: "Etoug-Ebe I", aliases: ["Etoug Ebe 1", "Etoug-Ebe 1"], arrondissement: "YAOUNDE_VI", neighbourhood: "Etoug-Ebe", lat: 3.8470, lng: 11.4880, serviceStatus: "PRIORITY", popularityRank: 80 },
+    { primaryName: "Etoug-Ebe II", aliases: ["Etoug Ebe 2", "Etoug-Ebe 2"], arrondissement: "YAOUNDE_VI", neighbourhood: "Etoug-Ebe", lat: 3.8495, lng: 11.4905, serviceStatus: "PRIORITY", popularityRank: 80 },
+    { primaryName: "Melen", aliases: ["Melen Yaounde"], arrondissement: "YAOUNDE_VI", neighbourhood: "Melen", lat: 3.8585, lng: 11.5015, serviceStatus: "PRIORITY", popularityRank: 82 },
+    { primaryName: "Mvog-Betsi", aliases: ["Mvog Betsi", "Mvogbetsi"], arrondissement: "YAOUNDE_VI", neighbourhood: "Mvog-Betsi", lat: 3.8500, lng: 11.4980, serviceStatus: "PRIORITY", popularityRank: 80, landmark: "Zoo de Mvog-Betsi" },
+    { primaryName: "Nkolbikok", aliases: ["Nkol Bikok"], arrondissement: "YAOUNDE_VI", neighbourhood: "Nkolbikok", lat: 3.8550, lng: 11.4870, serviceStatus: "STANDARD", popularityRank: 70 },
+    { primaryName: "Simbock", aliases: ["Simbok"], arrondissement: "YAOUNDE_VI", neighbourhood: "Simbock", lat: 3.8150, lng: 11.4780, serviceStatus: "PRIORITY", popularityRank: 78 },
+    { primaryName: "Elig-Effa", aliases: ["Elig Effa", "Eligeffa"], arrondissement: "YAOUNDE_VI", neighbourhood: "Elig-Effa", lat: 3.8620, lng: 11.5030, serviceStatus: "STANDARD", popularityRank: 66 },
+
+    // ── Yaoundé I ──
+    { primaryName: "Nlongkak", aliases: ["Nlonkak"], arrondissement: "YAOUNDE_I", neighbourhood: "Nlongkak", lat: 3.8760, lng: 11.5190, serviceStatus: "STANDARD", popularityRank: 60 },
+    { primaryName: "Bastos", aliases: [], arrondissement: "YAOUNDE_I", neighbourhood: "Bastos", lat: 3.8880, lng: 11.5090, serviceStatus: "STANDARD", popularityRank: 62 },
+    { primaryName: "Etoudi", aliases: [], arrondissement: "YAOUNDE_I", neighbourhood: "Etoudi", lat: 3.9050, lng: 11.5210, serviceStatus: "STANDARD", popularityRank: 55, landmark: "Palais d'Etoudi" },
+    { primaryName: "Emana", aliases: [], arrondissement: "YAOUNDE_I", neighbourhood: "Emana", lat: 3.9300, lng: 11.5300, serviceStatus: "EXTENDED", popularityRank: 48 },
+    { primaryName: "Messassi", aliases: ["Messasi"], arrondissement: "YAOUNDE_I", neighbourhood: "Messassi", lat: 3.9150, lng: 11.5350, serviceStatus: "EXTENDED", popularityRank: 46 },
+    { primaryName: "Olembé", aliases: ["Olembe"], arrondissement: "YAOUNDE_I", neighbourhood: "Olembé", lat: 3.9450, lng: 11.5250, serviceStatus: "EXTENDED", popularityRank: 44, landmark: "Stade d'Olembé" },
+
+    // ── Yaoundé II ──
+    { primaryName: "Tsinga", aliases: [], arrondissement: "YAOUNDE_II", neighbourhood: "Tsinga", lat: 3.8790, lng: 11.4980, serviceStatus: "STANDARD", popularityRank: 58 },
+    { primaryName: "Mokolo", aliases: ["Marché Mokolo", "Marche Mokolo"], arrondissement: "YAOUNDE_II", neighbourhood: "Mokolo", lat: 3.8730, lng: 11.5090, serviceStatus: "STANDARD", popularityRank: 64, landmark: "Marché Mokolo" },
+    { primaryName: "Messa", aliases: [], arrondissement: "YAOUNDE_II", neighbourhood: "Messa", lat: 3.8700, lng: 11.4950, serviceStatus: "STANDARD", popularityRank: 54 },
+    { primaryName: "Cité Verte", aliases: ["Cite Verte"], arrondissement: "YAOUNDE_II", neighbourhood: "Cité Verte", lat: 3.8850, lng: 11.4880, serviceStatus: "STANDARD", popularityRank: 56 },
+    { primaryName: "Madagascar", aliases: [], arrondissement: "YAOUNDE_II", neighbourhood: "Madagascar", lat: 3.8680, lng: 11.5150, serviceStatus: "STANDARD", popularityRank: 50 },
+    { primaryName: "Febe", aliases: ["Fébé"], arrondissement: "YAOUNDE_II", neighbourhood: "Febe", lat: 3.9000, lng: 11.4800, serviceStatus: "EXTENDED", popularityRank: 40 },
+
+    // ── Yaoundé III ──
+    { primaryName: "Obili", aliases: [], arrondissement: "YAOUNDE_III", neighbourhood: "Obili", lat: 3.8480, lng: 11.5060, serviceStatus: "STANDARD", popularityRank: 60, landmark: "Carrefour Obili" },
+    { primaryName: "Ngoa-Ekellé", aliases: ["Ngoa Ekele", "Ngoa-Ekelle", "Ngoaekelle"], arrondissement: "YAOUNDE_III", neighbourhood: "Ngoa-Ekellé", lat: 3.8560, lng: 11.5100, serviceStatus: "STANDARD", popularityRank: 58, landmark: "Université de Yaoundé I" },
+    { primaryName: "Mvolyé", aliases: ["Mvolye"], arrondissement: "YAOUNDE_III", neighbourhood: "Mvolyé", lat: 3.8400, lng: 11.5150, serviceStatus: "STANDARD", popularityRank: 48 },
+    { primaryName: "Efoulan", aliases: [], arrondissement: "YAOUNDE_III", neighbourhood: "Efoulan", lat: 3.8380, lng: 11.5080, serviceStatus: "STANDARD", popularityRank: 50 },
+    { primaryName: "Ahala", aliases: [], arrondissement: "YAOUNDE_III", neighbourhood: "Ahala", lat: 3.8050, lng: 11.5150, serviceStatus: "EXTENDED", popularityRank: 42 },
+    { primaryName: "Nsam", aliases: [], arrondissement: "YAOUNDE_III", neighbourhood: "Nsam", lat: 3.8280, lng: 11.5200, serviceStatus: "STANDARD", popularityRank: 46, landmark: "Nsam Efoulan" },
+    { primaryName: "Nsimeyong", aliases: ["Nsimeyon"], arrondissement: "YAOUNDE_III", neighbourhood: "Nsimeyong", lat: 3.8360, lng: 11.5031, serviceStatus: "STANDARD", popularityRank: 52 },
+
+    // ── Yaoundé IV ──
+    { primaryName: "Mvan", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Mvan", lat: 3.8100, lng: 11.5350, serviceStatus: "STANDARD", popularityRank: 50 },
+    { primaryName: "Odza", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Odza", lat: 3.7920, lng: 11.5480, serviceStatus: "EXTENDED", popularityRank: 48, landmark: "Aéroport de Yaoundé-Nsimalen" },
+    { primaryName: "Ekounou", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Ekounou", lat: 3.8350, lng: 11.5450, serviceStatus: "STANDARD", popularityRank: 50 },
+    { primaryName: "Awae", aliases: ["Awaé"], arrondissement: "YAOUNDE_IV", neighbourhood: "Awae", lat: 3.8450, lng: 11.5500, serviceStatus: "EXTENDED", popularityRank: 40 },
+    { primaryName: "Nkomo", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Nkomo", lat: 3.8200, lng: 11.5550, serviceStatus: "STANDARD", popularityRank: 42 },
+    { primaryName: "Mimboman", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Mimboman", lat: 3.8600, lng: 11.5400, serviceStatus: "STANDARD", popularityRank: 48 },
+    { primaryName: "Kondengui", aliases: [], arrondissement: "YAOUNDE_IV", neighbourhood: "Kondengui", lat: 3.8700, lng: 11.5450, serviceStatus: "STANDARD", popularityRank: 40 },
+
+    // ── Yaoundé V ──
+    { primaryName: "Essos", aliases: [], arrondissement: "YAOUNDE_V", neighbourhood: "Essos", lat: 3.8850, lng: 11.5300, serviceStatus: "STANDARD", popularityRank: 60, landmark: "Marché Essos" },
+    { primaryName: "Ngousso", aliases: [], arrondissement: "YAOUNDE_V", neighbourhood: "Ngousso", lat: 3.9000, lng: 11.5400, serviceStatus: "STANDARD", popularityRank: 48, landmark: "Hôpital Général" },
+    { primaryName: "Mvog-Ada", aliases: ["Mvog Ada"], arrondissement: "YAOUNDE_V", neighbourhood: "Mvog-Ada", lat: 3.8750, lng: 11.5250, serviceStatus: "STANDARD", popularityRank: 50 },
+    { primaryName: "Mfandena", aliases: ["Omnisport", "Stade Omnisport"], arrondissement: "YAOUNDE_V", neighbourhood: "Mfandena", lat: 3.8820, lng: 11.5200, serviceStatus: "STANDARD", popularityRank: 54, landmark: "Stade Omnisport" },
+    { primaryName: "Nkolmesseng", aliases: [], arrondissement: "YAOUNDE_V", neighbourhood: "Nkolmesseng", lat: 3.9050, lng: 11.5500, serviceStatus: "EXTENDED", popularityRank: 40 },
+
+    // ── Yaoundé VII ──
+    { primaryName: "Nkolbisson", aliases: [], arrondissement: "YAOUNDE_VII", neighbourhood: "Nkolbisson", lat: 3.8730, lng: 11.4520, serviceStatus: "STANDARD", popularityRank: 52 },
+    { primaryName: "Oyom-Abang", aliases: ["Oyom Abang"], arrondissement: "YAOUNDE_VII", neighbourhood: "Oyom-Abang", lat: 3.8650, lng: 11.4400, serviceStatus: "STANDARD", popularityRank: 44 },
+    { primaryName: "Etetak", aliases: [], arrondissement: "YAOUNDE_VII", neighbourhood: "Etetak", lat: 3.8600, lng: 11.4600, serviceStatus: "STANDARD", popularityRank: 40 },
+    { primaryName: "Minkoameyos", aliases: [], arrondissement: "YAOUNDE_VII", neighbourhood: "Minkoameyos", lat: 3.8500, lng: 11.4300, serviceStatus: "EXTENDED", popularityRank: 36 },
+
+    // ── Approved periphery — dispatcher review by default ──
+    { primaryName: "Mbalgong", aliases: [], arrondissement: "YAOUNDE_PERIPHERY", neighbourhood: "Mbalgong", lat: 3.7960, lng: 11.4460, serviceStatus: "REVIEW_REQUIRED", popularityRank: 30 },
+    { primaryName: "Eloumden", aliases: ["Eloumdem"], arrondissement: "YAOUNDE_PERIPHERY", neighbourhood: "Eloumden", lat: 3.8020, lng: 11.4340, serviceStatus: "REVIEW_REQUIRED", popularityRank: 28 },
+    { primaryName: "Nkolfoulou", aliases: [], arrondissement: "YAOUNDE_PERIPHERY", neighbourhood: "Nkolfoulou", lat: 3.9100, lng: 11.5900, serviceStatus: "REVIEW_REQUIRED", popularityRank: 20 },
+  ];
+
+  for (const l of locs) {
+    const data = {
+      primaryName: l.primaryName,
+      aliases: l.aliases,
+      arrondissement: l.arrondissement,
+      neighbourhood: l.neighbourhood,
+      landmark: l.landmark ?? null,
+      latitude: l.lat,
+      longitude: l.lng,
+      serviceStatus: l.serviceStatus,
+      popularityRank: l.popularityRank,
+      verified: true,
+      active: true,
+      source: "admin",
+      searchKey: locSearchKey(l.primaryName, l.aliases),
+    };
+    const existing = await prisma.serviceLocation.findFirst({ where: { primaryName: l.primaryName } });
+    if (existing) {
+      await prisma.serviceLocation.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.serviceLocation.create({ data });
+    }
+  }
+  console.log(`✓ ${locs.length} service locations (Yaoundé I–VII + periphery)`);
+}
+
 async function ensureStorageBuckets() {
   if (!SUPABASE_URL || !SUPABASE_SECRET_KEY) {
     console.warn("! Supabase env missing — skipping storage buckets");
@@ -207,6 +319,7 @@ async function ensureStorageBuckets() {
 async function main() {
   await seedSettings();
   await seedZones();
+  await seedLocations();
   await seedUsers();
   await seedMerchants();
   await ensureStorageBuckets();
