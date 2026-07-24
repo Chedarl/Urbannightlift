@@ -48,7 +48,7 @@ export const orderSchema = z.object({
   screenshotUrl: z.string().max(500).optional().or(z.literal("")),
 
   // Payment (tracking only — never credentials)
-  paymentMethod: z.enum(["MTN_MOMO", "ORANGE_MONEY"]),
+  paymentMethod: z.enum(["MTN_MOMO", "ORANGE_MONEY", "CASH"]),
   paymentPhone: z.string().trim().max(20).optional().or(z.literal("")),
   transactionReference: z.string().trim().max(100).optional().or(z.literal("")),
 

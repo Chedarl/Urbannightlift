@@ -43,7 +43,7 @@
     "placeOrder": "Passer une commande",
     "trackOrder": "Suivre ma commande",
     "chatWhatsApp": "Discuter sur WhatsApp",
-    "operatingHours": "Nous opérons de 20h00 à minuit.",
+    "operatingHours": "Nous opérons de 18h00 à 4h00.",
     "serviceArea": "Actuellement disponible dans certains quartiers de Yaoundé.",
     "safetyPositioning": "Récupérations vérifiées. Zones contrôlées. Preuve de livraison. Prépaiement uniquement.",
     "launchNote": "Lancement d'abord dans certaines zones — pas encore disponible partout.",
@@ -65,7 +65,7 @@
     "trustProof": "Preuve de livraison",
     "trustPrepay": "Prépaiement uniquement",
     "trustInsured": "Assuré jusqu'à 25 000 XAF",
-    "eta": "20h – minuit",
+    "eta": "18h – 4h",
     "zone": "Yaoundé"
   },
   "services": {
@@ -121,7 +121,7 @@
     "declaredValue": "Valeur estimée de l'article (XAF)",
     "declaredValueHint": "Les articles sont assurés jusqu'à 25 000 XAF. Les valeurs supérieures doivent être déclarées et approuvées.",
     "preferredDeliveryTime": "Heure de livraison souhaitée",
-    "preferredDeliveryTimeHint": "Entre 20h00 et minuit",
+    "preferredDeliveryTimeHint": "Entre 18h00 et 4h00",
     "specialInstructions": "Instructions spéciales",
     "itemAlreadyPaid": "L'article est-il déjà payé ?",
     "riderPaysAtPickup": "Le livreur doit-il payer à la récupération ?",
@@ -137,6 +137,7 @@
     "paymentMethod": "Mode de paiement",
     "mtnMomo": "MTN Mobile Money",
     "orangeMoney": "Orange Money",
+    "cashOnDelivery": "Paiement à la livraison",
     "paymentPhone": "Numéro de téléphone de paiement",
     "transactionReference": "Référence de transaction",
     "paymentStatusPending": "Statut du paiement : en attente de vérification après examen.",
@@ -203,7 +204,9 @@
     "submit": "J'ai payé",
     "submitting": "Envoi…",
     "submitted": "Merci ! Nous confirmerons votre paiement sous peu.",
-    "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret."
+    "pendingHint": "Le paiement est confirmé par notre dispatcher — ne partagez jamais votre code PIN ou code secret.",
+    "cashTitle": "Paiement à la livraison",
+    "cashNote": "Payez les frais de livraison en espèces au livreur à l'arrivée de votre commande. Merci de préparer le montant exact."
   },
   "customerStatus": {
     "received": "Demande reçue",

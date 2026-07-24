@@ -62,7 +62,7 @@ export function OrderReview() {
     pickupLandmark: draft.pickupLandmark,
     deliveryLocation: draft.deliveryLocation,
     deliveryLandmark: draft.deliveryLandmark,
-    paymentMethodLabel: draft.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : "ORANGE MONEY",
+    paymentMethodLabel: draft.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : draft.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
     paymentPhone: draft.paymentPhone,
     transactionReference: draft.transactionReference,
     specialInstructions: draft.specialInstructions,
@@ -130,7 +130,7 @@ export function OrderReview() {
         />
         <Row
           label={t("review.paymentMethod")}
-          value={draft.paymentMethod === "MTN_MOMO" ? t("orderForm.mtnMomo") : t("orderForm.orangeMoney")}
+          value={draft.paymentMethod === "MTN_MOMO" ? t("orderForm.mtnMomo") : draft.paymentMethod === "ORANGE_MONEY" ? t("orderForm.orangeMoney") : t("orderForm.cashOnDelivery")}
         />
         <Row
           label={t("review.disclaimerConfirmed")}

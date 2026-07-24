@@ -43,7 +43,7 @@
     "placeOrder": "Place an Order",
     "trackOrder": "Track My Order",
     "chatWhatsApp": "Chat on WhatsApp",
-    "operatingHours": "We operate from 8:00 PM to 12:00 midnight.",
+    "operatingHours": "We operate from 6:00 PM to 4:00 AM.",
     "serviceArea": "Currently serving selected areas in Yaoundé.",
     "safetyPositioning": "Verified pickups. Controlled zones. Delivery proof. Prepayment only.",
     "launchNote": "Launching in selected zones first — not yet available everywhere.",
@@ -65,7 +65,7 @@
     "trustProof": "Delivery proof",
     "trustPrepay": "Prepayment only",
     "trustInsured": "Insured to XAF 25,000",
-    "eta": "8 PM – 12 AM",
+    "eta": "6 PM – 4 AM",
     "zone": "Yaoundé"
   },
   "services": {
@@ -121,7 +121,7 @@
     "declaredValue": "Estimated item value (XAF)",
     "declaredValueHint": "Items are insured up to XAF 25,000. Higher values must be declared and approved.",
     "preferredDeliveryTime": "Preferred delivery time",
-    "preferredDeliveryTimeHint": "Between 8:00 PM and 12:00 midnight",
+    "preferredDeliveryTimeHint": "Between 6:00 PM and 4:00 AM",
     "specialInstructions": "Special instructions",
     "itemAlreadyPaid": "Is the item already paid for?",
     "riderPaysAtPickup": "Should the rider pay at pickup?",
@@ -137,6 +137,7 @@
     "paymentMethod": "Payment method",
     "mtnMomo": "MTN Mobile Money",
     "orangeMoney": "Orange Money",
+    "cashOnDelivery": "Cash on delivery",
     "paymentPhone": "Payment phone number",
     "transactionReference": "Transaction reference",
     "paymentStatusPending": "Payment status: pending verification after review.",
@@ -203,7 +204,9 @@
     "submit": "I've paid",
     "submitting": "Sending…",
     "submitted": "Thanks! We'll confirm your payment shortly.",
-    "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code."
+    "pendingHint": "Payment is confirmed by our dispatcher — never share your PIN or secret code.",
+    "cashTitle": "Cash on delivery",
+    "cashNote": "Pay the delivery fee in cash to the rider when your order arrives. Please have the exact amount ready."
   },
   "customerStatus": {
     "received": "Request received",

@@ -50,6 +50,7 @@ enum PrescriptionRequired {
 enum PaymentMethod {
   MTN_MOMO
   ORANGE_MONEY
+  CASH
 }
 
 enum PaymentStatus {

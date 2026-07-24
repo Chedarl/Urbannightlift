@@ -41,8 +41,8 @@ async function seedSettings() {
     create: {
       id: 1,
       mode: "CLOSED",
-      operatingStartHour: 20,
-      operatingEndHour: 24,
+      operatingStartHour: 18,
+      operatingEndHour: 4,
       zoneNoticeEn: "Serving selected areas across Yaoundé.",
       zoneNoticeFr: "Disponible dans certains quartiers de Yaoundé.",
       mtnMerchantCode: "653077160",
@@ -53,9 +53,14 @@ async function seedSettings() {
 }
 
 async function seedZones() {
-  // Green = easy access (Biyem-Assi core), Yellow = harder/slightly further,
-  // Red = far/difficult. Centroids are approximate Yaoundé coordinates used to
-  // resolve a map-dropped pin to a zone/tier.
+  // Zone tiers follow the owner's rule, anchored on Rond-Point Express Biyem-Assi:
+  //   GREEN  — Yaoundé-6 core, close to Rond-Point Express, easy roads.
+  //   YELLOW — Yaoundé-6 fringe further from Rond-Point Express (Mbalgong,
+  //            Eloumden, Derrière-le-camp Mendong…). A dispatcher may bump an
+  //            individual pickup to RED when the road is genuinely complex.
+  //   RED    — anywhere OUTSIDE the Yaoundé-6 arrondissement (far / difficult).
+  // Centroids are approximate Yaoundé coordinates used to resolve a map-dropped
+  // pin to a zone/tier (nearest centroid wins).
   const zones: Array<{
     zoneName: string;
     description: string;
@@ -69,29 +74,36 @@ async function seedZones() {
     active: boolean;
     notes?: string;
   }> = [
-    // GREEN — 1000–1500
-    { zoneName: "Biyem-Assi", description: "Biyem-Assi core — easy access", feeXaf: 1000, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8421, centroidLng: 11.4921, safetyLevel: "SAFE", active: true },
-    { zoneName: "Mendong", description: "Mendong", feeXaf: 1200, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8331, centroidLng: 11.4785, safetyLevel: "SAFE", active: true },
-    { zoneName: "Nsimeyong", description: "Nsimeyong", feeXaf: 1200, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8360, centroidLng: 11.5031, safetyLevel: "SAFE", active: true },
-    { zoneName: "Etoug-Ebe", description: "Etoug-Ebe", feeXaf: 1300, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8480, centroidLng: 11.4892, safetyLevel: "SAFE", active: true },
-    { zoneName: "Melen", description: "Melen / campus side", feeXaf: 1500, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8585, centroidLng: 11.5015, safetyLevel: "SAFE", active: true },
-    // YELLOW — 1600–2000
-    { zoneName: "Simbock", description: "Simbock — slightly further", feeXaf: 1600, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8150, centroidLng: 11.4780, safetyLevel: "CAUTION", active: true },
-    { zoneName: "Mvog-Mbi", description: "Mvog-Mbi", feeXaf: 1700, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8560, centroidLng: 11.5240, safetyLevel: "CAUTION", active: true },
-    { zoneName: "Nkolbisson", description: "Nkolbisson — reduced night coverage", feeXaf: 1800, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8730, centroidLng: 11.4520, safetyLevel: "CAUTION", active: true, notes: "Confirm rider comfort before late pickups." },
-    { zoneName: "Awae", description: "Awae escarpment side — harder access", feeXaf: 1800, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8450, centroidLng: 11.5500, safetyLevel: "CAUTION", active: true },
-    { zoneName: "Centre-ville", description: "Yaoundé town centre", feeXaf: 2000, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8667, centroidLng: 11.5167, safetyLevel: "CAUTION", active: true },
-    // RED — 2500+
-    { zoneName: "Emana", description: "Emana — far north, difficult at night", feeXaf: 2500, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.9300, centroidLng: 11.5300, safetyLevel: "RESTRICTED", active: true, notes: "Owner approval recommended." },
-    { zoneName: "Odza", description: "Odza / airport side — far", feeXaf: 3000, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.7920, centroidLng: 11.5480, safetyLevel: "RESTRICTED", active: true, notes: "Owner approval recommended." },
+    // GREEN — Yaoundé-6 core near Rond-Point Express Biyem-Assi (1000–1500)
+    { zoneName: "Biyem-Assi", description: "Biyem-Assi core — Rond-Point Express, easy access", feeXaf: 1000, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8421, centroidLng: 11.4921, safetyLevel: "SAFE", active: true },
+    { zoneName: "Mendong", description: "Mendong — Yaoundé 6", feeXaf: 1200, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8331, centroidLng: 11.4785, safetyLevel: "SAFE", active: true },
+    { zoneName: "Nsimeyong", description: "Nsimeyong — Yaoundé 6", feeXaf: 1200, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8360, centroidLng: 11.5031, safetyLevel: "SAFE", active: true },
+    { zoneName: "Etoug-Ebe", description: "Etoug-Ebe — Yaoundé 6", feeXaf: 1300, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8480, centroidLng: 11.4892, safetyLevel: "SAFE", active: true },
+    { zoneName: "Simbock", description: "Simbock — Yaoundé 6", feeXaf: 1400, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8150, centroidLng: 11.4780, safetyLevel: "SAFE", active: true },
+    { zoneName: "Melen", description: "Melen / campus side — Yaoundé 6 edge", feeXaf: 1500, nightUrgencyFeeXaf: 500, medicineFeeXaf: 300, tier: "GREEN", centroidLat: 3.8585, centroidLng: 11.5015, safetyLevel: "SAFE", active: true },
+    // YELLOW — Yaoundé-6 fringe, further from Rond-Point Express (1600–2000)
+    { zoneName: "Derrière-le-camp Mendong", description: "Behind the Mendong camp — Yaoundé-6 fringe", feeXaf: 1700, nightUrgencyFeeXaf: 700, medicineFeeXaf: 300, tier: "YELLOW", centroidLat: 3.8265, centroidLng: 11.4700, safetyLevel: "CAUTION", active: true, notes: "Complex-road pickups here may be quoted as RED by the dispatcher." },
+    { zoneName: "Mbalgong", description: "Mbalgong — Yaoundé-6 fringe, further out", feeXaf: 1900, nightUrgencyFeeXaf: 700, medicineFeeXaf: 400, tier: "YELLOW", centroidLat: 3.7960, centroidLng: 11.4460, safetyLevel: "CAUTION", active: true, notes: "Complex-road pickups here may be quoted as RED by the dispatcher." },
+    { zoneName: "Eloumden", description: "Eloumden hillside — Yaoundé-6 fringe, further out", feeXaf: 2000, nightUrgencyFeeXaf: 700, medicineFeeXaf: 400, tier: "YELLOW", centroidLat: 3.8020, centroidLng: 11.4340, safetyLevel: "CAUTION", active: true, notes: "Complex-road pickups here may be quoted as RED by the dispatcher." },
+    // RED — outside the Yaoundé-6 arrondissement (2500+)
+    { zoneName: "Nkolbisson", description: "Nkolbisson (Yaoundé 7) — outside Yaoundé 6", feeXaf: 2500, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.8730, centroidLng: 11.4520, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
+    { zoneName: "Mvog-Mbi", description: "Mvog-Mbi (Yaoundé 4) — outside Yaoundé 6", feeXaf: 2600, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.8560, centroidLng: 11.5240, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
+    { zoneName: "Centre-ville", description: "Yaoundé town centre (Yaoundé 1) — outside Yaoundé 6", feeXaf: 2800, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.8667, centroidLng: 11.5167, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
+    { zoneName: "Awae", description: "Awae escarpment — outside Yaoundé 6", feeXaf: 2800, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.8450, centroidLng: 11.5500, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
+    { zoneName: "Emana", description: "Emana — far north, outside Yaoundé 6", feeXaf: 3000, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.9300, centroidLng: 11.5300, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
+    { zoneName: "Odza", description: "Odza / airport side — outside Yaoundé 6", feeXaf: 3000, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.7920, centroidLng: 11.5480, safetyLevel: "RESTRICTED", active: true, notes: "Outside Yaoundé 6 — owner approval recommended." },
     { zoneName: "Outside Yaoundé", description: "Any area outside Yaoundé", feeXaf: 3500, nightUrgencyFeeXaf: 1000, medicineFeeXaf: 500, tier: "RED", centroidLat: 3.9500, centroidLng: 11.6000, safetyLevel: "NO_GO", active: false, notes: "Requires manual owner approval. Rejected by default." },
   ];
   for (const z of zones) {
-    await prisma.zone.upsert({ where: { zoneName: z.zoneName }, update: { tier: z.tier, centroidLat: z.centroidLat, centroidLng: z.centroidLng, feeXaf: z.feeXaf }, create: z });
+    await prisma.zone.upsert({
+      where: { zoneName: z.zoneName },
+      update: { tier: z.tier, centroidLat: z.centroidLat, centroidLng: z.centroidLng, feeXaf: z.feeXaf, safetyLevel: z.safetyLevel, description: z.description, notes: z.notes ?? null, active: z.active },
+      create: z,
+    });
   }
   // Retire the legacy "Yaoundé 6"-named zone from v1 (hide from customers).
   await prisma.zone.updateMany({ where: { zoneName: "Outside Yaoundé 6" }, data: { active: false } });
-  console.log(`✓ ${zones.length} zones (green/yellow/red)`);
+  console.log(`✓ ${zones.length} zones (green = Yaoundé-6 core, yellow = fringe, red = outside Yaoundé 6)`);
 }
 
 async function ensureAuthUser(

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
@@ -68,6 +68,12 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantOption | null>(null);
+  const [zones, setZones] = useState<{ id: string; zoneName: string; tier: ZoneTier; feeXaf: number; medicineFeeXaf: number }[]>([]);
+  const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
+  }, []);
 
   const {
     register, handleSubmit, watch, setValue,
@@ -91,15 +97,28 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
 
   const isMedicine = watch("isMedicine");
   const acceptedTerms = watch("acceptedTerms");
+  const deliveryZoneId = watch("deliveryZoneId");
+  const pickupZoneId = watch("pickupZoneId");
 
-  const estimatedFee = useMemo(() => {
-    const toZone = (p: PickedPoint | null) =>
-      p?.zoneId ? { id: p.zoneId, feeXaf: p.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (p.tier ?? "GREEN") as ZoneTier } : null;
-    return estimateDeliveryFee(toZone(pickup), toZone(delivery), { isMedicine });
-  }, [pickup, delivery, isMedicine]);
+  // Resolve the effective zone from the map pin first, else the dropdown.
+  const effDeliveryZone = useMemo(() => {
+    if (delivery?.zoneId) return { id: delivery.zoneId, feeXaf: delivery.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (delivery.tier ?? "GREEN") as ZoneTier };
+    const z = zones.find((z) => z.id === deliveryZoneId);
+    return z ? { id: z.id, feeXaf: z.feeXaf, medicineFeeXaf: z.medicineFeeXaf, nightUrgencyFeeXaf: 0, tier: z.tier } : null;
+  }, [delivery, deliveryZoneId, zones]);
 
-  const dominantTier: ZoneTier | null =
-    delivery?.tier ?? pickup?.tier ?? null;
+  const effPickupZone = useMemo(() => {
+    if (pickup?.zoneId) return { id: pickup.zoneId, feeXaf: pickup.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (pickup.tier ?? "GREEN") as ZoneTier };
+    const z = zones.find((z) => z.id === pickupZoneId);
+    return z ? { id: z.id, feeXaf: z.feeXaf, medicineFeeXaf: z.medicineFeeXaf, nightUrgencyFeeXaf: 0, tier: z.tier } : null;
+  }, [pickup, pickupZoneId, zones]);
+
+  const estimatedFee = useMemo(
+    () => estimateDeliveryFee(effPickupZone, effDeliveryZone, { isMedicine }),
+    [effPickupZone, effDeliveryZone, isMedicine]
+  );
+
+  const dominantTier: ZoneTier | null = effDeliveryZone?.tier ?? effPickupZone?.tier ?? null;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -126,17 +145,15 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   function onSubmit(data: OrderInput) {
     const pickupLoc = selectedMerchant
       ? `${selectedMerchant.merchantName} — ${selectedMerchant.address}`
-      : pickup?.label || data.pickupLocation || "Pickup point (see map)";
-    const deliveryLoc = delivery?.label || data.deliveryLocation || "Delivery point (see map)";
+      : data.pickupLocation;
 
     const merged: OrderInput = {
       ...data,
       pickupLocation: pickupLoc,
-      deliveryLocation: deliveryLoc,
       pickupLandmark: selectedMerchant?.landmark ?? data.pickupLandmark ?? "",
       merchantId: selectedMerchant?.id ?? "",
-      pickupZoneId: pickup?.zoneId ?? "",
-      deliveryZoneId: delivery?.zoneId ?? "",
+      pickupZoneId: effPickupZone?.id ?? "",
+      deliveryZoneId: effDeliveryZone?.id ?? "",
       pickupLat: pickup?.lat ?? null,
       pickupLng: pickup?.lng ?? null,
       deliveryLat: delivery?.lat ?? null,
@@ -146,11 +163,17 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     saveDraft({
       ...merged,
       estimatedFeeXaf: estimatedFee,
-      pickupZoneName: pickup?.zoneName ?? undefined,
-      deliveryZoneName: delivery?.zoneName ?? undefined,
+      pickupZoneName: pickup?.zoneName ?? zones.find((z) => z.id === effPickupZone?.id)?.zoneName ?? undefined,
+      deliveryZoneName: delivery?.zoneName ?? zones.find((z) => z.id === effDeliveryZone?.id)?.zoneName ?? undefined,
       merchantName: selectedMerchant?.merchantName,
     });
     router.push("/order/review");
+  }
+
+  function onInvalid() {
+    // Surface the first missing field so the user isn't stuck silently.
+    const el = document.querySelector("[data-error='true']") || document.querySelector("form");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   const merchantLayout = exp.layout === "merchant";
@@ -158,7 +181,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const focusRing = { "--tw-ring-color": `${exp.accent}66` } as React.CSSProperties;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-lg pb-28" noValidate>
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-28" noValidate>
       {/* Themed hero */}
       <div className={cn("relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b px-5 pb-8 pt-10", exp.gradient)}>
         <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl" style={{ backgroundColor: `${exp.accent}33` }} />
@@ -181,7 +204,12 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setSelectedMerchant(selectedMerchant?.id === m.id ? null : m)}
+                  onClick={() => {
+                    const next = selectedMerchant?.id === m.id ? null : m;
+                    setSelectedMerchant(next);
+                    setValue("pickupLocation", next ? `${next.merchantName} — ${next.address}` : "", { shouldValidate: true });
+                    setValue("pickupLandmark", next?.landmark ?? "");
+                  }}
                   className={cn(
                     "shrink-0 rounded-2xl border p-3 text-left transition-colors",
                     selectedMerchant?.id === m.id ? "border-transparent" : "border-ink-700 bg-ink-900/50"
@@ -208,16 +236,85 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
           {errors.itemDescription && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
         </section>
 
-        {/* Locations (map) */}
-        <section>
-          <h2 className="mb-2 font-display text-sm font-semibold" style={{ color: exp.accent }}>
+        {/* Locations — type or select an area, or pin on the map */}
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-sm font-semibold" style={{ color: exp.accent }}>
             {t("exp.locationTitle")}
           </h2>
-          <LocationPicker accent={exp.accent} pickup={pickup} delivery={delivery} onChange={(w, p) => (w === "pickup" ? setPickup(p) : setDelivery(p))} />
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <input className={cn(inputCls)} style={focusRing} placeholder={t("orderForm.pickupLandmark")} {...register("pickupLandmark")} />
-            <input className={cn(inputCls)} style={focusRing} placeholder={t("orderForm.deliveryLandmark")} {...register("deliveryLandmark")} />
+
+          <datalist id="unl-areas">
+            {zones.map((z) => (
+              <option key={z.id} value={z.zoneName} />
+            ))}
+          </datalist>
+
+          {!merchantLayout && (
+            <div>
+              <label className={labelCls}>{t("orderForm.pickupLocation")} <span className="text-restricted">*</span></label>
+              <input
+                className={inputCls}
+                style={focusRing}
+                list="unl-areas"
+                placeholder={locale === "fr" ? "Quartier ou adresse (ex. Biyem-Assi)" : "Area or address (e.g. Biyem-Assi)"}
+                data-error={errors.pickupLocation ? "true" : undefined}
+                {...register("pickupLocation")}
+              />
+              {errors.pickupLocation && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
+              <input className={cn(inputCls, "mt-2")} style={focusRing} placeholder={t("orderForm.pickupLandmark")} {...register("pickupLandmark")} />
+            </div>
+          )}
+
+          <div>
+            <label className={labelCls}>{t("orderForm.deliveryLocation")} <span className="text-restricted">*</span></label>
+            <input
+              className={inputCls}
+              style={focusRing}
+              list="unl-areas"
+              placeholder={locale === "fr" ? "Quartier ou adresse (ex. Mendong)" : "Area or address (e.g. Mendong)"}
+              data-error={errors.deliveryLocation ? "true" : undefined}
+              {...register("deliveryLocation")}
+            />
+            {errors.deliveryLocation && <p className="mt-1 text-xs text-restricted">{t("orderForm.fillRequired")}</p>}
+            <input className={cn(inputCls, "mt-2")} style={focusRing} placeholder={t("orderForm.deliveryLandmark")} {...register("deliveryLandmark")} />
           </div>
+
+          {/* Delivery zone → drives the price when typing an address */}
+          <div>
+            <label className={labelCls}>{t("orderForm.deliveryZone")}</label>
+            <select className={inputCls} style={focusRing} {...register("deliveryZoneId")}>
+              <option value="">{t("orderForm.selectZone")}</option>
+              {zones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.zoneName} · {locale === "fr" ? TIER_META[z.tier].labelFr : TIER_META[z.tier].label} · {formatXaf(z.feeXaf)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Optional precise map pin */}
+          <button
+            type="button"
+            onClick={() => setShowMap((v) => !v)}
+            className="self-start rounded-xl border border-ink-700 bg-ink-800 px-3 py-2 text-xs font-medium text-mist-300"
+          >
+            {showMap ? (locale === "fr" ? "Masquer la carte" : "Hide map") : locale === "fr" ? "📍 Choisir sur la carte" : "📍 Pin on map"}
+          </button>
+          {showMap && (
+            <LocationPicker
+              accent={exp.accent}
+              pickup={pickup}
+              delivery={delivery}
+              onChange={(w, p) => {
+                if (w === "pickup") {
+                  setPickup(p);
+                  if (p) { setValue("pickupLocation", p.label); if (p.zoneId) setValue("pickupZoneId", p.zoneId); }
+                } else {
+                  setDelivery(p);
+                  if (p) { setValue("deliveryLocation", p.label); if (p.zoneId) setValue("deliveryZoneId", p.zoneId); }
+                }
+              }}
+            />
+          )}
         </section>
 
         {/* Price chip */}
@@ -326,12 +423,12 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
         {/* Payment method */}
         <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900/40 p-4">
           <h2 className="font-display text-sm font-semibold" style={{ color: exp.accent }}>{t("orderForm.paymentSection")}</h2>
-          <div className="flex gap-2">
-            {(["MTN_MOMO", "ORANGE_MONEY"] as const).map((v) => (
+          <div className="flex flex-wrap gap-2">
+            {(["MTN_MOMO", "ORANGE_MONEY", "CASH"] as const).map((v) => (
               <button key={v} type="button" onClick={() => setValue("paymentMethod", v)}
-                className={cn("flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold", watch("paymentMethod") === v ? "border-transparent text-ink-950" : "border-ink-700 bg-ink-800 text-mist-400")}
+                className={cn("min-w-[30%] flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold", watch("paymentMethod") === v ? "border-transparent text-ink-950" : "border-ink-700 bg-ink-800 text-mist-400")}
                 style={watch("paymentMethod") === v ? { backgroundColor: exp.accent } : undefined}>
-                {v === "MTN_MOMO" ? t("orderForm.mtnMomo") : t("orderForm.orangeMoney")}
+                {v === "MTN_MOMO" ? t("orderForm.mtnMomo") : v === "ORANGE_MONEY" ? t("orderForm.orangeMoney") : t("orderForm.cashOnDelivery")}
               </button>
             ))}
           </div>

@@ -64,7 +64,7 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
     pickupLandmark: order.pickupLandmark,
     deliveryLocation: order.deliveryLocation,
     deliveryLandmark: order.deliveryLandmark,
-    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : "ORANGE MONEY",
+    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : order.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
   });
 
   return (
