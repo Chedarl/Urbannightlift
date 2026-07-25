@@ -243,7 +243,16 @@
     "orderCode": "Code de commande",
     "whatsappNumber": "Numéro WhatsApp",
     "find": "Suivre la commande",
-    "notFound": "Aucune commande trouvée avec ce code et ce numéro. Vérifiez et réessayez."
+    "notFound": "Aucune commande trouvée avec ce code et ce numéro. Vérifiez et réessayez.",
+    "mapTitle": "Suivi en direct",
+    "waitingRider": "En attente du livreur qui doit activer le partage de sa position. Vous le verrez ici en direct dès qu’il est en route.",
+    "riderLive": "Position du livreur · en direct",
+    "updatedAgo": "mis à jour il y a {time}",
+    "justNow": "à l’instant",
+    "stale": "dernière mise à jour il y a {time}",
+    "openInMaps": "Ouvrir dans Google Maps",
+    "secondsShort": "{n} s",
+    "minutesShort": "{n} min"
   },
   "pay": {
     "title": "Payer la livraison",
@@ -563,7 +572,18 @@
         "LATE_DELIVERY": "Retard",
         "CUSTOMER_COMPLAINT": "Autre"
       },
-      "issueSent": "Problème signalé au dispatch."
+      "issueSent": "Problème signalé au dispatch.",
+      "share": {
+        "start": "Partager ma position en direct",
+        "sharing": "Partage de position actif — appuyez pour arrêter",
+        "hint": "Activez ceci pour que le client puisse vous suivre sur sa carte.",
+        "sentAgo": "dernier envoi il y a {time} · {n} mises à jour",
+        "denied": "L’autorisation de localisation est bloquée. Activez la localisation pour ce site dans les réglages du navigateur, puis réessayez.",
+        "insecure": "Le partage de position nécessite une connexion sécurisée (https). Ouvrez l’app depuis https://urbannighlift.com.",
+        "unsupported": "Cet appareil ne prend pas en charge le partage de position en direct.",
+        "sendFailed": "Impossible d’envoyer votre position. Vérifiez que vous êtes connecté et en ligne, puis réessayez.",
+        "timeout": "Impossible d’obtenir un signal GPS. Placez-vous à ciel ouvert et réessayez."
+      }
     }
   },
   "steps": {
@@ -635,5 +655,14 @@
       "orderHint": "Que devons-nous récupérer chez ce commerçant ?",
       "counterRef": "Référence commande / comptoir (optionnel)"
     }
+  },
+  "install": {
+    "app": "Installer l’application",
+    "rider": "Installer l’app livreur",
+    "installing": "Ouverture de l’installation…",
+    "iosTitle": "Ajouter à l’écran d’accueil",
+    "iosSteps": "Appuyez sur l’icône Partager en bas de Safari, puis choisissez « Sur l’écran d’accueil ».",
+    "gotIt": "Compris",
+    "installed": "Application installée"
   }
 }

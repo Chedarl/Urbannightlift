@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   description:
     "Safe night pickup and delivery of food, medicine, groceries, urgent items, and approved errands across Yaoundé. 6:00 PM to 4:00 AM.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Urban Night Lift",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
   openGraph: {
     title: "Urban Night Lift — Night delivery in Yaoundé",
     description: "Your city. Our ride. Night delivered — across Yaoundé, 6 PM to 4 AM.",

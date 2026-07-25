@@ -5,6 +5,7 @@ import { MessageCircle, LogOut } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
+import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { signOutAction } from "@/lib/auth/actions";
 import { buildWaLink, ADMIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 
@@ -37,7 +38,10 @@ export function RiderShell({ userName, children }: { userName: string; children:
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-lg px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-lg px-4 py-6">
+        <InstallPrompt variant="rider" className="mb-4 w-full" />
+        {children}
+      </main>
     </div>
   );
 }
