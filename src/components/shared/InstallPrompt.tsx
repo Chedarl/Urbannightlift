@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share, X } from "lucide-react";
+import { Download, Share, MoreVertical, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -10,11 +10,17 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+type Platform = "ios" | "android" | "desktop";
+
 /**
- * Reusable "Install app" button. On Chrome/Android it captures the browser's
- * `beforeinstallprompt` event and triggers the native install. On iOS Safari
- * (which has no programmatic install) it opens short "Add to Home Screen"
- * instructions. Hides itself when the app is already installed/standalone.
+ * "Install app" button.
+ *
+ * Uses the native install flow when the browser offers it (`beforeinstallprompt`,
+ * Chrome/Edge/Samsung on Android and desktop). That event is not guaranteed —
+ * iOS Safari has no programmatic install at all, and other browsers may never
+ * fire it — so the button ALWAYS renders and falls back to short, per-platform
+ * "add to home screen" instructions. It hides only when the app is already
+ * running installed.
  */
 export function InstallPrompt({
   variant = "app",
@@ -23,33 +29,41 @@ export function InstallPrompt({
   variant?: "app" | "rider";
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const fr = locale === "fr";
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIos, setIsIos] = useState(false);
-  const [showIosSheet, setShowIosSheet] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("desktop");
+  const [installed, setInstalled] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  // Until mounted we don't know the platform or install state — render nothing
+  // rather than flashing a button that may be wrong.
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Already running as an installed PWA — nothing to offer.
+    setMounted(true);
+
     const standalone =
       window.matchMedia?.("(display-mode: standalone)").matches ||
-      // iOS Safari exposes navigator.standalone
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (standalone) {
-      setHidden(true);
-      return;
-    }
+    if (standalone) setInstalled(true);
 
     const ua = window.navigator.userAgent;
-    const iOS = /iphone|ipad|ipod/i.test(ua);
-    const isSafari = /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
-    setIsIos(iOS && isSafari);
+    if (/iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document)) {
+      setPlatform("ios");
+    } else if (/android/i.test(ua)) {
+      setPlatform("android");
+    } else {
+      setPlatform("desktop");
+    }
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BeforeInstallPromptEvent);
     };
-    const onInstalled = () => setHidden(true);
+    const onInstalled = () => {
+      setInstalled(true);
+      setShowSheet(false);
+    };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
@@ -59,8 +73,7 @@ export function InstallPrompt({
     };
   }, []);
 
-  // Nothing to show: installed, or a browser that neither fired the event nor is iOS Safari.
-  if (hidden || (!deferred && !isIos)) return null;
+  if (!mounted || installed) return null;
 
   const label = variant === "rider" ? t("install.rider") : t("install.app");
 
@@ -68,12 +81,44 @@ export function InstallPrompt({
     if (deferred) {
       await deferred.prompt();
       const choice = await deferred.userChoice.catch(() => ({ outcome: "dismissed" as const }));
-      if (choice.outcome === "accepted") setHidden(true);
+      if (choice.outcome === "accepted") setInstalled(true);
       setDeferred(null);
       return;
     }
-    if (isIos) setShowIosSheet(true);
+    // No native prompt available — show how to do it by hand.
+    setShowSheet(true);
   }
+
+  const steps: { icon: React.ReactNode; text: string }[] =
+    platform === "ios"
+      ? [
+          {
+            icon: <Share className="h-4 w-4" />,
+            text: fr
+              ? "Appuyez sur l'icône Partager en bas de Safari."
+              : "Tap the Share icon at the bottom of Safari.",
+          },
+          {
+            icon: <Download className="h-4 w-4" />,
+            text: fr
+              ? "Choisissez « Sur l'écran d'accueil », puis Ajouter."
+              : 'Choose "Add to Home Screen", then Add.',
+          },
+        ]
+      : [
+          {
+            icon: <MoreVertical className="h-4 w-4" />,
+            text: fr
+              ? "Ouvrez le menu ⋮ de votre navigateur."
+              : "Open your browser's ⋮ menu.",
+          },
+          {
+            icon: <Download className="h-4 w-4" />,
+            text: fr
+              ? "Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »."
+              : 'Choose "Install app" or "Add to Home screen".',
+          },
+        ];
 
   return (
     <>
@@ -88,35 +133,46 @@ export function InstallPrompt({
         <Download className="h-4 w-4" /> {label}
       </button>
 
-      {showIosSheet && (
+      {showSheet && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4"
-          onClick={() => setShowIosSheet(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          onClick={() => setShowSheet(false)}
         >
           <div
             className="w-full max-w-sm rounded-2xl border border-ink-700 bg-ink-900 p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-3 flex items-start justify-between gap-2">
               <h3 className="font-display text-base font-semibold text-mist-100">
                 {t("install.iosTitle")}
               </h3>
               <button
                 type="button"
-                onClick={() => setShowIosSheet(false)}
+                onClick={() => setShowSheet(false)}
                 aria-label={t("common.close")}
                 className="text-mist-500 hover:text-mist-300"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="flex items-start gap-2 text-sm leading-relaxed text-mist-300">
-              <Share className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
-              <span>{t("install.iosSteps")}</span>
+            <ol className="flex flex-col gap-3">
+              {steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-600/20 text-violet-300">
+                    {s.icon}
+                  </span>
+                  <span className="pt-1 text-sm leading-relaxed text-mist-300">{s.text}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-3 text-[11px] leading-relaxed text-mist-500">
+              {fr
+                ? "L'application s'ouvrira comme une vraie app, en plein écran."
+                : "The app then opens full-screen, just like a native app."}
             </p>
             <button
               type="button"
-              onClick={() => setShowIosSheet(false)}
+              onClick={() => setShowSheet(false)}
               className="mt-4 w-full rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-mist-100"
             >
               {t("install.gotIt")}
