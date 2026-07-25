@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingBag, MapPin, MessageCircle } from "lucide-react";
+import { Home, ShoppingBag, MapPin, MessageCircle, UserCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export function BottomNav() {
     { href: "/", icon: Home, label: t("nav.home"), active: pathname === "/" },
     { href: "/order", icon: ShoppingBag, label: t("nav.order"), active: pathname.startsWith("/order") },
     { href: "/track", icon: MapPin, label: t("nav.track"), active: pathname === "/track" },
+    { href: "/account", icon: UserCircle, label: t("nav.account"), active: pathname.startsWith("/account") },
   ];
 
   return (

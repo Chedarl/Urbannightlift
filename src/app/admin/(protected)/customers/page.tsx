@@ -60,7 +60,7 @@ export default async function CustomersPage({
         orderCount: c._count.orders,
         lastOrderAt: c.orders[0]?.createdAt.toISOString() ?? null,
         lifetimeFeesXaf: feeByCustomer.get(c.id) ?? 0,
-        hasAccount: false,
+        hasAccount: c.pinHash != null,
         createdAt: c.createdAt.toISOString(),
       }))}
     />

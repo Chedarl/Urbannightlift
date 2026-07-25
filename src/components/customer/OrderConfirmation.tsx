@@ -14,6 +14,7 @@ import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
+import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
@@ -49,7 +50,16 @@ export interface ConfirmationOrder {
   otpCode: string | null;
 }
 
-export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder; payment: PaymentInfo }) {
+export function OrderConfirmation({
+  order,
+  payment,
+  offerAccount = false,
+}: {
+  order: ConfirmationOrder;
+  payment: PaymentInfo;
+  /** Guest (not signed in) who just ordered — offer to claim an account. */
+  offerAccount?: boolean;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -137,6 +147,10 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
 
       {/* Pay for delivery (merchant code) */}
       {showPayment && <PaymentCard info={payment} />}
+
+      {verified && offerAccount && (
+        <SaveAccountPrompt fullName={order.customerName} whatsappNumber={order.customerWhatsapp} />
+      )}
 
       {/* Live tracking map (renders once locations/rider are known) */}
       {!isCancelled && <LiveTrackMap orderCode={order.orderCode} />}

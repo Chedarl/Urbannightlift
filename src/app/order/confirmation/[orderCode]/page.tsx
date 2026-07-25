@@ -4,6 +4,7 @@ import { OrderConfirmation } from "@/components/customer/OrderConfirmation";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
 import { hasOrderAccess } from "@/lib/orders/orderAccess";
+import { getCustomerId } from "@/lib/auth/customer";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,11 @@ export default async function ConfirmationPage({
   params: Promise<{ orderCode: string }>;
 }) {
   const { orderCode } = await params;
-  const [order, settings, verified] = await Promise.all([
+  const [order, settings, verified, customerId] = await Promise.all([
     prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true, pickupZone: true, deliveryZone: true } }),
     getOperatingSettings(),
     hasOrderAccess(orderCode),
+    getCustomerId(),
   ]);
   if (!order) notFound();
 
@@ -36,6 +38,7 @@ export default async function ConfirmationPage({
       <CustomerHeader />
       <main>
         <OrderConfirmation
+          offerAccount={!customerId}
           order={{
             orderCode: order.orderCode,
             createdAt: order.createdAt.toISOString(),
