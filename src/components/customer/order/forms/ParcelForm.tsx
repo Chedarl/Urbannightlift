@@ -13,6 +13,7 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -42,7 +43,7 @@ export function ParcelForm() {
       preferredLanguage: fr ? "FR" : "EN", serviceType: "SMALL_PARCEL", fullName: fr ? "Expéditeur" : "Sender",
       quantity: 1, declaredValueXaf: 0, itemAlreadyPaid: false, riderPaysAtPickup: false,
       isFragile: false, needsTemperatureCare: false, isMedicine: false, paymentMethod: "CASH",
-      acceptedTerms: true as const,
+      acceptedTerms: undefined as unknown as true,
       serviceDetails: { category: "DOCUMENTS", size: "S", sealed: false, proofPref: "PHOTO" },
     },
   });
@@ -102,6 +103,7 @@ export function ParcelForm() {
   }
   function onInvalid(errs: Record<string, unknown>) {
     const labels: Record<string, string> = {
+      acceptedTerms: fr ? "Accepter les conditions" : "Accept the terms",
       whatsappNumber: fr ? "Téléphone de l'expéditeur" : "Sender phone number",
       pickupLocation: fr ? "Adresse de ramassage" : "Pickup address",
       deliveryLocation: fr ? "Adresse de dépôt" : "Drop-off address",
@@ -270,6 +272,13 @@ export function ParcelForm() {
             <ul className="list-disc pl-5 text-xs">{missing.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         )}
+        <TermsCheckbox
+          accent={ACCENT}
+          checked={watch("acceptedTerms") === true}
+          onChange={(next) => setValue("acceptedTerms", (next ? true : undefined) as unknown as true, { shouldValidate: true })}
+          error={missing.includes(fr ? "Accepter les conditions" : "Accept the terms")}
+          fr={fr}
+        />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
+import {
+  ORDER_ACCESS_COOKIE,
+  grantOrderAccessValue,
+  orderAccessCookieOptions,
+} from "@/lib/orders/orderAccess";
 
 /**
  * POST /api/orders/track — guest order lookup: order code + the WhatsApp
@@ -29,5 +34,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ found: false }, { status: 404 });
   }
 
-  return NextResponse.json({ found: true, orderCode: order.orderCode });
+  // Code + phone matched: the visitor owns this order, so grant access to its
+  // private details (delivery OTP, contact, addresses) on the confirmation page.
+  const res = NextResponse.json({ found: true, orderCode: order.orderCode });
+  res.cookies.set(
+    ORDER_ACCESS_COOKIE,
+    grantOrderAccessValue(req.cookies.get(ORDER_ACCESS_COOKIE)?.value, order.orderCode),
+    orderAccessCookieOptions()
+  );
+  return res;
 }

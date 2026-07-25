@@ -42,21 +42,30 @@ function detailRows(data: OrderPdfData): [string, string][] {
   const list = (arr: unknown, fmt: (o: Record<string, unknown>) => string) =>
     Array.isArray(arr) ? arr.filter(Boolean).map((o) => fmt(o as Record<string, unknown>)).filter(Boolean).join("\n") : "";
 
-  const foods = list(sd.foodItems, (o) => (o.name ? `• ${o.qty || 1}× ${o.name}${o.notes ? ` — ${o.notes}` : ""}` : ""));
+  // Accept both key spellings the forms and this reader use, so nothing silently
+  // disappears from the customer's PDF (and older orders still render).
+  const foods = list(sd.foodItems ?? sd.items, (o) => (o.name ? `• ${o.qty || 1}× ${o.name}${o.notes ? ` — ${o.notes}` : ""}` : ""));
   if (foods) rows.push([fr ? "Plats" : "Dishes", foods]);
   const meds = list(sd.meds, (o) => (o.name ? `• ${o.qty || 1}× ${o.name}${o.dosage ? ` (${o.dosage})` : ""}` : ""));
   if (meds) rows.push([fr ? "Médicaments" : "Medicines", meds]);
   const grocery = list(sd.groceryItems, (o) => (o.name ? `• ${o.qty || 1}× ${o.name}${o.brand ? ` — ${o.brand}` : ""}` : ""));
   if (grocery) rows.push([fr ? "Articles" : "Items", grocery]);
 
-  if (sd.place) rows.push([fr ? "Lieu" : "Place", String(sd.place)]);
+  const place = sd.place ?? sd.vendorName;
+  if (place) rows.push([fr ? "Lieu" : "Place", String(place)]);
   if (sd.pharmacy) rows.push([fr ? "Pharmacie" : "Pharmacy", String(sd.pharmacy)]);
-  if (sd.store) rows.push([fr ? "Magasin" : "Store", String(sd.store)]);
+  const store = sd.store ?? sd.storeName;
+  if (store) rows.push([fr ? "Magasin" : "Store", String(store)]);
+  if (sd.title) rows.push([fr ? "Demande" : "Request", String(sd.title)]);
+  if (sd.category) rows.push([fr ? "Catégorie" : "Category", String(sd.category)]);
   if (sd.budgetXaf) rows.push([fr ? "Budget" : "Budget", xaf(Number(sd.budgetXaf) || 0)]);
   if (sd.size) rows.push([fr ? "Taille" : "Size", String(sd.size)]);
   if (sd.weight) rows.push([fr ? "Poids" : "Weight", String(sd.weight)]);
   if (sd.senderName || sd.senderPhone) rows.push([fr ? "Expéditeur" : "Sender", `${sd.senderName || ""} ${sd.senderPhone || ""}`.trim()]);
-  if (sd.recipientName || sd.recipientPhone) rows.push([fr ? "Destinataire" : "Recipient", `${sd.recipientName || ""} ${sd.recipientPhone || ""}`.trim()]);
+  const recipientName = sd.recipientName ?? sd.receiverName;
+  const recipientPhone = sd.recipientPhone ?? sd.receiverPhone;
+  if (recipientName || recipientPhone) rows.push([fr ? "Destinataire" : "Recipient", `${recipientName || ""} ${recipientPhone || ""}`.trim()]);
+  if (sd.accessNotes) rows.push([fr ? "Accès" : "Access notes", String(sd.accessNotes)]);
   if (sd.deadline) rows.push([fr ? "Échéance" : "Deadline", String(sd.deadline)]);
   if (sd.reason) rows.push([fr ? "Raison" : "Reason", String(sd.reason)]);
   if (sd.counterRef) rows.push([fr ? "Réf. comptoir" : "Counter ref", String(sd.counterRef)]);

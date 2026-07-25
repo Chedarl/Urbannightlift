@@ -13,6 +13,7 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -56,7 +57,7 @@ export function FoodForm() {
       needsTemperatureCare: false,
       isMedicine: false,
       paymentMethod: "CASH",
-      acceptedTerms: true as const,
+      acceptedTerms: undefined as unknown as true,
       serviceDetails: { source: "RESTAURANT", cutlery: true, preferences: [], items: [{ name: "", qty: 1, notes: "" }] },
     },
   });
@@ -137,6 +138,7 @@ export function FoodForm() {
 
   function onInvalid(errs: Record<string, unknown>) {
     const labels: Record<string, string> = {
+      acceptedTerms: fr ? "Accepter les conditions" : "Accept the terms",
       whatsappNumber: fr ? "Numéro du destinataire" : "Recipient phone number",
       pickupLocation: fr ? "Lieu du restaurant" : "Restaurant location",
       deliveryLocation: fr ? "Adresse de livraison" : "Delivery address",
@@ -320,6 +322,13 @@ export function FoodForm() {
             <ul className="list-disc pl-5 text-xs">{missing.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         )}
+        <TermsCheckbox
+          accent={ACCENT}
+          checked={watch("acceptedTerms") === true}
+          onChange={(next) => setValue("acceptedTerms", (next ? true : undefined) as unknown as true, { shouldValidate: true })}
+          error={missing.includes(fr ? "Accepter les conditions" : "Accept the terms")}
+          fr={fr}
+        />
       </div>
 
       {/* Sticky footer */}

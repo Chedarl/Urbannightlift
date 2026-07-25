@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth/session";
+import { ADMIN_ROLES, getSessionUser } from "@/lib/auth/session";
 
-/** GET /api/incidents — staff: list incidents. */
+/**
+ * GET /api/incidents — dispatch only. The log holds other customers' order
+ * codes and internal notes, so riders (who may only POST) must not read it.
+ */
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!ADMIN_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const incidents = await prisma.incident.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,

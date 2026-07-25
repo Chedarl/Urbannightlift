@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSessionUser } from "@/lib/auth/session";
+import { ADMIN_ROLES, getSessionUser } from "@/lib/auth/session";
 
 /**
- * GET /api/media?path=<bucket>/<key> — staff-only. Returns a short-lived signed
- * URL so a dispatcher can view a private upload (payment proof, order
+ * GET /api/media?path=<bucket>/<key> — dispatch-only. Returns a short-lived
+ * signed URL so a dispatcher can view a private upload (payment proof, order
  * screenshot, delivery proof) without the files being publicly accessible.
+ *
+ * Restricted to ADMIN_ROLES: any authenticated session used to be enough, which
+ * let a rider mint URLs for arbitrary private files — including prescriptions
+ * the Help Centre promises stay confidential.
  */
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!ADMIN_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const full = req.nextUrl.searchParams.get("path") ?? "";
   const slash = full.indexOf("/");

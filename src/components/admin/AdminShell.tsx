@@ -8,6 +8,7 @@ import {
   MapPin,
   Store,
   AlertTriangle,
+  Inbox,
   Users,
   Settings,
   LogOut,
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
   { href: "/admin/merchants", key: "merchants", icon: Store },
   { href: "/admin/complaints", key: "complaints", icon: AlertTriangle },
+  { href: "/admin/support", key: "support", icon: Inbox },
   { href: "/admin/users", key: "users", icon: Users, ownerOnly: true },
   { href: "/admin/settings", key: "settings", icon: Settings },
 ] as const;
