@@ -6,6 +6,7 @@ import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import { resolveAddress } from "@/lib/locations/resolveAddress";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -64,16 +65,39 @@ export async function POST(req: NextRequest) {
       : null,
   ]);
 
-  const estimatedFee = estimateDeliveryFee(pickupZone, deliveryZone, {
+  // When the customer typed a location instead of pinning it we have no
+  // coordinates — which leaves the tracking map blank and the fee null. Try to
+  // recover them from our own catalogue, then OpenStreetMap. Best-effort only:
+  // any failure just means the order is stored exactly as it is today.
+  const [pickupGeo, deliveryGeo] = await Promise.all([
+    input.pickupLat == null || input.pickupLng == null
+      ? resolveAddress(input.pickupLocation).catch(() => null)
+      : null,
+    input.deliveryLat == null || input.deliveryLng == null
+      ? resolveAddress(input.deliveryLocation).catch(() => null)
+      : null,
+  ]);
+
+  // A zone recovered from the resolved coordinates also unblocks the fee.
+  const effectivePickupZone =
+    pickupZone ??
+    (pickupGeo?.zoneId ? await prisma.zone.findUnique({ where: { id: pickupGeo.zoneId } }) : null);
+  const effectiveDeliveryZone =
+    deliveryZone ??
+    (deliveryGeo?.zoneId ? await prisma.zone.findUnique({ where: { id: deliveryGeo.zoneId } }) : null);
+
+  const estimatedFee = estimateDeliveryFee(effectivePickupZone, effectiveDeliveryZone, {
     isMedicine: input.isMedicine,
   });
 
   const highValueFlag = input.declaredValueXaf > INSURED_VALUE_CAP_XAF;
+  // Use the effective zones so a zone recovered from a typed address is still
+  // safety-checked rather than silently skipping the flag.
   const riskFlag =
-    pickupZone?.safetyLevel === "RESTRICTED" ||
-    pickupZone?.safetyLevel === "NO_GO" ||
-    deliveryZone?.safetyLevel === "RESTRICTED" ||
-    deliveryZone?.safetyLevel === "NO_GO";
+    effectivePickupZone?.safetyLevel === "RESTRICTED" ||
+    effectivePickupZone?.safetyLevel === "NO_GO" ||
+    effectiveDeliveryZone?.safetyLevel === "RESTRICTED" ||
+    effectiveDeliveryZone?.safetyLevel === "NO_GO";
 
   const orderCode = `UNL-${orderCodeId()}`;
   const otpCode = otpId();
@@ -116,15 +140,19 @@ export async function POST(req: NextRequest) {
           ? `${merchant.merchantName} — ${merchant.address}`
           : input.pickupLocation,
         pickupLandmark: (merchant?.landmark || input.pickupLandmark) || null,
-        pickupZoneId: pickupZone?.id ?? null,
-        pickupLat: input.pickupLat ?? null,
-        pickupLng: input.pickupLng ?? null,
+        pickupZoneId: effectivePickupZone?.id ?? null,
+        pickupLat: input.pickupLat ?? pickupGeo?.latitude ?? null,
+        pickupLng: input.pickupLng ?? pickupGeo?.longitude ?? null,
+        pickupGeoSource: pickupGeo?.source ?? null,
+        pickupGeoConfidence: pickupGeo?.confidence ?? null,
         pickupAddressLabel: input.pickupLocation ?? null,
         deliveryLocation: input.deliveryLocation,
         deliveryLandmark: input.deliveryLandmark || null,
-        deliveryZoneId: deliveryZone?.id ?? null,
-        deliveryLat: input.deliveryLat ?? null,
-        deliveryLng: input.deliveryLng ?? null,
+        deliveryZoneId: effectiveDeliveryZone?.id ?? null,
+        deliveryLat: input.deliveryLat ?? deliveryGeo?.latitude ?? null,
+        deliveryLng: input.deliveryLng ?? deliveryGeo?.longitude ?? null,
+        deliveryGeoSource: deliveryGeo?.source ?? null,
+        deliveryGeoConfidence: deliveryGeo?.confidence ?? null,
         deliveryAddressLabel: input.deliveryLocation ?? null,
         merchantId: merchant?.id ?? null,
         itemDescription: input.itemDescription,

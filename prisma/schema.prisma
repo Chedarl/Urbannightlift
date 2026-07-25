@@ -331,6 +331,10 @@ model Order {
   pickupLat               Float?
   pickupLng               Float?
   pickupAddressLabel      String?
+  /// How the pickup coordinates were obtained: null = customer pinned them,
+  /// CATALOGUE/OSM = recovered from free text (see resolveAddress).
+  pickupGeoSource         String?
+  pickupGeoConfidence     Float?
   deliveryLocation        String
   deliveryLandmark        String?
   deliveryZoneId          String?
@@ -338,6 +342,8 @@ model Order {
   deliveryLat             Float?
   deliveryLng             Float?
   deliveryAddressLabel    String?
+  deliveryGeoSource       String?
+  deliveryGeoConfidence   Float?
   merchantId              String?
   merchant                Merchant?             @relation(fields: [merchantId], references: [id])
   itemDescription         String
@@ -498,6 +504,22 @@ model ServiceInterest {
 
   @@unique([serviceType, whatsappNumber])
   @@index([serviceType])
+  @@index([createdAt])
+}
+
+/// One row per free-text address we tried to geocode. Tells the owner what share
+/// of typed addresses the free resolver actually covers, so any decision about
+/// paid AI is made on real numbers rather than a guess.
+model AddressResolutionLog {
+  id          String   @id @default(cuid())
+  rawText     String
+  resolved    Boolean
+  source      String?
+  confidence  Float?
+  matchedName String?
+  createdAt   DateTime @default(now())
+
+  @@index([resolved])
   @@index([createdAt])
 }
 
