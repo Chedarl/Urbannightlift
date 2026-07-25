@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, BellRing } from "lucide-react";
+import { Bell, BellOff, BellRing, Send } from "lucide-react";
 
 /**
  * Turns Web Push on for this device.
@@ -26,6 +26,26 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 export function EnableNotifications({ className = "" }: { className?: string }) {
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  /**
+   * Sends a real notification to this device. Notifications are the one thing
+   * you cannot verify by looking at the app — a silent failure looks exactly
+   * like a quiet night — so proving the chain end to end has to be one tap.
+   */
+  async function sendTest() {
+    setBusy(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      setTestResult(res.ok ? "Sent — check your device." : (data.error ?? "Couldn't send."));
+    } catch {
+      setTestResult("Couldn't reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -138,9 +158,21 @@ export function EnableNotifications({ className = "" }: { className?: string }) 
 
   if (state === "on") {
     return (
-      <button type="button" onClick={disable} disabled={busy} className={`${base} border-safe/40 bg-safe/10 text-safe ${className}`}>
-        <BellRing className="h-3.5 w-3.5" /> Alerts on
-      </button>
+      <span className={`inline-flex flex-wrap items-center gap-2 ${className}`}>
+        <button type="button" onClick={disable} disabled={busy} className={`${base} border-safe/40 bg-safe/10 text-safe`}>
+          <BellRing className="h-3.5 w-3.5" /> Alerts on
+        </button>
+        <button
+          type="button"
+          onClick={sendTest}
+          disabled={busy}
+          className={`${base} border-ink-600 text-mist-300 hover:text-mist-100`}
+          title="Send a test notification to this device"
+        >
+          <Send className="h-3.5 w-3.5" /> Test
+        </button>
+        {testResult && <span className="text-xs text-mist-400">{testResult}</span>}
+      </span>
     );
   }
 
