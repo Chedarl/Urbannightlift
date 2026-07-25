@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { ChevronRight, Navigation } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { AvailabilityToggle } from "@/components/rider/AvailabilityToggle";
 import { OrderStatusBadge } from "@/components/admin/StatusBadge";
-import { cn } from "@/lib/utils";
+import { cn, formatXaf } from "@/lib/utils";
 import type { OrderStatus, ServiceType } from "@prisma/client";
 
 interface RiderOrderRow {
@@ -20,6 +21,8 @@ interface RiderOrderRow {
 export function RiderDashboard({
   rows,
   stats,
+  isOnline,
+  earnedTonightXaf,
 }: {
   rows: RiderOrderRow[];
   stats: {
@@ -29,12 +32,22 @@ export function RiderDashboard({
     activeOrderId: string | null;
     nextPickupId: string | null;
   };
+  isOnline: boolean;
+  earnedTonightXaf: number;
 }) {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-display text-2xl font-bold">{t("rider.dashboard.title")}</h1>
+
+      <AvailabilityToggle initialOnline={isOnline} />
+
+      {/* A rider should always know what tonight has been worth. */}
+      <div className="rounded-2xl border border-gold-400/40 bg-gold-400/5 p-4">
+        <p className="text-xs text-mist-500">You&apos;ve earned tonight</p>
+        <p className="mt-1 font-display text-2xl font-bold text-gold-400">{formatXaf(earnedTonightXaf)}</p>
+      </div>
 
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-2xl border border-ink-700 bg-ink-900 p-3 text-center">

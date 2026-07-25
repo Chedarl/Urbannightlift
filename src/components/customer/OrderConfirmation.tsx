@@ -15,6 +15,7 @@ import { Button, LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
 import { QuoteCard } from "@/components/customer/QuoteCard";
+import { OrderCaseThread } from "@/components/customer/OrderCaseThread";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
@@ -166,6 +167,10 @@ export function OrderConfirmation({
 
       {/* Pay for delivery (merchant code) */}
       {showPayment && <PaymentCard info={payment} />}
+
+      {/* A complaint belongs on the order it is about — no code to type, no
+          context to re-explain, and our reply comes back here. */}
+      {verified && <OrderCaseThread orderCode={order.orderCode} fr={fr} />}
 
       {verified && offerAccount && (
         <SaveAccountPrompt fullName={order.customerName} whatsappNumber={order.customerWhatsapp} />

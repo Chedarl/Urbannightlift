@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatXaf, cn } from "@/lib/utils";
 
 /**
@@ -96,6 +98,29 @@ export function EarningsReport({
   riders: RiderLine[];
   failures: FailureLine[];
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [settling, setSettling] = useState<string | null>(null);
+  const [received, setReceived] = useState("");
+
+  /**
+   * Records a rider handing over the cash they were holding. The amount
+   * actually received is asked for rather than assumed, so a shortfall is
+   * recorded as a variance instead of quietly disappearing.
+   */
+  async function settle(riderId: string, expected: number) {
+    const res = await fetch(`/api/riders/${riderId}/settle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receivedXaf: received.trim() === "" ? expected : Number(received) }),
+    });
+    if (res.ok) {
+      setSettling(null);
+      setReceived("");
+      startTransition(() => router.refresh());
+    }
+  }
+
   const failureCount = failures.reduce((n, f) => n + f.count, 0);
   const failureCost = failures.reduce((n, f) => n + f.costXaf, 0);
   const attempts = totals.deliveries + failureCount;
@@ -180,6 +205,7 @@ export function EarningsReport({
                 <th className="px-3 py-2">Rider earned</th>
                 <th className="px-3 py-2">We earned</th>
                 <th className="px-3 py-2">Outstanding</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-700">
@@ -196,6 +222,45 @@ export function EarningsReport({
                       <span className="text-gold-200">Owes us {formatXaf(r.outstandingXaf)}</span>
                     ) : (
                       <span className="text-violet-300">We owe {formatXaf(-r.outstandingXaf)}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {r.outstandingXaf !== 0 && r.riderId !== "unassigned" && (
+                      settling === r.riderId ? (
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <input
+                            className="w-28 rounded-lg border border-ink-700 bg-ink-800 px-2 py-1 text-xs"
+                            type="number"
+                            placeholder={String(Math.abs(r.outstandingXaf))}
+                            value={received}
+                            onChange={(e) => setReceived(e.target.value)}
+                            aria-label="Amount actually received"
+                          />
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => settle(r.riderId, Math.abs(r.outstandingXaf))}
+                            className="rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSettling(null)}
+                            className="text-xs text-mist-500"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setSettling(r.riderId); setReceived(""); }}
+                          className="rounded-lg border border-ink-600 px-2.5 py-1 text-xs text-mist-200 hover:border-violet-500"
+                        >
+                          Settle up
+                        </button>
+                      )
                     )}
                   </td>
                 </tr>

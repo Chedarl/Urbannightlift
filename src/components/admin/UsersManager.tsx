@@ -15,13 +15,24 @@ export interface UserItem {
   phone: string | null;
   role: UserRole;
   status: UserStatus;
+  /** Riders only: the zones they cover. Empty = anywhere. */
+  zoneIds: string[];
+  isOnline: boolean;
 }
 
 const inputCls =
   "w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-mist-100 focus:border-violet-500 focus:outline-none";
 const ROLES: UserRole[] = ["OWNER", "DISPATCHER", "RIDER", "SUPPORT"];
 
-export function UsersManager({ users, currentUserId }: { users: UserItem[]; currentUserId: string }) {
+export function UsersManager({
+  users,
+  currentUserId,
+  zones,
+}: {
+  users: UserItem[];
+  currentUserId: string;
+  zones: { id: string; zoneName: string }[];
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,6 +60,24 @@ export function UsersManager({ users, currentUserId }: { users: UserItem[]; curr
     }
     setCreating(false);
     setForm({ fullName: "", email: "", phone: "", role: "DISPATCHER", password: "" });
+    startTransition(() => router.refresh());
+  }
+
+  /**
+   * Sets the zones a rider covers.
+   *
+   * Keeping riders in consistent areas is what lets local knowledge build up,
+   * and local knowledge is what makes a landmark address findable at all.
+   */
+  async function toggleZone(u: UserItem, zoneId: string) {
+    const next = u.zoneIds.includes(zoneId)
+      ? u.zoneIds.filter((z) => z !== zoneId)
+      : [...u.zoneIds, zoneId];
+    await fetch(`/api/users/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ zoneIds: next }),
+    });
     startTransition(() => router.refresh());
   }
 
@@ -100,8 +129,39 @@ export function UsersManager({ users, currentUserId }: { users: UserItem[]; curr
                 <Badge tone={u.status === "ACTIVE" ? "safe" : "restricted"}>
                   {u.status === "ACTIVE" ? t("admin.users.statusActive") : t("admin.users.statusSuspended")}
                 </Badge>
+                {u.role === "RIDER" && (
+                  <Badge tone={u.isOnline ? "safe" : "violet"}>{u.isOnline ? "Online" : "Offline"}</Badge>
+                )}
               </div>
               <p className="text-xs text-mist-500">{u.email}{u.phone ? ` · ${u.phone}` : ""}</p>
+
+              {u.role === "RIDER" && (
+                <div className="mt-2">
+                  <p className="text-[11px] text-mist-500">
+                    Zones covered {u.zoneIds.length === 0 && "— none set, so this rider is offered every area"}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {zones.map((z) => {
+                      const on = u.zoneIds.includes(z.id);
+                      return (
+                        <button
+                          key={z.id}
+                          type="button"
+                          disabled={pending}
+                          onClick={() => toggleZone(u, z.id)}
+                          className={
+                            on
+                              ? "rounded-full border border-gold-400/60 bg-gold-400/10 px-2.5 py-0.5 text-[11px] font-medium text-gold-200"
+                              : "rounded-full border border-ink-700 px-2.5 py-0.5 text-[11px] text-mist-500 hover:text-mist-300"
+                          }
+                        >
+                          {z.zoneName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             {u.id !== currentUserId && (
               <Button size="sm" variant="outline" onClick={() => toggleStatus(u)} disabled={pending}>
