@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth/session";
 import { OrderDetail } from "@/components/admin/OrderDetail";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export default async function AdminOrderPage({
   params: Promise<{ orderId: string }>;
 }) {
   const { orderId } = await params;
-  const [order, riders] = await Promise.all([
+  const [order, riders, viewer, auditTrail] = await Promise.all([
     prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -28,6 +29,14 @@ export default async function AdminOrderPage({
       where: { role: "RIDER", status: "ACTIVE" },
       select: { id: true, fullName: true },
       orderBy: { fullName: "asc" },
+    }),
+    getSessionUser(),
+    // The audit trail is keyed by entity rather than related, so a log row
+    // survives the order it describes.
+    prisma.auditLog.findMany({
+      where: { entityType: "order", entityId: orderId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
     }),
   ]);
 
@@ -85,6 +94,19 @@ export default async function AdminOrderPage({
         adminNotes: order.adminNotes,
         customerVisibleNotes: order.customerVisibleNotes,
         assignedRiderId: order.assignedRiderId,
+        quoteSentAt: order.quoteSentAt?.toISOString() ?? null,
+        quoteAcceptedAt: order.quoteAcceptedAt?.toISOString() ?? null,
+        quoteDeclinedAt: order.quoteDeclinedAt?.toISOString() ?? null,
+        quoteDeclineReason: order.quoteDeclineReason,
+        quotedFeeXaf: order.quotedFeeXaf,
+        riderAcceptedAt: order.riderAcceptedAt?.toISOString() ?? null,
+        riderSharePercent: order.riderSharePercent,
+        riderPayoutXaf: order.riderPayoutXaf,
+        companyEarningXaf: order.companyEarningXaf,
+        cashCollectedXaf: order.cashCollectedXaf,
+        cashSettledAt: order.cashSettledAt?.toISOString() ?? null,
+        isTest: order.isTest,
+        archived: order.archivedAt != null,
         riderLat: order.riderLat,
         riderLng: order.riderLng,
         riderLocationAt: order.riderLocationAt?.toISOString() ?? null,
@@ -104,8 +126,17 @@ export default async function AdminOrderPage({
           riderNote: p.riderNote,
           createdAt: p.createdAt.toISOString(),
         })),
+        auditTrail: auditTrail.map((a) => ({
+          actorName: a.actorName,
+          actorRole: a.actorRole,
+          action: a.action,
+          changes: a.changes as Record<string, { from: unknown; to: unknown }> | null,
+          reason: a.reason,
+          createdAt: a.createdAt.toISOString(),
+        })),
       }}
       riders={riders}
+      isOwner={viewer?.role === "OWNER"}
     />
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, AlertTriangle, Pill, Gem, Search, X } from "lucide-react";
+import { Download, AlertTriangle, Pill, Gem, Search, X, Eye, EyeOff, Clock } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { ORDER_FILTERS, type OrderFilter } from "@/lib/orders/filters";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
@@ -25,21 +25,65 @@ export interface OrderRow {
   riskFlag: boolean;
   highValueFlag: boolean;
   isMedicine: boolean;
+  isTest: boolean;
+  archived: boolean;
+  assignedAt: string | null;
+  riderAcceptedAt: string | null;
+}
+
+/**
+ * Marks a row as not-real-trading, or as an assignment the rider has not
+ * answered — the two things a dispatcher most needs to spot at a glance.
+ */
+function RowFlags({ row }: { row: OrderRow }) {
+  const unanswered = row.assignedAt != null && row.riderAcceptedAt == null;
+  return (
+    <>
+      {row.isTest && (
+        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[10px] font-semibold uppercase text-mist-400">
+          Test
+        </span>
+      )}
+      {row.archived && (
+        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[10px] font-semibold uppercase text-mist-400">
+          Archived
+        </span>
+      )}
+      {unanswered && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-caution/15 px-2 py-0.5 text-[10px] font-semibold text-gold-200"
+          title="The rider has not accepted this assignment yet"
+        >
+          <Clock className="h-3 w-3" /> Unaccepted
+        </span>
+      )}
+    </>
+  );
 }
 
 export function OrdersTable({
   rows,
   activeFilter,
   query = "",
+  includeHidden = false,
 }: {
   rows: OrderRow[];
   activeFilter: OrderFilter;
   query?: string;
+  /** Test and archived orders are hidden unless this is on. */
+  includeHidden?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [q, setQ] = useState(query);
+
+  function toggleHidden() {
+    const params = new URLSearchParams(searchParams);
+    if (includeHidden) params.delete("hidden");
+    else params.set("hidden", "1");
+    router.push(`/admin/orders?${params.toString()}`);
+  }
 
   function setFilter(f: OrderFilter) {
     const params = new URLSearchParams(searchParams);
@@ -70,12 +114,32 @@ export function OrdersTable({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">{t("admin.orders.title")}</h1>
-        <a
-          href={`/api/orders/export${activeFilter !== "ALL" ? `?filter=${activeFilter}` : ""}`}
-          className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-medium hover:border-violet-500"
-        >
-          <Download className="h-4 w-4" /> {t("admin.orders.exportCsv")}
-        </a>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Test and archived orders are out of the way by default so the list
+              describes real trading. */}
+          <button
+            type="button"
+            onClick={toggleHidden}
+            className={cn(
+              "flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium",
+              includeHidden
+                ? "border-gold-400/50 bg-gold-400/10 text-gold-200"
+                : "border-ink-700 bg-ink-800 text-mist-300 hover:border-violet-500"
+            )}
+          >
+            {includeHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            {includeHidden ? "Showing test & archived" : "Show test & archived"}
+          </button>
+          <a
+            href={`/api/orders/export?${new URLSearchParams({
+              ...(activeFilter !== "ALL" ? { filter: activeFilter } : {}),
+              ...(includeHidden ? { hidden: "1" } : {}),
+            }).toString()}`}
+            className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-medium hover:border-violet-500"
+          >
+            <Download className="h-4 w-4" /> {t("admin.orders.exportCsv")}
+          </a>
+        </div>
       </div>
 
       <form onSubmit={submitSearch} className="relative">
@@ -139,7 +203,10 @@ export function OrdersTable({
                 className="rounded-2xl border border-ink-700 bg-ink-900 p-4 transition-colors hover:border-violet-500"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-display font-bold text-gold-400">{r.orderCode}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-display font-bold text-gold-400">{r.orderCode}</span>
+                    <RowFlags row={r} />
+                  </span>
                   <span className="text-xs text-mist-500">{time(r.createdAt)}</span>
                 </div>
                 <p className="mt-1 text-sm font-medium">{r.customerName}</p>
@@ -185,7 +252,12 @@ export function OrdersTable({
                     onClick={() => router.push(`/admin/orders/${r.id}`)}
                     className="cursor-pointer bg-ink-950 hover:bg-ink-900"
                   >
-                    <td className="px-3 py-2 font-medium text-gold-400">{r.orderCode}</td>
+                    <td className="px-3 py-2 font-medium text-gold-400">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {r.orderCode}
+                        <RowFlags row={r} />
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-mist-500">{time(r.createdAt)}</td>
                     <td className="px-3 py-2">{r.customerName}</td>
                     <td className="px-3 py-2 text-mist-300">{t(`services.${r.serviceType}.name`)}</td>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
+import { recordAudit } from "@/lib/audit";
 
 /**
  * POST /api/payments/[orderId]/verify — manual payment verification.
@@ -62,6 +63,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
         },
       });
     }
+  });
+
+  // Payment.verifiedById already attributes a verification; this puts the
+  // change on the order's own activity trail alongside everything else.
+  await recordAudit({
+    actor: user,
+    action: "payment.status_changed",
+    entityType: "payment",
+    entityId: orderId,
+    entityLabel: order.orderCode,
+    changes: { paymentStatus: { from: order.paymentStatus, to: status } },
+    reason: note || null,
   });
 
   return NextResponse.json({ paymentStatus: status });

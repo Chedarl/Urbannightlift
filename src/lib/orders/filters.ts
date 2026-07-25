@@ -51,13 +51,23 @@ const STATUS_GROUPS: Partial<Record<OrderFilter, OrderStatus[]>> = {
   REJECTED: ["REJECTED"],
 };
 
-export function buildOrderWhere(filter: OrderFilter): Prisma.OrderWhereInput {
-  if (filter === "HIGH_VALUE") return { highValueFlag: true };
-  if (filter === "MEDICINE") return { isMedicine: true };
-  if (filter === "RISK") return { riskFlag: true };
+/**
+ * Excludes test and archived orders. Applied to every operational view, count
+ * and export, so the numbers describe the real business by default — the whole
+ * point of having the flags. Pass includeHidden to look at them deliberately.
+ */
+export function visibilityWhere(includeHidden = false): Prisma.OrderWhereInput {
+  return includeHidden ? {} : { isTest: false, archivedAt: null };
+}
+
+export function buildOrderWhere(filter: OrderFilter, includeHidden = false): Prisma.OrderWhereInput {
+  const visible = visibilityWhere(includeHidden);
+  if (filter === "HIGH_VALUE") return { ...visible, highValueFlag: true };
+  if (filter === "MEDICINE") return { ...visible, isMedicine: true };
+  if (filter === "RISK") return { ...visible, riskFlag: true };
   const group = STATUS_GROUPS[filter];
-  if (group) return { orderStatus: { in: group } };
-  return {};
+  if (group) return { ...visible, orderStatus: { in: group } };
+  return visible;
 }
 
 export function normalizeFilter(value: string | null | undefined): OrderFilter {

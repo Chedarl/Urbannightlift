@@ -6,6 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
+import { EnableNotifications } from "@/components/shared/EnableNotifications";
 import { signOutAction } from "@/lib/auth/actions";
 import { buildWaLink, ADMIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 
@@ -40,6 +41,8 @@ export function RiderShell({ userName, children }: { userName: string; children:
       </header>
       <main className="mx-auto max-w-lg px-4 py-6">
         <InstallPrompt variant="rider" className="mb-4 w-full" />
+        {/* Without this a rider only learns about a job by opening the app. */}
+        <EnableNotifications className="mb-4" />
         {children}
       </main>
     </div>

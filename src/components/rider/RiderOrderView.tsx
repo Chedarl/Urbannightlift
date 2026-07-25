@@ -34,6 +34,12 @@ export interface RiderOrderData {
   safetyNotes: string | null;
   hasPickupProof: boolean;
   hasDeliveryProof: boolean;
+  /** Set when dispatch offered this job; null until the rider answers. */
+  assignedAt: string | null;
+  riderAcceptedAt: string | null;
+  /** What the rider earns on this delivery, once it is known. */
+  riderPayoutXaf: number | null;
+  estimatedPayoutXaf: number | null;
 }
 
 // The rider's sequential step buttons, each enabled only at the right status.
@@ -76,6 +82,25 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
   const step = STEP_FOR_STATUS[order.orderStatus];
   const atDelivery = order.orderStatus === "RIDER_ARRIVED_AT_DELIVERY";
   const readyToComplete = atDelivery && order.hasDeliveryProof;
+  // The actual figure once delivered, the estimate before that.
+  const payout = order.riderPayoutXaf ?? order.estimatedPayoutXaf;
+
+  /** Accepts or declines the job dispatch offered. */
+  async function answerAssignment(accept: boolean, reason?: string) {
+    setError(null);
+    const res = await fetch(`/api/orders/${order.id}/assignment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accept, reason }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error ?? t("common.error"));
+      return;
+    }
+    if (accept) router.refresh();
+    else router.push("/rider/dashboard");
+  }
 
   async function setStatus(next: OrderStatus) {
     setError(null);
@@ -154,6 +179,43 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
       </div>
 
       {error && <p className="rounded-xl bg-restricted/10 px-3 py-2 text-sm text-restricted">{error}</p>}
+
+      {/* The assignment handshake. Dispatch cannot tell whether a rider has
+          seen a job until they answer here, so nothing else on this screen
+          matters until they do. */}
+      {order.assignedAt && !order.riderAcceptedAt ? (
+        <section className="rounded-2xl border border-gold-400/50 bg-gold-400/10 p-4">
+          <h2 className="font-display text-base font-bold text-gold-200">You&apos;ve been offered this delivery</h2>
+          <p className="mt-1 text-sm text-mist-300">
+            Dispatch is waiting to hear from you. Accept it so they know you&apos;re on the way
+            {payout != null ? `, or decline if you can't take it. You earn ${formatXaf(payout)} on this delivery.` : ", or decline if you can't take it."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" disabled={pending} onClick={() => answerAssignment(true)}>
+              <Check className="h-4 w-4" /> Accept delivery
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                const why = prompt("Why can't you take this delivery?") ?? "";
+                if (why.trim()) answerAssignment(false, why.trim());
+              }}
+            >
+              Can&apos;t take it
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {payout != null && (
+        <p className="rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-sm">
+          <span className="text-mist-500">Your earnings on this delivery: </span>
+          <span className="font-semibold text-gold-300">{formatXaf(payout)}</span>
+          {order.riderPayoutXaf == null && <span className="text-xs text-mist-500"> (estimated)</span>}
+        </p>
+      )}
 
       <RiderLocationShare orderId={order.id} />
 

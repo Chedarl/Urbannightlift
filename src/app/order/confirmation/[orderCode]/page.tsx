@@ -70,6 +70,10 @@ export default async function ConfirmationPage({
             specialInstructions: redact(order.specialInstructions),
             customerVisibleNotes: order.customerVisibleNotes,
             otpCode: redact(order.otpCode),
+            quoteSentAt: order.quoteSentAt?.toISOString() ?? null,
+            quoteAcceptedAt: order.quoteAcceptedAt?.toISOString() ?? null,
+            quoteDeclinedAt: order.quoteDeclinedAt?.toISOString() ?? null,
+            quotedFeeXaf: order.quotedFeeXaf,
           }}
           payment={{
             orderCode: order.orderCode,
