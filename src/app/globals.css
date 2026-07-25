@@ -7,6 +7,7 @@
   --color-ink-800: #1a1130;
   --color-ink-700: #271a44;
   --color-ink-600: #362356;
+  --color-ink-500: #462e6b;
 
   --color-violet-950: #2e0f52;
   --color-violet-900: #3c1361;
@@ -15,6 +16,8 @@
   --color-violet-500: #9645de;
   --color-violet-400: #ac66ec;
   --color-violet-300: #c6a6ef;
+  --color-violet-200: #dbc8f5;
+  --color-violet-100: #ece1fa;
 
   --color-gold-600: #96751f;
   --color-gold-500: #c9a227;
@@ -23,7 +26,9 @@
   --color-gold-200: #f1d97a;
 
   --color-mist-100: #f6f4fb;
+  --color-mist-200: #e3dced;
   --color-mist-300: #cfc6db;
+  --color-mist-400: #b4a9c6;
   --color-mist-500: #9a8fb0;
 
   --color-safe: #2fae60;

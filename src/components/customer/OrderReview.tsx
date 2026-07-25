@@ -20,17 +20,30 @@ function structuredRows(draft: OrderDraft, fr: boolean): [string, string][] {
   const rows: [string, string][] = [];
   const list = (arr: unknown, fmt: (o: Record<string, unknown>) => string) =>
     Array.isArray(arr) ? arr.filter(Boolean).map((o) => fmt(o as Record<string, unknown>)).filter(Boolean).join(" · ") : "";
-  const foods = list(sd.foodItems, (o) => (o.name ? `${o.qty || 1}× ${o.name}` : ""));
+  // The forms and these readers were written with different key names, so accept
+  // both spellings — this also repairs orders already stored with the old keys.
+  const foods = list(sd.foodItems ?? sd.items, (o) => (o.name ? `${o.qty || 1}× ${o.name}` : ""));
   if (foods) rows.push([fr ? "Plats" : "Dishes", foods]);
   const meds = list(sd.meds, (o) => (o.name ? `${o.qty || 1}× ${o.name}${o.dosage ? ` (${o.dosage})` : ""}` : ""));
   if (meds) rows.push([fr ? "Médicaments" : "Medicines", meds]);
   const grocery = list(sd.groceryItems, (o) => (o.name ? `${o.qty || 1}× ${o.name}` : ""));
   if (grocery) rows.push([fr ? "Articles" : "Items", grocery]);
-  if (sd.place) rows.push([fr ? "Lieu" : "Place", String(sd.place)]);
+  const place = sd.place ?? sd.vendorName;
+  if (place) rows.push([fr ? "Lieu" : "Place", String(place)]);
   if (sd.pharmacy) rows.push([fr ? "Pharmacie" : "Pharmacy", String(sd.pharmacy)]);
-  if (sd.store) rows.push([fr ? "Magasin" : "Store", String(sd.store)]);
+  const store = sd.store ?? sd.storeName;
+  if (store) rows.push([fr ? "Magasin" : "Store", String(store)]);
+  if (sd.title) rows.push([fr ? "Demande" : "Request", String(sd.title)]);
+  if (sd.category) rows.push([fr ? "Catégorie" : "Category", String(sd.category)]);
   if (sd.size) rows.push([fr ? "Taille" : "Size", String(sd.size)]);
+  if (sd.weight) rows.push([fr ? "Poids" : "Weight", String(sd.weight)]);
+  const receiver = sd.recipientName ?? sd.receiverName;
+  if (receiver) rows.push([fr ? "Destinataire" : "Receiver", String(receiver)]);
+  const receiverPhone = sd.recipientPhone ?? sd.receiverPhone;
+  if (receiverPhone) rows.push([fr ? "Tél. destinataire" : "Receiver phone", String(receiverPhone)]);
+  if (sd.budgetXaf) rows.push([fr ? "Budget" : "Budget", `${sd.budgetXaf} XAF`]);
   if (sd.deadline) rows.push([fr ? "Échéance" : "Deadline", String(sd.deadline)]);
+  if (sd.accessNotes) rows.push([fr ? "Accès" : "Access notes", String(sd.accessNotes)]);
   if (sd.counterRef) rows.push([fr ? "Réf." : "Ref", String(sd.counterRef)]);
   return rows;
 }

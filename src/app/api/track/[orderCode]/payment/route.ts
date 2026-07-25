@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizePhone } from "@/lib/utils";
+import { hasOrderAccess } from "@/lib/orders/orderAccess";
 
 /**
  * POST /api/track/[orderCode]/payment — customer reports they've paid to the
  * merchant code and submits the transaction reference. Marks payment as
  * "submitted, unverified"; the dispatcher still confirms receipt. The system
  * NEVER auto-confirms from customer input.
+ *
+ * Ownership is required: an order code alone must not let a third party mark an
+ * order as paid or overwrite its payment proof. The caller must either hold the
+ * order-access cookie (they placed the order, or passed the code + phone check)
+ * or supply the WhatsApp number on the order.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderCode: string }> }) {
   const { orderCode } = await params;
@@ -18,9 +25,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   const order = await prisma.order.findUnique({
     where: { orderCode: orderCode.toUpperCase() },
-    select: { id: true, customerId: true, paymentMethod: true, estimatedDeliveryFeeXaf: true, finalDeliveryFeeXaf: true },
+    select: {
+      id: true,
+      customerId: true,
+      paymentMethod: true,
+      estimatedDeliveryFeeXaf: true,
+      finalDeliveryFeeXaf: true,
+      customer: { select: { whatsappNumber: true } },
+    },
   });
   if (!order) return NextResponse.json({ found: false }, { status: 404 });
+
+  // Ownership check — cookie proof, or the WhatsApp number used on the order.
+  const claimedPhone = normalizePhone(typeof body.whatsappNumber === "string" ? body.whatsappNumber : "");
+  const owns =
+    (await hasOrderAccess(orderCode)) ||
+    (claimedPhone.length > 0 && normalizePhone(order.customer.whatsappNumber) === claimedPhone);
+  if (!owns) return NextResponse.json({ error: "Verification required" }, { status: 403 });
 
   await prisma.$transaction(async (tx) => {
     await tx.order.update({ where: { id: order.id }, data: { paymentStatus: "SUBMITTED_UNVERIFIED" } });

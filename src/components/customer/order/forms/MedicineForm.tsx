@@ -13,6 +13,7 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -51,7 +52,7 @@ export function MedicineForm() {
       isMedicine: true,
       prescriptionRequired: "YES",
       paymentMethod: "CASH",
-      acceptedTerms: true as const,
+      acceptedTerms: undefined as unknown as true,
       serviceDetails: { prescriptionType: "PRESCRIPTION", substituteOk: true, meds: [{ name: "", dosage: "", qty: 1 }] },
     },
   });
@@ -146,6 +147,7 @@ export function MedicineForm() {
 
   function onInvalid(errs: Record<string, unknown>) {
     const labels: Record<string, string> = {
+      acceptedTerms: fr ? "Accepter les conditions" : "Accept the terms",
       fullName: fr ? "Nom du patient" : "Patient full name",
       whatsappNumber: fr ? "Téléphone du patient" : "Patient phone number",
       pickupLocation: fr ? "Lieu de la pharmacie" : "Pharmacy location",
@@ -342,6 +344,13 @@ export function MedicineForm() {
             <ul className="list-disc pl-5 text-xs">{missing.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         )}
+        <TermsCheckbox
+          accent={ACCENT}
+          checked={watch("acceptedTerms") === true}
+          onChange={(next) => setValue("acceptedTerms", (next ? true : undefined) as unknown as true, { shouldValidate: true })}
+          error={missing.includes(fr ? "Accepter les conditions" : "Accept the terms")}
+          fr={fr}
+        />
       </div>
 
       {/* Sticky footer */}

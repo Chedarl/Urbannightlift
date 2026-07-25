@@ -327,7 +327,13 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
             {t("exp.locationTitle")}
           </h2>
 
-          {!merchantLayout && (
+          {/*
+            Show the pickup picker unless a merchant is chosen (which sets the
+            pickup itself). Previously the merchant layout hid this field
+            unconditionally, so with no verified merchants seeded there was no
+            way to set the required pickupLocation and submit always failed.
+          */}
+          {(!merchantLayout || !selectedMerchant) && (
             <LocationField
               label={LOC_LABELS[service].pickup[locale === "fr" ? "fr" : "en"]}
               accent={exp.accent}

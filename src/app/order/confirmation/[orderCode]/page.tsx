@@ -3,8 +3,15 @@ import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { OrderConfirmation } from "@/components/customer/OrderConfirmation";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
+import { hasOrderAccess } from "@/lib/orders/orderAccess";
 
 export const dynamic = "force-dynamic";
+
+/** Shows only the last two digits: "237 6XX XXX X04". */
+function maskPhone(phone: string): string {
+  const tail = phone.slice(-2);
+  return `${"•".repeat(Math.max(0, phone.length - 2))}${tail}`;
+}
 
 export default async function ConfirmationPage({
   params,
@@ -12,11 +19,17 @@ export default async function ConfirmationPage({
   params: Promise<{ orderCode: string }>;
 }) {
   const { orderCode } = await params;
-  const [order, settings] = await Promise.all([
+  const [order, settings, verified] = await Promise.all([
     prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true, pickupZone: true, deliveryZone: true } }),
     getOperatingSettings(),
+    hasOrderAccess(orderCode),
   ]);
   if (!order) notFound();
+
+  // An order code travels through WhatsApp, PDFs and screenshots, so it is not
+  // a credential. Until the visitor proves ownership we withhold the delivery
+  // OTP and the personal details, and show a verification prompt instead.
+  const redact = <T,>(value: T): T | null => (verified ? value : null);
 
   return (
     <>
@@ -27,12 +40,17 @@ export default async function ConfirmationPage({
             orderCode: order.orderCode,
             createdAt: order.createdAt.toISOString(),
             orderStatus: order.orderStatus,
-            customerName: order.customer.fullName,
-            customerWhatsapp: order.customer.whatsappNumber,
+            verified,
+            customerName: verified ? order.customer.fullName : "",
+            customerWhatsapp: verified
+              ? order.customer.whatsappNumber
+              : maskPhone(order.customer.whatsappNumber),
             preferredLanguage: order.customer.preferredLanguage,
             serviceType: order.serviceType,
-            itemDescription: order.itemDescription,
-            serviceDetails: (order.serviceDetails ?? null) as Record<string, unknown> | null,
+            itemDescription: verified ? order.itemDescription : "",
+            serviceDetails: verified
+              ? ((order.serviceDetails ?? null) as Record<string, unknown> | null)
+              : null,
             estimatedFeeXaf: order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
             pickupZoneName: order.pickupZone?.zoneName ?? null,
             deliveryZoneName: order.deliveryZone?.zoneName ?? null,
@@ -41,14 +59,14 @@ export default async function ConfirmationPage({
             isFragile: order.isFragile,
             isMedicine: order.isMedicine,
             prescriptionRequired: order.prescriptionRequired,
-            pickupLocation: order.pickupLocation,
-            pickupLandmark: order.pickupLandmark,
-            deliveryLocation: order.deliveryLocation,
-            deliveryLandmark: order.deliveryLandmark,
+            pickupLocation: verified ? order.pickupLocation : "",
+            pickupLandmark: redact(order.pickupLandmark),
+            deliveryLocation: verified ? order.deliveryLocation : "",
+            deliveryLandmark: redact(order.deliveryLandmark),
             paymentMethod: order.paymentMethod,
-            specialInstructions: order.specialInstructions,
+            specialInstructions: redact(order.specialInstructions),
             customerVisibleNotes: order.customerVisibleNotes,
-            otpCode: order.otpCode,
+            otpCode: redact(order.otpCode),
           }}
           payment={{
             orderCode: order.orderCode,

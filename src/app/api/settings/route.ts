@@ -15,7 +15,13 @@ export async function GET() {
   });
 }
 
-/** PATCH /api/settings — staff: update operating mode / hours / notices. */
+/**
+ * PATCH /api/settings — staff: update operating mode / hours / notices.
+ *
+ * The merchant codes and USSD templates decide where customer money is sent, so
+ * only the OWNER may change them; dispatchers and support keep day-to-day
+ * control of the operating mode, hours and notices.
+ */
 export async function PATCH(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || user.role === "RIDER") {
@@ -30,10 +36,18 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.operatingEndHour === "number") data.operatingEndHour = body.operatingEndHour;
   if (typeof body.zoneNoticeEn === "string") data.zoneNoticeEn = body.zoneNoticeEn;
   if (typeof body.zoneNoticeFr === "string") data.zoneNoticeFr = body.zoneNoticeFr;
-  if (typeof body.mtnMerchantCode === "string") data.mtnMerchantCode = body.mtnMerchantCode || null;
-  if (typeof body.mtnUssdTemplate === "string") data.mtnUssdTemplate = body.mtnUssdTemplate || null;
-  if (typeof body.orangeMerchantCode === "string") data.orangeMerchantCode = body.orangeMerchantCode || null;
-  if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
+
+  const paymentFields = ["mtnMerchantCode", "mtnUssdTemplate", "orangeMerchantCode", "orangeUssdTemplate"];
+  const touchesPayment = paymentFields.some((f) => typeof body[f] === "string");
+  if (touchesPayment) {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change payment codes" }, { status: 403 });
+    }
+    if (typeof body.mtnMerchantCode === "string") data.mtnMerchantCode = body.mtnMerchantCode || null;
+    if (typeof body.mtnUssdTemplate === "string") data.mtnUssdTemplate = body.mtnUssdTemplate || null;
+    if (typeof body.orangeMerchantCode === "string") data.orangeMerchantCode = body.orangeMerchantCode || null;
+    if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
+  }
 
   await getOperatingSettings(); // ensure the singleton exists
   const settings = await prisma.operatingSettings.update({ where: { id: 1 }, data });

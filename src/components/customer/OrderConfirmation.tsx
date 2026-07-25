@@ -13,6 +13,7 @@ import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
+import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ export interface ConfirmationOrder {
   orderCode: string;
   createdAt: string;
   orderStatus: OrderStatus;
+  /** True once the visitor proved they own this order (placed it, or passed the code + phone check). */
+  verified: boolean;
   customerName: string;
   customerWhatsapp: string;
   preferredLanguage: PreferredLanguage;
@@ -53,7 +56,10 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
   const statusKey = CUSTOMER_STATUS_KEY[order.orderStatus];
   const isCancelled = statusKey === "cancelled";
   const currentIdx = CUSTOMER_TIMELINE.indexOf(statusKey);
-  const showPayment = !isCancelled && payment.paymentStatus !== "VERIFIED";
+  const verified = order.verified;
+  // Payment submission and the shareable summary both expose private details,
+  // so they stay behind the ownership check.
+  const showPayment = verified && !isCancelled && payment.paymentStatus !== "VERIFIED";
 
   const waMessage = buildOrderMessage({
     orderCode: order.orderCode,
@@ -110,8 +116,14 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
           {order.orderCode}
         </p>
         <p className="mt-1 text-xs text-mist-500">{t("confirmation.keepCode")}</p>
-        <DownloadPdfButton data={pdfData} label={t("confirmation.downloadPdf")} className="mx-auto mt-3" />
+        {verified && (
+          <DownloadPdfButton data={pdfData} label={t("confirmation.downloadPdf")} className="mx-auto mt-3" />
+        )}
       </div>
+
+      {!verified && (
+        <VerifyOrderCard orderCode={order.orderCode} maskedPhone={order.customerWhatsapp} />
+      )}
 
       {order.otpCode && !isCancelled && (
         <div className="rounded-2xl border border-violet-500/40 bg-violet-950/40 p-4 text-center">
@@ -177,8 +189,8 @@ export function OrderConfirmation({ order, payment }: { order: ConfirmationOrder
         </Button>
       </div>
 
-      {/* WhatsApp hand-off */}
-      <div className="flex flex-col gap-3">
+      {/* WhatsApp hand-off — the message contains the full order, so it needs ownership */}
+      <div className={cn("flex flex-col gap-3", !verified && "hidden")}>
         <p className="text-xs text-mist-500">{t("confirmation.whatsappHint")}</p>
         <LinkButton
           href={buildWaLink(MAIN_WHATSAPP_NUMBER, waMessage)}

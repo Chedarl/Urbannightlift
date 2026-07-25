@@ -13,6 +13,7 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -50,7 +51,7 @@ export function GroceryForm() {
       preferredLanguage: fr ? "FR" : "EN", serviceType: "GROCERY_PICKUP", fullName: fr ? "Client" : "Customer",
       quantity: 1, declaredValueXaf: 0, itemAlreadyPaid: false, riderPaysAtPickup: false,
       isFragile: false, needsTemperatureCare: false, isMedicine: false, paymentMethod: "CASH",
-      acceptedTerms: true as const,
+      acceptedTerms: undefined as unknown as true,
       serviceDetails: { shoppingType: "SUPERMARKET", substituteOk: true, bagSize: "MEDIUM", groceryItems: [{ name: "", qty: 1, brand: "", notes: "" }] },
     },
   });
@@ -101,6 +102,7 @@ export function GroceryForm() {
   }
   function onInvalid(errs: Record<string, unknown>) {
     const labels: Record<string, string> = {
+      acceptedTerms: fr ? "Accepter les conditions" : "Accept the terms",
       whatsappNumber: fr ? "Numéro du destinataire" : "Recipient phone number",
       pickupLocation: fr ? "Lieu du magasin" : "Store location",
       deliveryLocation: fr ? "Adresse de livraison" : "Delivery address",
@@ -255,6 +257,13 @@ export function GroceryForm() {
             <ul className="list-disc pl-5 text-xs">{missing.map((m) => <li key={m}>{m}</li>)}</ul>
           </div>
         )}
+        <TermsCheckbox
+          accent={ACCENT}
+          checked={watch("acceptedTerms") === true}
+          onChange={(next) => setValue("acceptedTerms", (next ? true : undefined) as unknown as true, { shouldValidate: true })}
+          error={missing.includes(fr ? "Accepter les conditions" : "Accept the terms")}
+          fr={fr}
+        />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-green-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
