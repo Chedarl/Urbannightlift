@@ -299,6 +299,7 @@
     "nav": {
       "dashboard": "Tableau de bord",
       "orders": "Commandes",
+      "customers": "Clients",
       "zones": "Zones & tarifs",
       "merchants": "Marchands",
       "complaints": "Incidents",

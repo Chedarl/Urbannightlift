@@ -1,4 +1,5 @@
 import type { Prisma, OrderStatus } from "@prisma/client";
+import { normalizePhone } from "@/lib/utils";
 
 /** Admin order-table filters mapped to a Prisma where-clause. */
 export type OrderFilter =
@@ -61,4 +62,30 @@ export function buildOrderWhere(filter: OrderFilter): Prisma.OrderWhereInput {
 
 export function normalizeFilter(value: string | null | undefined): OrderFilter {
   return ORDER_FILTERS.includes(value as OrderFilter) ? (value as OrderFilter) : "ALL";
+}
+
+/**
+ * Free-text order lookup: order code, customer name, or phone number. Staff
+ * previously had no way to find an order from a phone number, which is what a
+ * customer gives on a call.
+ */
+export function buildOrderSearchWhere(query: string): Prisma.OrderWhereInput {
+  const q = query.trim();
+  if (!q) return {};
+
+  const or: Prisma.OrderWhereInput[] = [
+    { orderCode: { contains: q.toUpperCase() } },
+    { customer: { fullName: { contains: q, mode: "insensitive" } } },
+  ];
+
+  const digits = q.replace(/[^\d]/g, "");
+  if (digits.length >= 3) {
+    or.push({ customer: { whatsappNumber: { contains: digits } } });
+    const normalized = normalizePhone(q);
+    if (normalized && normalized !== digits) {
+      or.push({ customer: { whatsappNumber: { contains: normalized } } });
+    }
+  }
+
+  return { OR: or };
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Download, AlertTriangle, Pill, Gem } from "lucide-react";
+import { Download, AlertTriangle, Pill, Gem, Search, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { ORDER_FILTERS, type OrderFilter } from "@/lib/orders/filters";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
@@ -26,15 +27,39 @@ export interface OrderRow {
   isMedicine: boolean;
 }
 
-export function OrdersTable({ rows, activeFilter }: { rows: OrderRow[]; activeFilter: OrderFilter }) {
+export function OrdersTable({
+  rows,
+  activeFilter,
+  query = "",
+}: {
+  rows: OrderRow[];
+  activeFilter: OrderFilter;
+  query?: string;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [q, setQ] = useState(query);
 
   function setFilter(f: OrderFilter) {
     const params = new URLSearchParams(searchParams);
     if (f === "ALL") params.delete("filter");
     else params.set("filter", f);
+    router.push(`/admin/orders?${params.toString()}`);
+  }
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
+    if (q.trim()) params.set("q", q.trim());
+    else params.delete("q");
+    router.push(`/admin/orders?${params.toString()}`);
+  }
+
+  function clearSearch() {
+    setQ("");
+    const params = new URLSearchParams(searchParams);
+    params.delete("q");
     router.push(`/admin/orders?${params.toString()}`);
   }
 
@@ -52,6 +77,32 @@ export function OrdersTable({ rows, activeFilter }: { rows: OrderRow[]; activeFi
           <Download className="h-4 w-4" /> {t("admin.orders.exportCsv")}
         </a>
       </div>
+
+      <form onSubmit={submitSearch} className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist-500" />
+        <input
+          className="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2 pl-9 pr-9 text-sm text-mist-100 placeholder:text-mist-500 focus:border-violet-500 focus:outline-none"
+          placeholder="Search order code, customer name or phone…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-mist-500 hover:text-mist-300"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </form>
+
+      {query && (
+        <p className="text-xs text-mist-400">
+          {rows.length} {rows.length === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
+        </p>
+      )}
 
       {/* Filter pills */}
       <div className="-mx-1 overflow-x-auto px-1 pb-1">

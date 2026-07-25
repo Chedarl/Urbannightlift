@@ -9,6 +9,7 @@ import {
   Store,
   AlertTriangle,
   Inbox,
+  Users2,
   Users,
   Settings,
   LogOut,
@@ -23,6 +24,7 @@ import type { UserRole } from "@prisma/client";
 const NAV = [
   { href: "/admin/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", key: "orders", icon: ClipboardList },
+  { href: "/admin/customers", key: "customers", icon: Users2 },
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
   { href: "/admin/merchants", key: "merchants", icon: Store },
   { href: "/admin/complaints", key: "complaints", icon: AlertTriangle },

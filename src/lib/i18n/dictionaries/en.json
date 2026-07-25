@@ -299,6 +299,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "orders": "Orders",
+      "customers": "Customers",
       "zones": "Zones & pricing",
       "merchants": "Merchants",
       "complaints": "Incidents",
