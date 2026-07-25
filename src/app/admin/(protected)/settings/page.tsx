@@ -29,6 +29,7 @@ export default async function SettingsPage() {
         mtnUssdTemplate: settings.mtnUssdTemplate ?? "",
         orangeMerchantCode: settings.orangeMerchantCode ?? "",
         orangeUssdTemplate: settings.orangeUssdTemplate ?? "",
+        riderSharePercent: settings.riderSharePercent,
       }}
     />
   );

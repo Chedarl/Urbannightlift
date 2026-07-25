@@ -14,6 +14,7 @@ import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
+import { QuoteCard } from "@/components/customer/QuoteCard";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
@@ -48,6 +49,11 @@ export interface ConfirmationOrder {
   specialInstructions: string | null;
   customerVisibleNotes: string | null;
   otpCode: string | null;
+  /** The priced quote awaiting the customer's agreement. */
+  quoteSentAt: string | null;
+  quoteAcceptedAt: string | null;
+  quoteDeclinedAt: string | null;
+  quotedFeeXaf: number | null;
 }
 
 export function OrderConfirmation({
@@ -133,6 +139,19 @@ export function OrderConfirmation({
 
       {!verified && (
         <VerifyOrderCard orderCode={order.orderCode} maskedPhone={order.customerWhatsapp} />
+      )}
+
+      {/* The quote. Sits above everything else because until the customer
+          answers it, nothing on this order can move. */}
+      {verified && order.quoteSentAt && order.quotedFeeXaf != null && !isCancelled && (
+        <QuoteCard
+          orderCode={order.orderCode}
+          feeXaf={order.quotedFeeXaf}
+          note={order.customerVisibleNotes}
+          accepted={order.quoteAcceptedAt != null}
+          declined={order.quoteDeclinedAt != null}
+          fr={fr}
+        />
       )}
 
       {order.otpCode && !isCancelled && (

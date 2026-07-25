@@ -12,8 +12,11 @@ export async function GET(req: NextRequest) {
   }
 
   const filter = normalizeFilter(req.nextUrl.searchParams.get("filter"));
+  // Test and archived orders stay out of the export, so a spreadsheet handed to
+  // an accountant describes real trading.
+  const includeHidden = req.nextUrl.searchParams.get("hidden") === "1";
   const orders = await prisma.order.findMany({
-    where: buildOrderWhere(filter),
+    where: buildOrderWhere(filter, includeHidden),
     orderBy: { createdAt: "desc" },
     include: {
       customer: { select: { fullName: true, whatsappNumber: true } },

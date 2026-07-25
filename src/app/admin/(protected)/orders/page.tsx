@@ -7,14 +7,18 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; hidden?: string }>;
 }) {
-  const { filter: filterParam, q = "" } = await searchParams;
+  const { filter: filterParam, q = "", hidden } = await searchParams;
   const filter = normalizeFilter(filterParam);
+  // Test and archived orders are out of sight unless you ask for them.
+  const includeHidden = hidden === "1";
   const search = buildOrderSearchWhere(q);
 
   const orders = await prisma.order.findMany({
-    where: q ? { AND: [buildOrderWhere(filter), search] } : buildOrderWhere(filter),
+    where: q
+      ? { AND: [buildOrderWhere(filter, includeHidden), search] }
+      : buildOrderWhere(filter, includeHidden),
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
@@ -40,7 +44,12 @@ export default async function AdminOrdersPage({
     riskFlag: o.riskFlag,
     highValueFlag: o.highValueFlag,
     isMedicine: o.isMedicine,
+    isTest: o.isTest,
+    archived: o.archivedAt != null,
+    // Dispatch needs to see an assignment nobody has answered.
+    assignedAt: o.assignedAt?.toISOString() ?? null,
+    riderAcceptedAt: o.riderAcceptedAt?.toISOString() ?? null,
   }));
 
-  return <OrdersTable rows={rows} activeFilter={filter} query={q} />;
+  return <OrdersTable rows={rows} activeFilter={filter} query={q} includeHidden={includeHidden} />;
 }

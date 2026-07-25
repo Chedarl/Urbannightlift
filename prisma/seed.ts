@@ -51,6 +51,10 @@ async function seedSettings() {
       // enables them from admin Settings as demand justifies it. Not in `update`
       // so a reseed never overrides what the owner has switched on.
       enabledServices: ["MEDICINE_PICKUP", "FOOD_PICKUP", "GROCERY_PICKUP", "SMALL_PARCEL"],
+      // The business runs on a revenue share: 60% of each delivery fee to the
+      // rider, 40% to Urban Night Lift. Not in `update`, so a reseed never
+      // overrides a rate the owner has changed.
+      riderSharePercent: 60,
     },
   });
   console.log("✓ OperatingSettings (mode=CLOSED)");

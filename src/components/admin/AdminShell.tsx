@@ -12,6 +12,7 @@ import {
   Users2,
   Users,
   Settings,
+  Wallet,
   LogOut,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/admin/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", key: "orders", icon: ClipboardList },
   { href: "/admin/customers", key: "customers", icon: Users2 },
+  { href: "/admin/earnings", key: "earnings", icon: Wallet },
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
   { href: "/admin/merchants", key: "merchants", icon: Store },
   { href: "/admin/complaints", key: "complaints", icon: AlertTriangle },

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { OperatingModeControls } from "@/components/admin/OperatingModeControls";
+import { NeedsAttention, type AttentionRow } from "@/components/admin/NeedsAttention";
+import { EnableNotifications } from "@/components/shared/EnableNotifications";
 import { formatXaf, cn } from "@/lib/utils";
 import type { OperatingMode } from "@prisma/client";
 
@@ -48,20 +50,35 @@ function Stat({
   return href ? <Link href={href}>{inner}</Link> : inner;
 }
 
-export function DashboardStats({ stats, mode }: { stats: DashboardStatsData; mode: OperatingMode }) {
+export function DashboardStats({
+  stats,
+  mode,
+  attention,
+}: {
+  stats: DashboardStatsData;
+  mode: OperatingMode;
+  attention: AttentionRow[];
+}) {
   const { t } = useTranslation();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">{t("admin.dashboard.title")}</h1>
-        <Link
-          href="/admin/orders"
-          className="flex items-center gap-1 text-sm font-medium text-violet-300 hover:text-violet-500"
-        >
-          {t("admin.dashboard.viewAllOrders")} <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <EnableNotifications />
+          <Link
+            href="/admin/orders"
+            className="flex items-center gap-1 text-sm font-medium text-violet-300 hover:text-violet-500"
+          >
+            {t("admin.dashboard.viewAllOrders")} <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
+
+      {/* Above the stats on purpose: what is stuck matters more than what has
+          already gone right. */}
+      <NeedsAttention rows={attention} />
 
       <OperatingModeControls mode={mode} />
 

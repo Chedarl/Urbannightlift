@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
+import { recordAudit, diffFields } from "@/lib/audit";
 import type { ServiceType } from "@prisma/client";
 
 const ALL_SERVICES: ServiceType[] = [
@@ -72,7 +73,35 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
   }
 
-  await getOperatingSettings(); // ensure the singleton exists
+  // The revenue share decides how every franc is divided, so it is OWNER-only
+  // and audited. It applies to future deliveries only — completed orders keep
+  // the rate they were delivered under.
+  if (body.riderSharePercent !== undefined) {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change the revenue share" }, { status: 403 });
+    }
+    const pct = Number(body.riderSharePercent);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      return NextResponse.json({ error: "The rider share must be between 0 and 100" }, { status: 400 });
+    }
+    data.riderSharePercent = Math.round(pct);
+  }
+
+  const before = await getOperatingSettings(); // ensure the singleton exists
   const settings = await prisma.operatingSettings.update({ where: { id: 1 }, data });
+
+  const changes = diffFields(before as unknown as Record<string, unknown>, data);
+  delete changes.updatedByUserId; // always changes; says nothing
+  if (Object.keys(changes).length > 0) {
+    await recordAudit({
+      actor: user,
+      action: "settings.updated",
+      entityType: "settings",
+      entityId: "1",
+      entityLabel: "Operating settings",
+      changes,
+    });
+  }
+
   return NextResponse.json({ settings });
 }

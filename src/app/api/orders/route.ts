@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
+import { notifyNewOrder } from "@/lib/notify/triggers";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -206,6 +207,10 @@ export async function POST(req: NextRequest) {
 
     return created;
   });
+
+  // An order nobody sees is an order nobody delivers. Alert dispatch now
+  // rather than waiting for someone to reload the console.
+  await notifyNewOrder(order.orderCode, order.id, input.serviceType);
 
   // The submitter owns this order — grant access to its private details
   // (delivery OTP, contact, addresses) on the confirmation screen.

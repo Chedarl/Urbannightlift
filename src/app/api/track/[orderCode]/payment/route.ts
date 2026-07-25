@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { hasOrderAccess } from "@/lib/orders/orderAccess";
+import { notifyPaymentSubmitted } from "@/lib/notify/triggers";
 
 /**
  * POST /api/track/[orderCode]/payment — customer reports they've paid to the
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     where: { orderCode: orderCode.toUpperCase() },
     select: {
       id: true,
+      orderCode: true,
       customerId: true,
       paymentMethod: true,
       estimatedDeliveryFeeXaf: true,
@@ -64,6 +66,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
         },
       });
   });
+
+  // A payment nobody sees is a delivery that never starts. Alert dispatch the
+  // moment the customer says they've paid.
+  await notifyPaymentSubmitted(
+    order.orderCode,
+    order.id,
+    order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf
+  );
 
   return NextResponse.json({ ok: true });
 }

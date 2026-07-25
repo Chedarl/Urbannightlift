@@ -12,6 +12,7 @@ import {
   Wallet,
   StickyNote,
   Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
@@ -96,6 +97,19 @@ export interface OrderDetailData {
   adminNotes: string | null;
   customerVisibleNotes: string | null;
   assignedRiderId: string | null;
+  quoteSentAt: string | null;
+  quoteAcceptedAt: string | null;
+  quoteDeclinedAt: string | null;
+  quoteDeclineReason: string | null;
+  quotedFeeXaf: number | null;
+  riderAcceptedAt: string | null;
+  riderSharePercent: number | null;
+  riderPayoutXaf: number | null;
+  companyEarningXaf: number | null;
+  cashCollectedXaf: number | null;
+  cashSettledAt: string | null;
+  isTest: boolean;
+  archived: boolean;
   riderLat: number | null;
   riderLng: number | null;
   riderLocationAt: string | null;
@@ -103,6 +117,16 @@ export interface OrderDetailData {
   screenshotUrl: string | null;
   statusHistory: StatusHistoryRow[];
   proofs: ProofRow[];
+  auditTrail: AuditRow[];
+}
+
+export interface AuditRow {
+  actorName: string;
+  actorRole: string;
+  action: string;
+  changes: Record<string, { from: unknown; to: unknown }> | null;
+  reason: string | null;
+  createdAt: string;
 }
 
 const REJECTION_REASONS = [
@@ -136,6 +160,21 @@ function GeoNote({ source, confidence }: { source: string | null; confidence: nu
   );
 }
 
+/** Plain-language names for the audit actions, in the order they usually occur. */
+const AUDIT_LABEL: Record<string, string> = {
+  "order.quoted": "Priced and sent to the customer",
+  "order.requoted": "Re-priced — the customer must agree again",
+  "order.quote_accepted": "Customer accepted the price",
+  "order.quote_declined": "Customer declined the price",
+  "order.updated": "Order edited",
+  "order.rider_assigned": "Rider assigned",
+  "order.assignment_accepted": "Rider accepted the assignment",
+  "order.assignment_declined": "Rider declined the assignment",
+  "order.archived": "Archived",
+  "order.unarchived": "Restored from archive",
+  "order.deleted": "Deleted",
+};
+
 const card = "rounded-2xl border border-ink-700 bg-ink-900 p-4";
 const inputCls =
   "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-violet-500 focus:outline-none";
@@ -153,9 +192,12 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 export function OrderDetail({
   order,
   riders,
+  isOwner = false,
 }: {
   order: OrderDetailData;
   riders: { id: string; fullName: string }[];
+  /** Deleting an order is owner-only, so the control is owner-only too. */
+  isOwner?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -168,6 +210,11 @@ export function OrderDetail({
   const [fee, setFee] = useState(order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? 0);
   const [totalDue, setTotalDue] = useState(order.totalAmountDueXaf ?? 0);
   const [verifyNote, setVerifyNote] = useState("");
+  const [quoteFee, setQuoteFee] = useState(
+    order.quotedFeeXaf ?? order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? 0
+  );
+  const [quoteNote, setQuoteNote] = useState("");
+  const [housekeepingReason, setHousekeepingReason] = useState("");
   const [adminNote, setAdminNote] = useState(order.adminNotes ?? "");
   const [customerNote, setCustomerNote] = useState(order.customerVisibleNotes ?? "");
 
@@ -369,6 +416,40 @@ export function OrderDetail({
             </ol>
           </section>
 
+          {/* Activity — every privileged change to this order and who made it.
+              Fee edits and rider assignment used to leave no trace at all. */}
+          {order.auditTrail.length > 0 && (
+            <section className={card}>
+              <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">Activity</h2>
+              <ol className="flex flex-col gap-2">
+                {order.auditTrail.map((a, i) => (
+                  <li key={i} className="text-xs">
+                    <span className="text-mist-500">
+                      {new Date(a.createdAt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>{" "}
+                    <span className="font-medium text-mist-200">{AUDIT_LABEL[a.action] ?? a.action}</span>
+                    <span className="text-mist-500">
+                      {" "}
+                      · {a.actorName} ({a.actorRole})
+                    </span>
+                    {a.changes &&
+                      Object.entries(a.changes).map(([field, v]) => (
+                        <span key={field} className="block text-mist-500">
+                          ↳ {field}: {String(v.from ?? "—")} → {String(v.to ?? "—")}
+                        </span>
+                      ))}
+                    {a.reason ? <span className="block text-mist-500">↳ {a.reason}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
           {order.proofs.length > 0 && (
             <section className={card}>
               <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">{t("admin.order.proofs")}</h2>
@@ -494,11 +575,76 @@ export function OrderDetail({
             </div>
           </section>
 
+          {/* Quote — accept the order at a price and send it to the customer.
+              No rider may be assigned until they have agreed to it. */}
+          <section className={card}>
+            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Accept &amp; price this order</h2>
+            <p className="mb-3 text-xs text-mist-500">
+              The customer is notified and has to agree to the price before a rider is assigned.
+            </p>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  className={inputCls}
+                  type="number"
+                  value={quoteFee}
+                  onChange={(e) => setQuoteFee(Number(e.target.value))}
+                  aria-label="Delivery fee in XAF"
+                />
+                <Button
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => call(`/api/orders/${order.id}/quote`, { feeXaf: quoteFee, note: quoteNote })}
+                >
+                  {order.quoteSentAt ? "Re-send quote" : "Send quote"}
+                </Button>
+              </div>
+              <input
+                className={inputCls}
+                placeholder="Optional note for the customer"
+                value={quoteNote}
+                onChange={(e) => setQuoteNote(e.target.value)}
+              />
+              {order.quoteAcceptedAt ? (
+                <p className="text-xs text-safe">
+                  Customer accepted {order.quotedFeeXaf != null ? formatXaf(order.quotedFeeXaf) : "the price"} on{" "}
+                  {new Date(order.quoteAcceptedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              ) : order.quoteDeclinedAt ? (
+                <p className="text-xs text-restricted">
+                  Customer declined the price{order.quoteDeclineReason ? ` — ${order.quoteDeclineReason}` : ""}
+                </p>
+              ) : order.quoteSentAt ? (
+                <p className="text-xs text-gold-300">Quote sent — waiting for the customer to accept.</p>
+              ) : (
+                <p className="text-xs text-mist-500">Not priced yet.</p>
+              )}
+            </div>
+          </section>
+
           {/* Rider + fees */}
           <section className={card}>
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
               <UserCheck className="h-4 w-4" /> {t("admin.order.assignRider")}
             </h2>
+            {!order.quoteAcceptedAt && (
+              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+                The customer hasn&apos;t accepted the price yet. Assignment is blocked until they do — otherwise we pay
+                for a trip that can be refused at the door.
+              </p>
+            )}
+            {order.assignedRiderId && (
+              <p className="mb-2 text-xs">
+                {order.riderAcceptedAt ? (
+                  <span className="text-safe">
+                    Rider accepted on{" "}
+                    {new Date(order.riderAcceptedAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                ) : (
+                  <span className="text-gold-300">Waiting for the rider to accept this assignment.</span>
+                )}
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               <select className={inputCls} value={riderId} onChange={(e) => setRiderId(e.target.value)}>
                 <option value="">{t("admin.order.selectRider")}</option>
@@ -535,6 +681,99 @@ export function OrderDetail({
                   {t("common.save")}
                 </Button>
               </div>
+            </div>
+          </section>
+
+          {/* Earnings — the 60/40 split, frozen at delivery. */}
+          {order.riderPayoutXaf != null && order.companyEarningXaf != null && (
+            <section className={card}>
+              <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Earnings on this delivery</h2>
+              <div className="flex flex-col gap-1.5 text-sm">
+                <Row label={`Rider (${order.riderSharePercent ?? 60}%)`} value={formatXaf(order.riderPayoutXaf)} />
+                <Row label={`Urban Night Lift (${100 - (order.riderSharePercent ?? 60)}%)`} value={formatXaf(order.companyEarningXaf)} />
+                {order.paymentMethod === "CASH" && (
+                  <>
+                    <Row label="Cash collected by rider" value={order.cashCollectedXaf != null ? formatXaf(order.cashCollectedXaf) : "—"} />
+                    <Row
+                      label="Rider owes us"
+                      value={
+                        <span className={order.cashSettledAt ? "text-safe" : "text-gold-300"}>
+                          {formatXaf(Math.max(0, (order.cashCollectedXaf ?? 0) - order.riderPayoutXaf))}
+                          {order.cashSettledAt ? " · settled" : " · outstanding"}
+                        </span>
+                      }
+                    />
+                  </>
+                )}
+              </div>
+              <p className="mt-2 text-[11px] text-mist-500">
+                The split is fixed at the rate in force when the order was delivered, so changing the rate later never
+                rewrites completed accounts.
+              </p>
+            </section>
+          )}
+
+          {/* Housekeeping — test data, archiving, and (owner only) deletion. */}
+          <section className={card}>
+            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Housekeeping</h2>
+            <p className="mb-3 text-xs text-mist-500">
+              Test and archived orders leave every list, count and export. Nothing here destroys history — every action
+              is recorded against your name.
+            </p>
+            <div className="flex flex-col gap-2">
+              <input
+                className={inputCls}
+                placeholder="Reason (recorded in the audit log)"
+                value={housekeepingReason}
+                onChange={(e) => setHousekeepingReason(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={pending} onClick={() => patch({ isTest: !order.isTest })}>
+                  {order.isTest ? "Unmark as test" : "Mark as test order"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() =>
+                    call(`/api/orders/${order.id}/archive`, {
+                      archive: !order.archived,
+                      reason: housekeepingReason,
+                    })
+                  }
+                >
+                  {order.archived ? "Restore from archive" : "Archive"}
+                </Button>
+                {isOwner && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    className="border-restricted/50 text-restricted"
+                    onClick={async () => {
+                      if (housekeepingReason.trim().length < 3) {
+                        setError("Type a reason before deleting.");
+                        return;
+                      }
+                      if (!confirm(`Permanently delete ${order.orderCode}? This cannot be undone.`)) return;
+                      const ok = await call(
+                        `/api/orders/${order.id}/archive`,
+                        { reason: housekeepingReason },
+                        "DELETE"
+                      );
+                      if (ok) router.push("/admin/orders");
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete permanently
+                  </Button>
+                )}
+              </div>
+              {isOwner && (
+                <p className="text-[11px] text-mist-500">
+                  Deleting is permanent and owner-only. An order with a verified payment cannot be deleted at all —
+                  archive it instead.
+                </p>
+              )}
             </div>
           </section>
 

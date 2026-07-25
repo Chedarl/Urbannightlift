@@ -376,6 +376,54 @@ model Order {
   riderLat                Float? // last known live rider position
   riderLng                Float?
   riderLocationAt         DateTime?
+
+  /// ── Quote handshake ──
+  /// Dispatch approving an order sends a priced quote; no rider may be
+  /// assigned until the customer has accepted that price. Without this a fee
+  /// could be raised after ordering and the customer would first hear of it at
+  /// the door — a completed trip with no revenue.
+  quoteSentAt        DateTime?
+  quoteAcceptedAt    DateTime?
+  quoteDeclinedAt    DateTime?
+  quoteDeclineReason String?
+  /// The price the customer actually agreed to, frozen at acceptance so a
+  /// later edit can never silently change what was agreed.
+  quotedFeeXaf       Int?
+
+  /// ── Rider assignment handshake ──
+  /// Assignment is an offer, not a fact: until the rider accepts, dispatch
+  /// must assume nobody has seen it.
+  assignedAt         DateTime?
+  riderAcceptedAt    DateTime?
+  riderDeclinedAt    DateTime?
+  riderDeclineReason String?
+
+  /// ── Commission split ──
+  /// Frozen at delivery, never recomputed. The rate lives in settings and will
+  /// change over time; an order delivered under a 60/40 split must still read
+  /// as 60/40 in next year's accounts, so the rate that applied is stored on
+  /// the order itself rather than looked up later.
+  riderSharePercent Int?
+  riderPayoutXaf    Int?
+  companyEarningXaf Int?
+
+  /// ── Cash reconciliation ──
+  /// On cash on delivery the rider physically holds our money. Recording what
+  /// they collected, and when it was settled, is the difference between a
+  /// managed float and an honour system.
+  cashCollectedXaf   Int?
+  cashSettledAt      DateTime?
+  cashSettledByUserId String?
+
+  /// ── Housekeeping ──
+  /// Test orders and archived orders are excluded from every operational view,
+  /// count, and export by default. Nothing is ever deleted to make the numbers
+  /// look right — that would also be the easiest way to hide a stolen payment.
+  isTest           Boolean   @default(false)
+  archivedAt       DateTime?
+  archivedByUserId String?
+  archiveReason    String?
+
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
   completedAt             DateTime?
@@ -388,6 +436,58 @@ model Order {
   @@index([orderStatus])
   @@index([createdAt])
   @@index([assignedRiderId])
+  @@index([isTest, archivedAt])
+}
+
+/// Every privileged change, and who made it.
+///
+/// Status changes were already attributed via OrderStatusHistory and payment
+/// verification via Payment.verifiedById, but fee overrides, rider assignment
+/// and note edits went through PATCH /api/orders/[orderId] and recorded
+/// nothing at all — a delivery fee could be dropped to a fraction of its value
+/// with no trace. This closes that, and covers settings, users, archives and
+/// deletions on the same terms.
+///
+/// Rows are append-only: nothing in the app updates or deletes them, and a log
+/// row outlives the entity it describes so a deletion is still accountable.
+model AuditLog {
+  id         String   @id @default(cuid())
+  /// Staff User.id. Null only for system-generated actions.
+  actorId    String?
+  actorName  String
+  actorRole  String
+  /// e.g. "order.fee_changed", "order.rider_assigned", "order.deleted".
+  action     String
+  entityType String
+  entityId   String
+  /// Human-readable label that survives the entity, e.g. an order code.
+  entityLabel String?
+  /// Changed fields only, as { field: { from, to } }.
+  changes    Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+/// A browser/device registration for Web Push. Free on Android and desktop;
+/// on iOS it requires the app to have been added to the Home Screen first.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  /// Exactly one of these is set: staff/rider subscriptions carry userId,
+  /// customer subscriptions carry customerId.
+  userId     String?
+  customerId String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([customerId])
 }
 
 model Payment {
@@ -533,6 +633,10 @@ model OperatingSettings {
   /// "coming soon" and is rejected server-side, so the owner can introduce
   /// services sequentially from the admin Settings page without a deploy.
   enabledServices    ServiceType[]
+  /// Share of each delivery fee that belongs to the rider. The business was
+  /// designed around 60% rider / 40% company; changing it here applies to
+  /// future deliveries only, never to ones already completed.
+  riderSharePercent  Int           @default(60)
   zoneNoticeEn       String?
   zoneNoticeFr       String?
   mtnMerchantCode    String? // customer-facing MTN MoMo merchant number

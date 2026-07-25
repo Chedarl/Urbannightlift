@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/session";
+import { getOperatingSettings } from "@/lib/settings";
+import { splitEarnings } from "@/lib/orders/earnings";
 import { RiderOrderView } from "@/components/rider/RiderOrderView";
 
 export const dynamic = "force-dynamic";
@@ -14,20 +16,28 @@ export default async function RiderOrderPage({
   if (!rider) redirect("/rider/login");
 
   const { orderId } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      customer: true,
-      pickupZone: true,
-      deliveryZone: true,
-      merchant: true,
-      deliveryProofs: { orderBy: { createdAt: "asc" } },
-    },
-  });
+  const [order, settings] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        pickupZone: true,
+        deliveryZone: true,
+        merchant: true,
+        deliveryProofs: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    getOperatingSettings(),
+  ]);
 
   // Riders can only view their own assigned orders.
   if (!order) notFound();
   if (order.assignedRiderId !== rider.id) redirect("/rider/dashboard");
+
+  // Before delivery there is no frozen figure yet, so show the rider what the
+  // job is currently worth — nobody should accept work without knowing that.
+  const fee = order.finalDeliveryFeeXaf ?? order.quotedFeeXaf ?? order.estimatedDeliveryFeeXaf ?? 0;
+  const estimatedPayoutXaf = fee > 0 ? splitEarnings(fee, settings.riderSharePercent).riderPayoutXaf : null;
 
   return (
     <RiderOrderView
@@ -59,6 +69,10 @@ export default async function RiderOrderPage({
         hasDeliveryProof: order.deliveryProofs.some(
           (p) => p.stage === "DELIVERY" && (p.otpEntered || p.photoUrl)
         ),
+        assignedAt: order.assignedAt?.toISOString() ?? null,
+        riderAcceptedAt: order.riderAcceptedAt?.toISOString() ?? null,
+        riderPayoutXaf: order.riderPayoutXaf,
+        estimatedPayoutXaf,
       }}
     />
   );

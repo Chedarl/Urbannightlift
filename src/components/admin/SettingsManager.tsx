@@ -37,6 +37,7 @@ export function SettingsManager({
     mtnUssdTemplate: string;
     orangeMerchantCode: string;
     orangeUssdTemplate: string;
+    riderSharePercent: number;
   };
 }) {
   const { t } = useTranslation();
@@ -60,6 +61,7 @@ export function SettingsManager({
         orangeMerchantCode: form.orangeMerchantCode,
         orangeUssdTemplate: form.orangeUssdTemplate,
         enabledServices: form.enabledServices,
+        riderSharePercent: form.riderSharePercent,
       }),
     });
     setSaved(true);
@@ -163,6 +165,32 @@ export function SettingsManager({
               <input className={inputCls} value={form.orangeUssdTemplate} onChange={(e) => setForm({ ...form, orangeUssdTemplate: e.target.value })} placeholder="#150*..." />
             </label>
           </div>
+        </div>
+
+        {/* The revenue share. Changing it applies to future deliveries only —
+            an order already delivered keeps the terms it was completed under,
+            so past accounts and past rider statements never move. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <p className="mb-2 text-sm font-semibold text-mist-100">Revenue share</p>
+          <label className="text-xs text-mist-500">
+            Rider&apos;s share of each delivery fee (%)
+            <input
+              className={inputCls}
+              type="number"
+              min={0}
+              max={100}
+              value={form.riderSharePercent}
+              onChange={(e) => setForm({ ...form, riderSharePercent: Number(e.target.value) })}
+            />
+          </label>
+          <p className="mt-2 text-xs text-mist-400">
+            Rider keeps {form.riderSharePercent}% · Urban Night Lift keeps {100 - form.riderSharePercent}%. On a 2,000
+            XAF delivery that is {Math.ceil((2000 * form.riderSharePercent) / 100).toLocaleString("fr-FR")} XAF to the
+            rider and {(2000 - Math.ceil((2000 * form.riderSharePercent) / 100)).toLocaleString("fr-FR")} XAF to you.
+          </p>
+          <p className="mt-1 text-[11px] text-mist-500">
+            Applies to deliveries completed from now on. Rounding favours the rider.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
