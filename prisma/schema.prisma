@@ -174,6 +174,17 @@ model User {
   email      String     @unique
   role       UserRole
   status     UserStatus @default(ACTIVE)
+  /// Zones this rider covers.
+  ///
+  /// Operations that reach 90%+ first-attempt success keep riders in
+  /// consistent areas so local knowledge accumulates — which matters far more
+  /// here than anywhere with street addresses, because finding a place is the
+  /// job. Empty means "anywhere", so nothing breaks before zones are assigned.
+  zoneIds    String[]   @default([])
+  /// Whether the rider is available for work right now. Dispatch previously
+  /// had no way to tell before assigning.
+  isOnline   Boolean    @default(false)
+  lastSeenAt DateTime?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -201,6 +212,7 @@ model Customer {
   orders    Order[]
   payments  Payment[]
   addresses CustomerAddress[]
+  cases     SupportRequest[]
 
   @@index([whatsappNumber])
 }
@@ -433,6 +445,7 @@ model Order {
   deliveryProofs DeliveryProof[]
   incidents      Incident[]
   failures       DeliveryFailure[]
+  cases          SupportRequest[]
 
   @@index([orderStatus])
   @@index([createdAt])
@@ -641,11 +654,49 @@ model SupportRequest {
   message        String
   status         SupportStatus   @default(NEW)
   handledByUserId String?
+  /// Linked to the order and customer it is about, so a complaint is never an
+  /// orphaned message and a customer's history is visible when you answer.
+  orderId          String?
+  order            Order?   @relation(fields: [orderId], references: [id])
+  customerId       String?
+  customer         Customer? @relation(fields: [customerId], references: [id])
+  assignedToUserId String?
+  /// Drives the "waiting on us" queue: a case where the customer spoke last is
+  /// a case nobody has answered.
+  lastCustomerMessageAt DateTime?
+  lastStaffMessageAt    DateTime?
+  resolvedAt            DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
+  messages CaseMessage[]
+
   @@index([status])
   @@index([createdAt])
+  @@index([orderId])
+  @@index([customerId])
+}
+
+/// One message in a support conversation.
+///
+/// Customers were told "our team will reach out soon" and nothing could — the
+/// request was stored and never answerable. A case is a thread: the customer
+/// sees replies on their own order, and staff can keep private notes on the
+/// same timeline without exposing them.
+model CaseMessage {
+  id       String   @id @default(cuid())
+  caseId   String
+  case     SupportRequest @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  body     String
+  /// CUSTOMER or STAFF. Staff messages carry the author's user id.
+  authorType   String
+  authorUserId String?
+  authorName   String
+  /// Internal notes are never returned to the customer.
+  internal Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([caseId])
 }
 
 /// Waiting list for a service that isn't live yet. Doubles as the market-demand

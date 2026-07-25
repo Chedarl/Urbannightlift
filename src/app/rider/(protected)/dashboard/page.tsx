@@ -25,7 +25,7 @@ export default async function RiderDashboardPage() {
 
   const [tonightOrders, totalDeliveries] = await Promise.all([
     prisma.order.findMany({
-      where: { assignedRiderId: rider.id, createdAt: { gte: start, lt: end } },
+      where: { assignedRiderId: rider.id, createdAt: { gte: start, lt: end }, isTest: false, archivedAt: null },
       orderBy: { updatedAt: "asc" },
       include: {
         customer: { select: { fullName: true } },
@@ -46,6 +46,9 @@ export default async function RiderDashboardPage() {
     orderStatus: o.orderStatus,
   }));
 
+  // What the rider has actually earned tonight, from the frozen split.
+  const earnedTonightXaf = tonightOrders.reduce((sum, o) => sum + (o.riderPayoutXaf ?? 0), 0);
+
   const completedTonight = rows.filter((r) => ["DELIVERED", "CLOSED"].includes(r.orderStatus)).length;
   const activeOrder = rows.find((r) => (ACTIVE as readonly string[]).includes(r.orderStatus) && r.orderStatus !== "RIDER_ASSIGNED");
   const nextPickup = rows.find((r) => r.orderStatus === "RIDER_ASSIGNED");
@@ -60,6 +63,8 @@ export default async function RiderDashboardPage() {
         activeOrderId: activeOrder?.id ?? null,
         nextPickupId: nextPickup?.id ?? null,
       }}
+      isOnline={rider.isOnline}
+      earnedTonightXaf={earnedTonightXaf}
     />
   );
 }

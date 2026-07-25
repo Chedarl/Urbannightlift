@@ -120,6 +120,16 @@ export interface OrderDetailData {
   auditTrail: AuditRow[];
 }
 
+/** A rider, ranked for this particular drop-off. */
+export interface RiderOption {
+  id: string;
+  fullName: string;
+  coversZone: boolean;
+  isOnline: boolean;
+  zoneDeliveries: number;
+  zoneSuccessRate: number | null;
+}
+
 export interface AuditRow {
   actorName: string;
   actorRole: string;
@@ -195,7 +205,7 @@ export function OrderDetail({
   isOwner = false,
 }: {
   order: OrderDetailData;
-  riders: { id: string; fullName: string }[];
+  riders: RiderOption[];
   /** Deleting an order is owner-only, so the control is owner-only too. */
   isOwner?: boolean;
 }) {
@@ -646,14 +656,24 @@ export function OrderDetail({
               </p>
             )}
             <div className="flex flex-col gap-2">
+              {/* Riders who cover this zone come first, then whoever is
+                  online. A rider who knows the area finds a landmark address
+                  the next name on the list would spend twenty minutes on. */}
               <select className={inputCls} value={riderId} onChange={(e) => setRiderId(e.target.value)}>
                 <option value="">{t("admin.order.selectRider")}</option>
                 {riders.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.fullName}
+                    {r.coversZone ? "✓" : "○"} {r.fullName}
+                    {r.isOnline ? " · online" : " · offline"}
+                    {r.zoneDeliveries > 0
+                      ? ` · ${r.zoneDeliveries} here${r.zoneSuccessRate != null ? ` (${r.zoneSuccessRate}%)` : ""}`
+                      : ""}
                   </option>
                 ))}
               </select>
+              <p className="text-[11px] text-mist-500">
+                ✓ covers this delivery zone · the count is how many deliveries they have completed there.
+              </p>
               <Button
                 size="sm"
                 disabled={pending}

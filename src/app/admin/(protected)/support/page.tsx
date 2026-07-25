@@ -10,6 +10,9 @@ export default async function SupportPage() {
     prisma.supportRequest.findMany({
       orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       take: 200,
+      include: {
+        messages: { orderBy: { createdAt: "asc" } },
+      },
     }),
     prisma.serviceInterest.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
     getOperatingSettings(),
@@ -28,6 +31,21 @@ export default async function SupportPage() {
           message: r.message,
           status: r.status,
           createdAt: r.createdAt.toISOString(),
+          orderId: r.orderId,
+          assignedToName: null,
+          // The customer spoke last, so nobody has answered them yet. This is
+          // the queue that actually matters — "new" only counts arrivals.
+          waitingOnUs:
+            r.status !== "RESOLVED" &&
+            r.lastCustomerMessageAt != null &&
+            (r.lastStaffMessageAt == null || r.lastStaffMessageAt < r.lastCustomerMessageAt),
+          messages: r.messages.map((m) => ({
+            body: m.body,
+            authorType: m.authorType,
+            authorName: m.authorName,
+            internal: m.internal,
+            createdAt: m.createdAt.toISOString(),
+          })),
         }))}
       />
 
