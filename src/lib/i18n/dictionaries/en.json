@@ -243,7 +243,16 @@
     "orderCode": "Order code",
     "whatsappNumber": "WhatsApp number",
     "find": "Track order",
-    "notFound": "No order found with that code and number. Check and try again."
+    "notFound": "No order found with that code and number. Check and try again.",
+    "mapTitle": "Live tracking",
+    "waitingRider": "Waiting for the rider to start sharing their location. You’ll see them here live once they’re on the way.",
+    "riderLive": "Rider location · live",
+    "updatedAgo": "updated {time} ago",
+    "justNow": "just now",
+    "stale": "last update {time} ago",
+    "openInMaps": "Open in Google Maps",
+    "secondsShort": "{n}s",
+    "minutesShort": "{n} min"
   },
   "pay": {
     "title": "Pay for delivery",
@@ -563,7 +572,18 @@
         "LATE_DELIVERY": "Delay",
         "CUSTOMER_COMPLAINT": "Other"
       },
-      "issueSent": "Issue reported to dispatch."
+      "issueSent": "Issue reported to dispatch.",
+      "share": {
+        "start": "Share my live location",
+        "sharing": "Sharing live location — tap to stop",
+        "hint": "Turn this on so the customer can track you on their map.",
+        "sentAgo": "last sent {time} ago · {n} updates",
+        "denied": "Location permission is blocked. Enable location for this site in your browser settings, then try again.",
+        "insecure": "Live location needs a secure (https) connection. Open the app from https://urbannighlift.com.",
+        "unsupported": "This device doesn’t support live location sharing.",
+        "sendFailed": "Couldn’t send your location. Check that you’re signed in and online, then try again.",
+        "timeout": "Couldn’t get a GPS fix. Move to open sky and try again."
+      }
     }
   },
   "steps": {
@@ -635,5 +655,14 @@
       "orderHint": "What should we collect from this merchant?",
       "counterRef": "Order / counter reference (optional)"
     }
+  },
+  "install": {
+    "app": "Install app",
+    "rider": "Install rider app",
+    "installing": "Opening install…",
+    "iosTitle": "Add to your Home Screen",
+    "iosSteps": "Tap the Share icon at the bottom of Safari, then choose “Add to Home Screen”.",
+    "gotIt": "Got it",
+    "installed": "App installed"
   }
 }

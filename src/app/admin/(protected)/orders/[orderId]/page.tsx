@@ -81,6 +81,9 @@ export default async function AdminOrderPage({
         adminNotes: order.adminNotes,
         customerVisibleNotes: order.customerVisibleNotes,
         assignedRiderId: order.assignedRiderId,
+        riderLat: order.riderLat,
+        riderLng: order.riderLng,
+        riderLocationAt: order.riderLocationAt?.toISOString() ?? null,
         otpCode: order.otpCode,
         screenshotUrl: order.screenshotUrl,
         statusHistory: order.statusHistory.map((h) => ({

@@ -92,6 +92,9 @@ export interface OrderDetailData {
   adminNotes: string | null;
   customerVisibleNotes: string | null;
   assignedRiderId: string | null;
+  riderLat: number | null;
+  riderLng: number | null;
+  riderLocationAt: string | null;
   otpCode: string | null;
   screenshotUrl: string | null;
   statusHistory: StatusHistoryRow[];
@@ -292,6 +295,33 @@ export function OrderDetail({
               }
             />
             {order.merchantName && <Row label="Merchant" value={order.merchantName} />}
+            {order.riderLat != null && order.riderLng != null && (
+              <Row
+                label="Rider live position"
+                value={
+                  <span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${order.riderLat},${order.riderLng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-violet-300 underline"
+                    >
+                      {order.riderLat.toFixed(5)}, {order.riderLng.toFixed(5)}
+                    </a>
+                    {order.riderLocationAt ? (
+                      <span className="block text-xs text-mist-500">
+                        {new Date(order.riderLocationAt).toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    ) : null}
+                  </span>
+                }
+              />
+            )}
           </section>
 
           <section className={card}>
