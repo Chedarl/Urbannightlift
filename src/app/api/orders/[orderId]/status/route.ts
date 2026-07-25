@@ -5,6 +5,7 @@ import { isTransitionAllowed } from "@/lib/orders/statusMachine";
 import { splitEarnings } from "@/lib/orders/earnings";
 import { getOperatingSettings } from "@/lib/settings";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
+import { recordDeliveredPlace } from "@/lib/locations/verifiedPlaces";
 import type { OrderStatus } from "@prisma/client";
 
 /**
@@ -90,6 +91,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     });
     return result;
   });
+
+  // Learn where this address actually is. Every completed delivery makes the
+  // next order to the same place start from a known point instead of a guess —
+  // which is the largest single lever on failed first attempts.
+  if (nextStatus === "DELIVERED") {
+    await recordDeliveredPlace({
+      customerId: order.customerId,
+      deliveryText: order.deliveryLocation,
+      latitude: order.riderLat,
+      longitude: order.riderLng,
+      fixedAt: order.riderLocationAt,
+    });
+  }
+
+  // A failed delivery is a rider trip already paid for. Record why, so the
+  // causes can be ranked and fixed rather than absorbed.
+  if (nextStatus === "FAILED_DELIVERY") {
+    const attempts = await prisma.deliveryFailure.count({ where: { orderId } });
+    await prisma.deliveryFailure
+      .create({
+        data: {
+          orderId,
+          reason: typeof body.failureReason === "string" ? body.failureReason : "OTHER",
+          note: note,
+          riderId: user.role === "RIDER" ? user.id : order.assignedRiderId,
+          costXaf: order.finalDeliveryFeeXaf ?? order.quotedFeeXaf ?? order.estimatedDeliveryFeeXaf,
+          attemptNumber: attempts + 1,
+        },
+      })
+      .catch(() => {});
+  }
 
   // Keep the customer informed at the moments they care about, instead of
   // leaving them to guess and re-open the page.

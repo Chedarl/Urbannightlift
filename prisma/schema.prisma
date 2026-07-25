@@ -432,6 +432,7 @@ model Order {
   payments       Payment[]
   deliveryProofs DeliveryProof[]
   incidents      Incident[]
+  failures       DeliveryFailure[]
 
   @@index([orderStatus])
   @@index([createdAt])
@@ -470,6 +471,61 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@index([actorId])
+}
+
+/// A place we know the real coordinates of, because a rider actually delivered
+/// there.
+///
+/// Addresses here are landmark-based ("behind the Total station, blue gate"),
+/// not postal, and address errors are the single largest cause of failed first
+/// attempts in this market. Guessing from text gets us close; a completed
+/// delivery tells us exactly. So every successful drop-off writes the rider's
+/// GPS back against the address text that was typed, and the next order to that
+/// address starts from a known point instead of a guess.
+///
+/// The result is an operation that gets more accurate the more it delivers,
+/// with no data purchase and no per-lookup cost.
+model VerifiedPlace {
+  id             String   @id @default(cuid())
+  /// Scoped to a customer: their "home" is theirs. Null = confirmed often
+  /// enough by different customers to be trusted for everyone.
+  customerId     String?
+  /// Lowercased, accent-stripped form used for matching.
+  normalizedText String
+  /// What the customer actually typed, kept for dispatchers to read.
+  rawText        String
+  latitude       Float
+  longitude      Float
+  /// How many separate deliveries have landed here. Higher = more trustworthy.
+  confirmations  Int      @default(1)
+  lastConfirmedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@unique([customerId, normalizedText])
+  @@index([normalizedText])
+}
+
+/// Why a delivery failed, and what it cost.
+///
+/// Failed first attempts run 8–20% across this market and each one burns a
+/// rider trip we have already paid for. They were invisible here: the status
+/// existed, the reason did not. Recording the reason turns "deliveries fail
+/// sometimes" into a ranked list of fixable causes.
+model DeliveryFailure {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  reason       String
+  note         String?
+  riderId      String?
+  /// The delivery fee we had already committed a rider's time against.
+  costXaf      Int?
+  attemptNumber Int     @default(1)
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+  @@index([reason])
+  @@index([createdAt])
 }
 
 /// A browser/device registration for Web Push. Free on Android and desktop;

@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { scoreMatch, normalizeTokens } from "@/lib/locations/normalize";
 import { nearestZone } from "@/lib/orders/pricing";
+import { findVerifiedPlace } from "@/lib/locations/verifiedPlaces";
 
 /**
  * Best-effort geocoding for orders whose location was typed as free text.
@@ -12,15 +13,16 @@ import { nearestZone } from "@/lib/orders/pricing";
  * nothing to draw and the delivery fee came out null. This recovers coordinates
  * from the text using only assets we already own:
  *
- *   1. the seeded Yaoundé ServiceLocation catalogue (exact / alias / fuzzy), then
- *   2. OpenStreetMap Nominatim, bounded to Yaoundé.
+ *   1. places we have actually delivered to before (see verifiedPlaces), then
+ *   2. the seeded Yaoundé ServiceLocation catalogue (exact / alias / fuzzy), then
+ *   3. OpenStreetMap Nominatim, bounded to Yaoundé.
  *
  * No API key, no third-party AI, and no customer data leaves the server beyond
  * the place name itself. Every attempt is logged so we can measure how much of
  * the problem this actually solves before considering anything paid.
  */
 
-export type GeoSource = "CATALOGUE" | "OSM";
+export type GeoSource = "DELIVERED" | "CATALOGUE" | "OSM";
 
 export interface ResolvedAddress {
   latitude: number;
@@ -147,11 +149,31 @@ async function matchNominatim(text: string): Promise<ResolvedAddress | null> {
  * credible was found — callers must treat that as "no coordinates", never as an
  * error, so an order can always still be placed.
  */
-export async function resolveAddress(text: string): Promise<ResolvedAddress | null> {
+export async function resolveAddress(
+  text: string,
+  customerId?: string | null
+): Promise<ResolvedAddress | null> {
   const trimmed = (text ?? "").trim();
   if (trimmed.length < 3) return null;
 
-  let resolved = await matchCatalogue(trimmed);
+  // Somewhere we have actually delivered beats every guess. This is where the
+  // operation gets better over time: each completed delivery adds a place, so
+  // the same address resolves more accurately next month than it does today.
+  const known = await findVerifiedPlace(trimmed, customerId).catch(() => null);
+  let resolved: ResolvedAddress | null = known
+    ? {
+        latitude: known.latitude,
+        longitude: known.longitude,
+        source: "DELIVERED",
+        // The customer's own confirmed drop-off is as close to certain as we
+        // get; a shared landmark is strong but not personal.
+        confidence: known.personal ? 0.99 : 0.9,
+        matchedName: trimmed.slice(0, 80),
+        zoneId: null,
+      }
+    : null;
+
+  if (!resolved) resolved = await matchCatalogue(trimmed);
   if (!resolved) resolved = await matchNominatim(trimmed);
 
   if (resolved && !resolved.zoneId) {

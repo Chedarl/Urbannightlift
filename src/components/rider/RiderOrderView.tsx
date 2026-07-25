@@ -42,6 +42,23 @@ export interface RiderOrderData {
   estimatedPayoutXaf: number | null;
 }
 
+/**
+ * Why deliveries fail here, ordered by how common they are in this market.
+ * Address problems lead deliberately: they cause the largest share of failed
+ * first attempts, and they are the one cause we can actually engineer away.
+ */
+const FAILURE_REASONS = [
+  { value: "WRONG_ADDRESS", label: "Couldn't find the address" },
+  { value: "CUSTOMER_UNREACHABLE", label: "Customer not reachable" },
+  { value: "CUSTOMER_ABSENT", label: "Nobody there to receive it" },
+  { value: "CUSTOMER_REFUSED", label: "Customer refused the delivery" },
+  { value: "PAYMENT_REFUSED", label: "Customer wouldn't pay" },
+  { value: "ACCESS_BLOCKED", label: "Couldn't get in — gate, road or security" },
+  { value: "SAFETY", label: "Unsafe to continue" },
+  { value: "VEHICLE_ISSUE", label: "Bike or fuel problem" },
+  { value: "OTHER", label: "Something else" },
+] as const;
+
 // The rider's sequential step buttons, each enabled only at the right status.
 const STEP_FOR_STATUS: Partial<Record<OrderStatus, { next: OrderStatus; labelKey: string }>> = {
   RIDER_ASSIGNED: { next: "RIDER_GOING_TO_PICKUP", labelKey: "goingToPickup" },
@@ -76,6 +93,9 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
   const [otp, setOtp] = useState("");
   const [uploading, setUploading] = useState<null | "PICKUP" | "DELIVERY">(null);
   const [showIssue, setShowIssue] = useState(false);
+  const [showFailure, setShowFailure] = useState(false);
+  const [failureReason, setFailureReason] = useState<string>(FAILURE_REASONS[0].value);
+  const [failureNote, setFailureNote] = useState("");
   const [issueType, setIssueType] = useState<IncidentType>("CUSTOMER_UNREACHABLE");
   const [issueDesc, setIssueDesc] = useState("");
 
@@ -102,12 +122,12 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
     else router.push("/rider/dashboard");
   }
 
-  async function setStatus(next: OrderStatus) {
+  async function setStatus(next: OrderStatus, extra: Record<string, unknown> = {}) {
     setError(null);
     const res = await fetch(`/api/orders/${order.id}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: next }),
+      body: JSON.stringify({ status: next, ...extra }),
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -347,6 +367,48 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
             <Button size="lg" disabled={pending || !readyToComplete} onClick={() => setStatus("DELIVERED")}>
               <Check className="h-5 w-5" /> {t("rider.order.actions.completed")}
             </Button>
+          )}
+
+          {/* A failed delivery is a trip we have already paid for. Recording
+              why turns "deliveries fail sometimes" into a ranked list of
+              causes we can act on, so the reason is required, not optional. */}
+          {["RIDER_GOING_TO_DELIVERY", "RIDER_ARRIVED_AT_DELIVERY", "ITEM_COLLECTED"].includes(order.orderStatus) && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setShowFailure((v) => !v)}>
+                <AlertTriangle className="h-4 w-4" /> Couldn&apos;t deliver
+              </Button>
+              {showFailure && (
+                <div className="flex flex-col gap-2 rounded-xl border border-caution/40 bg-ink-800 p-3">
+                  <p className="text-xs text-mist-400">What stopped the delivery?</p>
+                  <select
+                    className={inputCls}
+                    value={failureReason}
+                    onChange={(e) => setFailureReason(e.target.value)}
+                  >
+                    {FAILURE_REASONS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    className={inputCls}
+                    rows={2}
+                    placeholder="Anything that would help next time (optional)"
+                    value={failureNote}
+                    onChange={(e) => setFailureNote(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={pending}
+                    onClick={() => setStatus("FAILED_DELIVERY", { failureReason, note: failureNote })}
+                  >
+                    Report failed delivery
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
           <Button variant="danger" size="sm" onClick={() => setShowIssue((v) => !v)}>

@@ -68,14 +68,23 @@ export async function POST(req: NextRequest) {
 
   // When the customer typed a location instead of pinning it we have no
   // coordinates — which leaves the tracking map blank and the fee null. Try to
-  // recover them from our own catalogue, then OpenStreetMap. Best-effort only:
-  // any failure just means the order is stored exactly as it is today.
+  // recover them from places we have delivered to before, then our catalogue,
+  // then OpenStreetMap. Best-effort only: any failure just means the order is
+  // stored exactly as it is today.
+  //
+  // A repeat customer is looked up by their WhatsApp number first, so their own
+  // confirmed drop-off points are used before any general guess.
+  const existingCustomer = await prisma.customer.findFirst({
+    where: { whatsappNumber: whatsapp },
+    select: { id: true },
+  });
+
   const [pickupGeo, deliveryGeo] = await Promise.all([
     input.pickupLat == null || input.pickupLng == null
-      ? resolveAddress(input.pickupLocation).catch(() => null)
+      ? resolveAddress(input.pickupLocation, existingCustomer?.id).catch(() => null)
       : null,
     input.deliveryLat == null || input.deliveryLng == null
-      ? resolveAddress(input.deliveryLocation).catch(() => null)
+      ? resolveAddress(input.deliveryLocation, existingCustomer?.id).catch(() => null)
       : null,
   ]);
 
