@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { CUSTOMER_COOKIE, verifyCustomerToken } from "@/lib/auth/customer";
+import { CUSTOMER_COOKIE, verifyCustomerToken } from "@/lib/auth/customerToken";
 
 const CANONICAL_HOST = "urbannighlift.com";
 
