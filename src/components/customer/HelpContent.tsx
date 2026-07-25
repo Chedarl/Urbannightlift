@@ -158,7 +158,7 @@ export function HelpContent() {
       </div>
 
       {/* FAQ */}
-      <section>
+      <section id="faq" className="scroll-mt-20">
         <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">{fr ? "Questions fréquentes" : "Frequently asked questions"}</h2>
         <div className="flex flex-col gap-2">
           {FAQS.map((f, i) => (
@@ -174,7 +174,7 @@ export function HelpContent() {
       </section>
 
       {/* Support form */}
-      <section className="rounded-2xl border border-ink-700 bg-ink-900/40 p-4">
+      <section id="contact" className="scroll-mt-20 rounded-2xl border border-ink-700 bg-ink-900/40 p-4">
         <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">{fr ? "Nous écrire" : "Send us a message"}</h2>
         <p className="mb-3 text-xs text-mist-500">{fr ? "Nous répondons généralement pendant nos heures de nuit (18h–4h)." : "We usually reply during our night hours (6 PM–4 AM)."}</p>
 

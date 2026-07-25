@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   UtensilsCrossed, Pill, ShoppingBasket, Package, Zap, ClipboardList, Store,
-  MessageCircle, ArrowRight, Clock, MapPinned, ShieldCheck, Wallet, Star,
-  Bike, FileText, Mail, Phone, MapPin, Globe, AtSign, Send, Share2, BellRing,
+  MessageCircle, ArrowRight, Clock, MapPinned, ShieldCheck, Wallet,
+  Bike, FileText, Mail, Phone, MapPin, BellRing,
   UserPlus, UserCircle, Repeat, Bookmark, History,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -49,12 +49,106 @@ const FEATURES: { icon: React.ElementType; title: L; desc: L }[] = [
 
 const AREAS = ["Yaoundé I", "Yaoundé II", "Yaoundé III", "Yaoundé IV", "Yaoundé V", "Yaoundé VI", "Yaoundé VII"];
 
+/** 12 → "12 AM", 16 → "4 PM". Whole hours only; that is all we schedule on. */
+function hourLabel(hour: number, fr: boolean): string {
+  const h = ((hour % 24) + 24) % 24;
+  if (fr) return `${h}h`;
+  const suffix = h < 12 ? "AM" : "PM";
+  const twelve = h % 12 === 0 ? 12 : h % 12;
+  return `${twelve} ${suffix}`;
+}
+
+/**
+ * Whether we are actually taking orders right now, in Yaoundé time.
+ *
+ * For a night-only business this is the single most important thing on the
+ * page, and it was never shown while open. Computed on the client against
+ * Africa/Douala so it stays correct no matter where the visitor's device
+ * thinks it is; null until mounted, so server and client markup match.
+ */
+function useOpenNow(mode: OperatingMode, startHour: number, endHour: number): boolean | null {
+  const [open, setOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const check = () => {
+      if (mode !== "OPEN") {
+        setOpen(false);
+        return;
+      }
+      const hour = Number(
+        new Intl.DateTimeFormat("en-GB", {
+          hour: "numeric",
+          hourCycle: "h23",
+          timeZone: "Africa/Douala",
+        }).format(new Date())
+      );
+      // The window wraps past midnight (18 → 4), so it is two ranges.
+      setOpen(startHour <= endHour ? hour >= startHour && hour < endHour : hour >= startHour || hour < endHour);
+    };
+    check();
+    const timer = setInterval(check, 60_000);
+    return () => clearInterval(timer);
+  }, [mode, startHour, endHour]);
+
+  return open;
+}
+
+/**
+ * The hero visual. The 2.2 MB clip used to autoplay with `preload="auto"` on
+ * every single visit — real money on a metered Cameroonian mobile plan, and it
+ * sat on the critical path of the first paint.
+ *
+ * Now nothing is fetched until after mount, and then only if the connection
+ * can afford it: data-saver, 2G/3G and reduced-motion visitors get the still
+ * panel with a tap-to-play, so they choose to spend their bundle.
+ */
+function HeroMedia({ fr }: { fr: boolean }) {
+  const [play, setPlay] = useState(false);
+
+  useEffect(() => {
+    const conn = (navigator as unknown as {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    const saveData = conn?.saveData === true;
+    const slow = ["slow-2g", "2g", "3g"].includes(conn?.effectiveType ?? "");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!saveData && !slow && !reduced) setPlay(true);
+  }, []);
+
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ink-700 bg-gradient-to-br from-violet-900/40 via-ink-900 to-ink-950">
+      {play ? (
+        <video className="h-full w-full object-cover" src="/home-hero.mp4" autoPlay loop muted playsInline preload="auto" />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlay(true)}
+          className="flex h-full w-full flex-col items-center justify-center gap-3 text-center"
+        >
+          <Bike className="h-12 w-12 text-violet-300" />
+          <span className="text-sm font-semibold text-mist-200">
+            {fr ? "Urban Night Lift — la nuit, à Yaoundé" : "Urban Night Lift — Yaoundé, after dark"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-3 py-1 text-xs text-mist-400">
+            {fr ? "Lire la vidéo (2 Mo)" : "Play video (2 MB)"}
+          </span>
+        </button>
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-ink-950/60 via-transparent to-transparent" />
+    </div>
+  );
+}
+
 export function HomeContent({
   mode,
+  startHour,
+  endHour,
   enabledServices,
   signedIn,
 }: {
   mode: OperatingMode;
+  startHour: number;
+  endHour: number;
   enabledServices: ServiceType[];
   signedIn: boolean;
 }) {
@@ -63,7 +157,10 @@ export function HomeContent({
   // Services not yet launched show a "coming soon" card that captures interest
   // instead of linking to an order form.
   const [pending, setPending] = useState<(typeof SERVICES)[number] | null>(null);
+  const openNow = useOpenNow(mode, startHour, endHour);
   const isLive = (key: ServiceType) => enabledServices.includes(key);
+  const liveServices = SERVICES.filter((s) => isLive(s.key));
+  const soonServices = SERVICES.filter((s) => !isLive(s.key));
   const greeting = fr ? "Bonsoir, je souhaite passer une commande Urban Night Lift." : "Good evening, I would like to place an Urban Night Lift order.";
   const waHref = buildWaLink(MAIN_WHATSAPP_NUMBER, greeting);
 
@@ -114,12 +211,50 @@ export function HomeContent({
             </Link>
           </div>
         </div>
+        {/* The desktop nav is hidden below md and there is no hamburger, which
+            left Services / How it works / Coverage / Help unreachable on a
+            phone — where nearly all of our traffic is. Same links, as a
+            scrollable chip row. */}
+        <nav className="flex gap-2 overflow-x-auto border-t border-ink-800/60 px-4 py-2 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {navLinks.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="shrink-0 rounded-full border border-ink-700 bg-ink-900/60 px-3 py-1 text-xs font-medium text-mist-300"
+            >
+              {tr(fr, l.label)}
+            </a>
+          ))}
+        </nav>
       </header>
 
       {/* ───── Hero ───── */}
       <section className="relative overflow-hidden border-b border-ink-800">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:py-16">
           <div>
+            {/* Reserve the row's height either way so the pill can't shift the
+                headline when it resolves after mount. */}
+            <div className="mb-4 flex h-7 items-center">
+              {openNow !== null && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+                    openNow
+                      ? "border-safe/40 bg-safe/10 text-safe"
+                      : "border-ink-600 bg-ink-900/70 text-mist-300"
+                  )}
+                >
+                  <span className={cn("h-2 w-2 rounded-full", openNow ? "animate-pulse bg-safe" : "bg-mist-500")} />
+                  {openNow
+                    ? fr
+                      ? `Ouvert · jusqu'à ${hourLabel(endHour, true)}`
+                      : `Open now · until ${hourLabel(endHour, false)}`
+                    : fr
+                      ? `Fermé · ouverture à ${hourLabel(startHour, true)}`
+                      : `Closed · opens at ${hourLabel(startHour, false)}`}
+                </span>
+              )}
+            </div>
             <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl">
               {fr ? "Votre ville," : "Your city,"}<br />
               {fr ? "Notre course." : "Our ride."}<br />
@@ -135,22 +270,16 @@ export function HomeContent({
               <Link href="/order" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
                 <ShoppingBasket className="h-4 w-4" /> {fr ? "Passer une commande" : "Place an Order"}
               </Link>
-              <a href="#services" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-violet-500/60">
-                {fr ? "Voir les services" : "Explore Services"}
+              {/* Was "Explore Services", which only scrolled to a grid already
+                  in view. WhatsApp is a genuinely different route to an order —
+                  and the one most people here reach for first. */}
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-safe/60">
+                <MessageCircle className="h-4 w-4 text-safe" /> {fr ? "Commander sur WhatsApp" : "Order on WhatsApp"}
               </a>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist-400">
-              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-safe" /> {fr ? "Sûr & sécurisé" : "Safe & Secure"}</span>
-              <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-gold-400" /> {fr ? "Toujours à l'heure" : "Always On Time"}</span>
-              <span className="inline-flex items-center gap-1.5"><Star className="h-4 w-4 text-violet-400" /> {fr ? "Approuvé par des milliers" : "Trusted by Thousands"}</span>
             </div>
           </div>
 
-          {/* Video / rider visual */}
-          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-ink-700 bg-ink-900">
-            <video className="h-full w-full object-cover" src="/home-hero.mp4" autoPlay loop muted playsInline preload="auto" />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-ink-950/60 via-transparent to-transparent" />
-          </div>
+          <HeroMedia fr={fr} />
         </div>
 
         {mode === "CLOSED" && (
@@ -170,46 +299,54 @@ export function HomeContent({
           </h2>
           <p className="mt-1 text-sm text-mist-400">{fr ? "Choisissez un service pour commencer" : "Choose a service to get started"}</p>
         </Reveal>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {SERVICES.map((s) =>
-            isLive(s.key) ? (
-              <Link key={s.key} href={`/order/new?service=${s.key}`} className="group flex flex-col rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all hover:-translate-y-0.5 hover:border-ink-500">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
-                  <s.icon className="h-6 w-6" />
-                </span>
-                <h3 className="mt-3 font-display text-base font-semibold text-mist-100">{tr(fr, s.title)}</h3>
-                <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-400">{tr(fr, s.desc)}</p>
-                <ArrowRight className="mt-3 h-4 w-4 text-mist-500 transition-transform group-hover:translate-x-1" style={{ color: s.accent }} />
-              </Link>
-            ) : (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => setPending(s)}
-                className="group relative flex flex-col rounded-2xl border border-dashed border-ink-600 bg-ink-900/30 p-5 text-left transition-all hover:border-ink-500"
-              >
-                <span className="absolute right-3 top-3 rounded-full bg-ink-800 px-2 py-0.5 text-[10px] font-semibold text-mist-400">
-                  {fr ? "Bientôt" : "Coming soon"}
-                </span>
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl opacity-50" style={{ backgroundColor: `${s.accent}18`, color: s.accent }}>
-                  <s.icon className="h-6 w-6" />
-                </span>
-                <h3 className="mt-3 font-display text-base font-semibold text-mist-300">{tr(fr, s.title)}</h3>
-                <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-500">{tr(fr, s.desc)}</p>
-                <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-mist-400">
-                  <BellRing className="h-3.5 w-3.5" /> {fr ? "Prévenez-moi" : "Notify me"}
-                </span>
-              </button>
-            )
-          )}
-          {/* 8th card — WhatsApp fallback */}
+        {/* Only orderable services get a full card. The paused ones used to
+            take three of the eight slots on the page's main conversion
+            surface — a third of it advertising things nobody can buy. */}
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {liveServices.map((s) => (
+            <Link key={s.key} href={`/order/new?service=${s.key}`} className="group flex flex-col rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all hover:-translate-y-0.5 hover:border-ink-500">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
+                <s.icon className="h-6 w-6" />
+              </span>
+              <h3 className="mt-3 font-display text-base font-semibold text-mist-100">{tr(fr, s.title)}</h3>
+              <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-400">{tr(fr, s.desc)}</p>
+              <ArrowRight className="mt-3 h-4 w-4 transition-transform group-hover:translate-x-1" style={{ color: s.accent }} />
+            </Link>
+          ))}
+          {/* WhatsApp — the catch-all for anything the cards don't cover. */}
           <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-2xl border border-gold-400/50 bg-gradient-to-b from-gold-400/10 to-transparent p-5 text-center">
-            <Star className="h-7 w-7 text-gold-400" />
+            <MessageCircle className="h-7 w-7 text-gold-400" />
             <h3 className="mt-2 font-display text-base font-semibold text-gold-200">{fr ? "Autre chose ?" : "Need something else?"}</h3>
             <p className="mt-1 text-xs text-mist-400">{fr ? "Discutez avec notre dispatcher sur WhatsApp." : "Chat with our dispatcher on WhatsApp."}</p>
             <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-safe/20 px-3 py-1.5 text-xs font-semibold text-safe"><MessageCircle className="h-4 w-4" /> WhatsApp</span>
           </a>
         </div>
+
+        {/* Paused services, demoted to a compact row. Still tappable, because
+            "notify me" is how we measure whether to launch them. */}
+        {soonServices.length > 0 && (
+          <div className="mt-8">
+            <p className="text-xs font-semibold uppercase tracking-wide text-mist-500">
+              {fr ? "Bientôt disponible — dites-nous si vous en avez besoin" : "Coming soon — tell us if you need it"}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {soonServices.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setPending(s)}
+                  className="flex items-center gap-2.5 rounded-2xl border border-dashed border-ink-600 bg-ink-900/30 px-4 py-2.5 text-left transition-colors hover:border-ink-500"
+                >
+                  <s.icon className="h-4 w-4 shrink-0 opacity-60" style={{ color: s.accent }} />
+                  <span className="text-sm font-medium text-mist-300">{tr(fr, s.title)}</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-mist-500">
+                    <BellRing className="h-3.5 w-3.5" /> {fr ? "Prévenez-moi" : "Notify me"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ───── How it works ───── */}
@@ -263,17 +400,6 @@ export function HomeContent({
         </Link>
       </section>
 
-      {/* ───── App CTA ───── */}
-      <section className="mx-auto max-w-6xl px-4 pb-12">
-        <div className="flex flex-col items-start gap-4 overflow-hidden rounded-3xl border border-violet-700/40 bg-gradient-to-r from-violet-900/40 to-ink-900 p-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h3 className="font-display text-xl font-bold">{fr ? "Installez l'application" : "Install the app"}</h3>
-            <p className="mt-1 max-w-md text-sm text-mist-300">{fr ? "Ajoutez Urban Night Lift à votre écran d'accueil : commandez et suivez vos livraisons en un tap." : "Add Urban Night Lift to your home screen — order and track deliveries in one tap."}</p>
-          </div>
-          <InstallPrompt variant="app" className="shrink-0 px-5 py-2.5" />
-        </div>
-      </section>
-
       {/* ───── Create an account ───── */}
       <section className="mx-auto max-w-6xl px-4 pb-12">
         <div className="overflow-hidden rounded-3xl border border-gold-400/40 bg-gradient-to-r from-gold-400/10 via-ink-900 to-ink-900 p-6">
@@ -324,6 +450,19 @@ export function HomeContent({
         </div>
       </section>
 
+      {/* ───── Install ─────
+          Kept as a slim strip rather than a second full-width gradient card:
+          two of those back to back made both easier to scroll past. */}
+      <section className="mx-auto max-w-6xl px-4 pb-12">
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-violet-700/40 bg-violet-900/15 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-mist-300">
+            <span className="font-semibold text-mist-100">{fr ? "Installez l'application." : "Install the app."}</span>{" "}
+            {fr ? "Sur votre écran d'accueil : commande et suivi en un tap." : "On your home screen — order and track in one tap."}
+          </p>
+          <InstallPrompt variant="app" className="shrink-0 px-4 py-2" />
+        </div>
+      </section>
+
       {/* ───── Footer ───── */}
       <footer className="border-t border-ink-800 bg-ink-950">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
@@ -334,33 +473,42 @@ export function HomeContent({
           </div>
           <div>
             <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Entreprise" : "Company"}</p>
+            {/* These three links were all crammed into a single <li>, so they
+                ran together on one line. "About us" pointed at #top — the page
+                you are already on — and is gone until there is a page to name. */}
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
-              <li><a href="#top" className="hover:text-mist-200">{fr ? "À propos" : "About us"}</a></li>
-              <li><Link href="/account/signup" className="hover:text-mist-200">{fr ? "Créer un compte" : "Create an account"}</Link>
-              <Link href="/account" className="hover:text-mist-200">{fr ? "Mon compte" : "My account"}</Link>
-              <Link href="/rider/login" className="hover:text-mist-200">{fr ? "Devenir livreur" : "Become a rider"}</Link></li>
-              <li><Link href="/help" className="hover:text-mist-200">Contact</Link></li>
+              <li><Link href={signedIn ? "/account" : "/account/signup"} className="hover:text-mist-200">{signedIn ? (fr ? "Mon compte" : "My account") : (fr ? "Créer un compte" : "Create an account")}</Link></li>
+              <li><Link href="/rider/login" className="hover:text-mist-200">{fr ? "Devenir livreur" : "Become a rider"}</Link></li>
+              <li><Link href="/help#contact" className="hover:text-mist-200">Contact</Link></li>
             </ul>
           </div>
           <div>
             <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Assistance" : "Support"}</p>
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
+              {/* Help centre, FAQs and Safety were three labels for one
+                  destination. FAQs now lands on the FAQ itself. */}
               <li><Link href="/help" className="hover:text-mist-200">{fr ? "Centre d'aide" : "Help center"}</Link></li>
-              <li><Link href="/help" className="hover:text-mist-200">FAQs</Link></li>
-              <li><Link href="/help" className="hover:text-mist-200">{fr ? "Sécurité" : "Safety"}</Link></li>
+              <li><Link href="/help#faq" className="hover:text-mist-200">{fr ? "Questions fréquentes" : "FAQs"}</Link></li>
+              <li><Link href="/track" className="hover:text-mist-200">{fr ? "Suivre une commande" : "Track an order"}</Link></li>
               <li><Link href="/admin/login" className="hover:text-mist-200">{fr ? "Connexion staff" : "Staff login"}</Link></li>
             </ul>
           </div>
           <div>
-            <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Nous suivre" : "Follow us"}</p>
-            <div className="mb-3 flex gap-3 text-mist-400">
-              <a href={waHref} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><MessageCircle className="h-4 w-4 hover:text-mist-200" /></a>
-              <a href={`mailto:${SUPPORT_EMAIL}`} aria-label="Email"><AtSign className="h-4 w-4 hover:text-mist-200" /></a>
-              <Globe className="h-4 w-4" /><Share2 className="h-4 w-4" /><Send className="h-4 w-4" />
-            </div>
+            {/* "Follow us" showed three icons that were not links and led
+                nowhere. Reachable contact details are the honest version. */}
+            <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Nous contacter" : "Contact us"}</p>
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
+              <li>
+                <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-mist-200">
+                  <MessageCircle className="h-3.5 w-3.5 text-safe" /> WhatsApp
+                </a>
+              </li>
               <li className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {PHONE_DISPLAY}</li>
-              <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {SUPPORT_EMAIL}</li>
+              <li>
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-2 hover:text-mist-200">
+                  <Mail className="h-3.5 w-3.5" /> {SUPPORT_EMAIL}
+                </a>
+              </li>
               <li className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {fr ? "Yaoundé, Cameroun" : "Yaoundé, Cameroon"}</li>
             </ul>
           </div>

@@ -10,6 +10,8 @@ export default async function HomePage() {
     <main>
       <HomeContent
         mode={settings.mode}
+        startHour={settings.operatingStartHour}
+        endHour={settings.operatingEndHour}
         enabledServices={resolveEnabledServices(settings)}
         signedIn={Boolean(customerId)}
       />
