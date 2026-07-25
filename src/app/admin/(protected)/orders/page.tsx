@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { buildOrderWhere, normalizeFilter } from "@/lib/orders/filters";
+import { buildOrderWhere, buildOrderSearchWhere, normalizeFilter } from "@/lib/orders/filters";
 import { OrdersTable } from "@/components/admin/OrdersTable";
 
 export const dynamic = "force-dynamic";
@@ -7,13 +7,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string }>;
 }) {
-  const { filter: filterParam } = await searchParams;
+  const { filter: filterParam, q = "" } = await searchParams;
   const filter = normalizeFilter(filterParam);
+  const search = buildOrderSearchWhere(q);
 
   const orders = await prisma.order.findMany({
-    where: buildOrderWhere(filter),
+    where: q ? { AND: [buildOrderWhere(filter), search] } : buildOrderWhere(filter),
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
@@ -41,5 +42,5 @@ export default async function AdminOrdersPage({
     isMedicine: o.isMedicine,
   }));
 
-  return <OrdersTable rows={rows} activeFilter={filter} />;
+  return <OrdersTable rows={rows} activeFilter={filter} query={q} />;
 }
