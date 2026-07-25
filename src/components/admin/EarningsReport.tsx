@@ -55,15 +55,51 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "go
   );
 }
 
+export interface FailureLine {
+  reason: string;
+  count: number;
+  costXaf: number;
+}
+
+const FAILURE_LABEL: Record<string, string> = {
+  WRONG_ADDRESS: "Couldn't find the address",
+  CUSTOMER_UNREACHABLE: "Customer not reachable",
+  CUSTOMER_ABSENT: "Nobody there to receive it",
+  CUSTOMER_REFUSED: "Customer refused the delivery",
+  PAYMENT_REFUSED: "Customer wouldn't pay",
+  ACCESS_BLOCKED: "Couldn't get in",
+  SAFETY: "Unsafe to continue",
+  VEHICLE_ISSUE: "Bike or fuel problem",
+  OTHER: "Something else",
+};
+
+/** What we'd do about each cause. A ranked list is only useful with a next step. */
+const FAILURE_FIX: Record<string, string> = {
+  WRONG_ADDRESS: "Ask for a landmark and a pin at checkout; the address book learns each drop-off.",
+  CUSTOMER_UNREACHABLE: "Confirm the customer is reachable before dispatching the rider.",
+  CUSTOMER_ABSENT: "Agree a delivery window at the quote instead of assuming.",
+  CUSTOMER_REFUSED: "Check the quote was accepted before the rider set off.",
+  PAYMENT_REFUSED: "Take payment before dispatch on repeat offenders.",
+  ACCESS_BLOCKED: "Capture gate or security instructions on the order.",
+  SAFETY: "Review the zone's safety level.",
+  VEHICLE_ISSUE: "Rider equipment — not a customer problem.",
+};
+
 export function EarningsReport({
   days,
   totals,
   riders,
+  failures,
 }: {
   days: number;
   totals: EarningsTotals;
   riders: RiderLine[];
+  failures: FailureLine[];
 }) {
+  const failureCount = failures.reduce((n, f) => n + f.count, 0);
+  const failureCost = failures.reduce((n, f) => n + f.costXaf, 0);
+  const attempts = totals.deliveries + failureCount;
+  const successRate = attempts > 0 ? Math.round((totals.deliveries / attempts) * 100) : 100;
   const margin =
     totals.revenueXaf > 0 ? Math.round((totals.companyEarningXaf / totals.revenueXaf) * 100) : 0;
 
@@ -96,8 +132,38 @@ export function EarningsReport({
         <Stat label={`Urban Night Lift kept (${margin}%)`} value={formatXaf(totals.companyEarningXaf)} tone="gold" />
       </div>
 
-      {totals.unsettledCashXaf > 0 && (
-        <Stat label="Cash riders are still holding" value={formatXaf(totals.unsettledCashXaf)} tone="warn" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Stat label="First-attempt success" value={`${successRate}%`} tone={successRate < 85 ? "warn" : undefined} />
+        <Stat label="Failed attempts" value={String(failureCount)} />
+        {totals.unsettledCashXaf > 0 && (
+          <Stat label="Cash riders are still holding" value={formatXaf(totals.unsettledCashXaf)} tone="warn" />
+        )}
+      </div>
+
+      {failures.length > 0 && (
+        <section className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
+          <h2 className="font-display text-sm font-semibold text-gold-300">
+            Why deliveries failed — {formatXaf(failureCost)} of rider time spent with nothing delivered
+          </h2>
+          <p className="mt-1 text-xs text-mist-500">
+            Ranked by frequency. These are trips already paid for, so the top line is the most valuable thing to fix.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {failures.map((f) => (
+              <li key={f.reason} className="rounded-xl border border-ink-700 bg-ink-950 px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-mist-200">{FAILURE_LABEL[f.reason] ?? f.reason}</span>
+                  <span className="text-xs text-mist-400">
+                    {f.count}× · {formatXaf(f.costXaf)} lost
+                  </span>
+                </div>
+                {FAILURE_FIX[f.reason] && (
+                  <p className="mt-1 text-xs text-mist-500">↳ {FAILURE_FIX[f.reason]}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {riders.length === 0 ? (

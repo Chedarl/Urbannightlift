@@ -27,6 +27,15 @@ export default async function EarningsPage({
   const days = Math.min(90, Math.max(1, Number(daysParam) || 30));
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  // Failed attempts are a cost the console never showed. Each one is a rider
+  // trip already spent, so they belong next to the revenue they didn't earn.
+  const failures = await prisma.deliveryFailure.groupBy({
+    by: ["reason"],
+    where: { createdAt: { gte: since } },
+    _count: { reason: true },
+    _sum: { costXaf: true },
+  });
+
   const delivered = await prisma.order.findMany({
     where: {
       ...visibilityWhere(),
@@ -103,6 +112,13 @@ export default async function EarningsPage({
         unsettledCashXaf: unsettledCash,
       }}
       riders={[...byRider.values()].sort((a, b) => b.earnedXaf - a.earnedXaf)}
+      failures={failures
+        .map((f) => ({
+          reason: f.reason,
+          count: f._count.reason,
+          costXaf: f._sum.costXaf ?? 0,
+        }))
+        .sort((a, b) => b.count - a.count)}
     />
   );
 }
