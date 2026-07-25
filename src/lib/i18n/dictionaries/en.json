@@ -665,5 +665,17 @@
     "iosSteps": "Tap the Share icon at the bottom of Safari, then choose “Add to Home Screen”.",
     "gotIt": "Got it",
     "installed": "App installed"
+  },
+  "comingSoon": {
+    "badge": "Coming soon",
+    "title": "Not available just yet",
+    "body": "We're rolling out our services one at a time so every delivery stays reliable. Leave your WhatsApp number and we'll tell you the moment this one goes live.",
+    "notifyCta": "Notify me when it launches",
+    "placeholder": "+237 6XX XXX XXX",
+    "success": "You're on the list. We'll message you on WhatsApp when it launches.",
+    "error": "Enter a valid WhatsApp number.",
+    "nowLive": "Good news — this service is now live. Refresh to order.",
+    "meanwhile": "Meanwhile, you can order",
+    "close": "Close"
   }
 }

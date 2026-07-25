@@ -5,6 +5,7 @@ import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
+import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -42,6 +43,12 @@ export async function POST(req: NextRequest) {
     );
   }
   const input = parsed.data;
+
+  // A paused service must be refused here too — the UI hiding it is not enough.
+  const settings = await getOperatingSettings();
+  if (!isServiceEnabled(settings, input.serviceType)) {
+    return NextResponse.json({ error: "Service not available yet", code: "SERVICE_DISABLED" }, { status: 403 });
+  }
 
   const whatsapp = normalizePhone(input.whatsappNumber);
 

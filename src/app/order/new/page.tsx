@@ -1,15 +1,50 @@
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { OrderForm } from "@/components/customer/OrderForm";
+import { ServiceComingSoon } from "@/components/customer/ServiceComingSoon";
 import { prisma } from "@/lib/prisma";
+import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import type { ServiceType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrderFormPage() {
-  const merchants = await prisma.merchant.findMany({
-    where: { verified: true, active: true },
-    orderBy: { merchantName: "asc" },
-    select: { id: true, merchantName: true, category: true, address: true, landmark: true, openingHours: true },
-  });
+const ALL_SERVICES: ServiceType[] = [
+  "FOOD_PICKUP",
+  "MEDICINE_PICKUP",
+  "GROCERY_PICKUP",
+  "SMALL_PARCEL",
+  "URGENT_ITEM",
+  "CUSTOM_ERRAND",
+  "MERCHANT_DELIVERY",
+];
+
+export default async function OrderFormPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string }>;
+}) {
+  const [{ service }, settings, merchants] = await Promise.all([
+    searchParams,
+    getOperatingSettings(),
+    prisma.merchant.findMany({
+      where: { verified: true, active: true },
+      orderBy: { merchantName: "asc" },
+      select: { id: true, merchantName: true, category: true, address: true, landmark: true, openingHours: true },
+    }),
+  ]);
+
+  // Guard deep links and shared URLs: a paused service must not render a form
+  // the customer can fill in and then have rejected on submit.
+  const requested = ALL_SERVICES.find((s) => s === service);
+  if (requested && !isServiceEnabled(settings, requested)) {
+    return (
+      <>
+        <CustomerHeader />
+        <main>
+          <ServiceComingSoon serviceType={requested} />
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

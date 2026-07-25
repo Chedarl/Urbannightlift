@@ -47,6 +47,10 @@ async function seedSettings() {
       zoneNoticeFr: "Disponible dans certains quartiers de Yaoundé.",
       mtnMerchantCode: "653077160",
       mtnUssdTemplate: "*126*4*857539*{amount}#",
+      // Urgent, Custom errand and Verified merchant start on hold — the owner
+      // enables them from admin Settings as demand justifies it. Not in `update`
+      // so a reseed never overrides what the owner has switched on.
+      enabledServices: ["MEDICINE_PICKUP", "FOOD_PICKUP", "GROCERY_PICKUP", "SMALL_PARCEL"],
     },
   });
   console.log("✓ OperatingSettings (mode=CLOSED)");
