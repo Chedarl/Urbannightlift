@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   UtensilsCrossed, Pill, ShoppingBasket, Package, Zap, ClipboardList, Store,
   MessageCircle, ArrowRight, Clock, MapPinned, ShieldCheck, Wallet, Star,
-  Bike, FileText, Mail, Phone, MapPin, Globe, AtSign, Send, Share2,
+  Bike, FileText, Mail, Phone, MapPin, Globe, AtSign, Send, Share2, BellRing,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getClosedNotice } from "@/lib/i18n/legal";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { Reveal } from "@/components/shared/motion";
+import { InstallPrompt } from "@/components/shared/InstallPrompt";
+import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
 import { cn } from "@/lib/utils";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -45,9 +48,19 @@ const FEATURES: { icon: React.ElementType; title: L; desc: L }[] = [
 
 const AREAS = ["Yaoundé I", "Yaoundé II", "Yaoundé III", "Yaoundé IV", "Yaoundé V", "Yaoundé VI", "Yaoundé VII"];
 
-export function HomeContent({ mode }: { mode: OperatingMode }) {
+export function HomeContent({
+  mode,
+  enabledServices,
+}: {
+  mode: OperatingMode;
+  enabledServices: ServiceType[];
+}) {
   const { locale } = useTranslation();
   const fr = locale === "fr";
+  // Services not yet launched show a "coming soon" card that captures interest
+  // instead of linking to an order form.
+  const [pending, setPending] = useState<(typeof SERVICES)[number] | null>(null);
+  const isLive = (key: ServiceType) => enabledServices.includes(key);
   const greeting = fr ? "Bonsoir, je souhaite passer une commande Urban Night Lift." : "Good evening, I would like to place an Urban Night Lift order.";
   const waHref = buildWaLink(MAIN_WHATSAPP_NUMBER, greeting);
 
@@ -139,16 +152,37 @@ export function HomeContent({ mode }: { mode: OperatingMode }) {
           <p className="mt-1 text-sm text-mist-400">{fr ? "Choisissez un service pour commencer" : "Choose a service to get started"}</p>
         </Reveal>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {SERVICES.map((s) => (
-            <Link key={s.key} href={`/order/new?service=${s.key}`} className="group flex flex-col rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all hover:-translate-y-0.5 hover:border-ink-500">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
-                <s.icon className="h-6 w-6" />
-              </span>
-              <h3 className="mt-3 font-display text-base font-semibold text-mist-100">{tr(fr, s.title)}</h3>
-              <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-400">{tr(fr, s.desc)}</p>
-              <ArrowRight className="mt-3 h-4 w-4 text-mist-500 transition-transform group-hover:translate-x-1" style={{ color: s.accent }} />
-            </Link>
-          ))}
+          {SERVICES.map((s) =>
+            isLive(s.key) ? (
+              <Link key={s.key} href={`/order/new?service=${s.key}`} className="group flex flex-col rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all hover:-translate-y-0.5 hover:border-ink-500">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
+                  <s.icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-3 font-display text-base font-semibold text-mist-100">{tr(fr, s.title)}</h3>
+                <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-400">{tr(fr, s.desc)}</p>
+                <ArrowRight className="mt-3 h-4 w-4 text-mist-500 transition-transform group-hover:translate-x-1" style={{ color: s.accent }} />
+              </Link>
+            ) : (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setPending(s)}
+                className="group relative flex flex-col rounded-2xl border border-dashed border-ink-600 bg-ink-900/30 p-5 text-left transition-all hover:border-ink-500"
+              >
+                <span className="absolute right-3 top-3 rounded-full bg-ink-800 px-2 py-0.5 text-[10px] font-semibold text-mist-400">
+                  {fr ? "Bientôt" : "Coming soon"}
+                </span>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl opacity-50" style={{ backgroundColor: `${s.accent}18`, color: s.accent }}>
+                  <s.icon className="h-6 w-6" />
+                </span>
+                <h3 className="mt-3 font-display text-base font-semibold text-mist-300">{tr(fr, s.title)}</h3>
+                <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-500">{tr(fr, s.desc)}</p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-mist-400">
+                  <BellRing className="h-3.5 w-3.5" /> {fr ? "Prévenez-moi" : "Notify me"}
+                </span>
+              </button>
+            )
+          )}
           {/* 8th card — WhatsApp fallback */}
           <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-2xl border border-gold-400/50 bg-gradient-to-b from-gold-400/10 to-transparent p-5 text-center">
             <Star className="h-7 w-7 text-gold-400" />
@@ -264,6 +298,15 @@ export function HomeContent({ mode }: { mode: OperatingMode }) {
           © {new Date().getFullYear()} Urban Night Lift. {fr ? "Tous droits réservés." : "All rights reserved."}
         </div>
       </footer>
+
+      {pending && (
+        <ComingSoonSheet
+          serviceType={pending.key}
+          serviceName={tr(fr, pending.title)}
+          accent={pending.accent}
+          onClose={() => setPending(null)}
+        />
+      )}
 
       {/* Mobile Track shortcut */}
       <Link href="/track" className="fixed bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-full bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg sm:hidden">

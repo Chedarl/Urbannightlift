@@ -665,5 +665,17 @@
     "iosSteps": "Appuyez sur l’icône Partager en bas de Safari, puis choisissez « Sur l’écran d’accueil ».",
     "gotIt": "Compris",
     "installed": "Application installée"
+  },
+  "comingSoon": {
+    "badge": "Bientôt disponible",
+    "title": "Pas encore disponible",
+    "body": "Nous lançons nos services un par un pour garantir des livraisons fiables. Laissez votre numéro WhatsApp et nous vous préviendrons dès l'ouverture.",
+    "notifyCta": "Prévenez-moi au lancement",
+    "placeholder": "+237 6XX XXX XXX",
+    "success": "Vous êtes sur la liste. Nous vous écrirons sur WhatsApp au lancement.",
+    "error": "Entrez un numéro WhatsApp valide.",
+    "nowLive": "Bonne nouvelle : ce service est maintenant actif. Rafraîchissez pour commander.",
+    "meanwhile": "En attendant, vous pouvez commander",
+    "close": "Fermer"
   }
 }

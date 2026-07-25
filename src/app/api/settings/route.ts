@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
-import { getOperatingSettings } from "@/lib/settings";
+import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
+import type { ServiceType } from "@prisma/client";
+
+const ALL_SERVICES: ServiceType[] = [
+  "FOOD_PICKUP",
+  "MEDICINE_PICKUP",
+  "GROCERY_PICKUP",
+  "SMALL_PARCEL",
+  "URGENT_ITEM",
+  "CUSTOM_ERRAND",
+  "MERCHANT_DELIVERY",
+];
 
 /** GET /api/settings — public: drives the customer closed/paused banner. */
 export async function GET() {
@@ -12,6 +23,7 @@ export async function GET() {
     operatingEndHour: settings.operatingEndHour,
     zoneNoticeEn: settings.zoneNoticeEn,
     zoneNoticeFr: settings.zoneNoticeFr,
+    enabledServices: resolveEnabledServices(settings),
   });
 }
 
@@ -36,6 +48,17 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.operatingEndHour === "number") data.operatingEndHour = body.operatingEndHour;
   if (typeof body.zoneNoticeEn === "string") data.zoneNoticeEn = body.zoneNoticeEn;
   if (typeof body.zoneNoticeFr === "string") data.zoneNoticeFr = body.zoneNoticeFr;
+
+  // Which services are offered is a business decision, so OWNER-only like the
+  // payment codes. Unknown values are dropped rather than stored.
+  if (Array.isArray(body.enabledServices)) {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change which services are offered" }, { status: 403 });
+    }
+    data.enabledServices = (body.enabledServices as unknown[]).filter(
+      (s): s is ServiceType => typeof s === "string" && ALL_SERVICES.includes(s as ServiceType)
+    );
+  }
 
   const paymentFields = ["mtnMerchantCode", "mtnUssdTemplate", "orangeMerchantCode", "orangeUssdTemplate"];
   const touchesPayment = paymentFields.some((f) => typeof body[f] === "string");

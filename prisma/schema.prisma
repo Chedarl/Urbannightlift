@@ -461,12 +461,31 @@ model SupportRequest {
   @@index([createdAt])
 }
 
+/// Waiting list for a service that isn't live yet. Doubles as the market-demand
+/// signal the owner uses to decide which service to introduce next.
+model ServiceInterest {
+  id             String      @id @default(cuid())
+  serviceType    ServiceType
+  whatsappNumber String
+  locale         String      @default("en")
+  notified       Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@unique([serviceType, whatsappNumber])
+  @@index([serviceType])
+  @@index([createdAt])
+}
+
 // Singleton row (id = 1). App always upserts/reads id = 1.
 model OperatingSettings {
   id                 Int           @id @default(1)
   mode               OperatingMode @default(CLOSED)
   operatingStartHour Int           @default(20)
   operatingEndHour   Int           @default(24)
+  /// Services currently offered to customers. Anything not listed shows as
+  /// "coming soon" and is rejected server-side, so the owner can introduce
+  /// services sequentially from the admin Settings page without a deploy.
+  enabledServices    ServiceType[]
   zoneNoticeEn       String?
   zoneNoticeFr       String?
   mtnMerchantCode    String? // customer-facing MTN MoMo merchant number

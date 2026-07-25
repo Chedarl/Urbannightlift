@@ -2,20 +2,33 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Save, BellRing } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { OperatingModeControls } from "@/components/admin/OperatingModeControls";
 import { Button } from "@/components/shared/Button";
-import type { OperatingMode } from "@prisma/client";
+import type { OperatingMode, ServiceType } from "@prisma/client";
 
 const inputCls =
   "w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-violet-500 focus:outline-none";
 
+const SERVICE_ORDER: ServiceType[] = [
+  "MEDICINE_PICKUP",
+  "FOOD_PICKUP",
+  "GROCERY_PICKUP",
+  "SMALL_PARCEL",
+  "URGENT_ITEM",
+  "CUSTOM_ERRAND",
+  "MERCHANT_DELIVERY",
+];
+
 export function SettingsManager({
   settings,
+  interestCounts,
 }: {
+  interestCounts: Partial<Record<ServiceType, number>>;
   settings: {
     mode: OperatingMode;
+    enabledServices: ServiceType[];
     operatingStartHour: number;
     operatingEndHour: number;
     zoneNoticeEn: string;
@@ -46,6 +59,7 @@ export function SettingsManager({
         mtnUssdTemplate: form.mtnUssdTemplate,
         orangeMerchantCode: form.orangeMerchantCode,
         orangeUssdTemplate: form.orangeUssdTemplate,
+        enabledServices: form.enabledServices,
       }),
     });
     setSaved(true);
@@ -80,6 +94,54 @@ export function SettingsManager({
           {t("admin.settings.noticeFr")}
           <input className={inputCls} value={form.zoneNoticeFr} onChange={(e) => setForm({ ...form, zoneNoticeFr: e.target.value })} />
         </label>
+
+        <div className="mt-2 border-t border-ink-700 pt-3">
+          <p className="font-display text-sm font-semibold text-gold-300">Services offered</p>
+          <p className="mb-2 text-xs text-mist-500">
+            Switch a service on when demand justifies it. Anything off shows customers a
+            &ldquo;coming soon&rdquo; card that collects WhatsApp numbers, and is refused server-side.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {SERVICE_ORDER.map((svc) => {
+              const on = form.enabledServices.includes(svc);
+              const waiting = interestCounts[svc] ?? 0;
+              return (
+                <label
+                  key={svc}
+                  className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-ink-700 bg-ink-800/60 px-3 py-2"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm text-mist-100">{t(`services.${svc}.name`)}</span>
+                    {waiting > 0 && (
+                      <span className="mt-0.5 flex items-center gap-1 text-[11px] text-gold-300">
+                        <BellRing className="h-3 w-3" /> {waiting} waiting
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className={on ? "text-xs font-semibold text-safe" : "text-xs text-mist-500"}>
+                      {on ? "Live" : "On hold"}
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      style={{ accentColor: "#2fae60" }}
+                      checked={on}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          enabledServices: e.target.checked
+                            ? [...form.enabledServices, svc]
+                            : form.enabledServices.filter((x) => x !== svc),
+                        })
+                      }
+                    />
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="mt-2 border-t border-ink-700 pt-3">
           <p className="mb-2 font-display text-sm font-semibold text-gold-300">Mobile Money merchant</p>
