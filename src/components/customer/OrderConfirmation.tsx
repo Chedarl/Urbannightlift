@@ -1,26 +1,38 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { MessageCircle, RefreshCw, Check } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
-import { buildWaLink, MAIN_WHATSAPP_NUMBER, ADMIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
-import { CUSTOMER_STATUS_KEY, CUSTOMER_TIMELINE } from "@/lib/orders/statusLabels";
+import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
+import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";
 import { getLegalNotice } from "@/lib/i18n/legal";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
+import { DownloadReceiptButton } from "@/components/customer/order/DownloadReceiptButton";
+import type { ReceiptPdfData } from "@/components/customer/order/receiptPdf";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
-import { Button, LinkButton } from "@/components/shared/Button";
+import { LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
 import { QuoteCard } from "@/components/customer/QuoteCard";
 import { OrderCaseThread } from "@/components/customer/OrderCaseThread";
+import { LiveTimeline } from "@/components/customer/LiveTimeline";
+import { ConfirmReceipt } from "@/components/customer/ConfirmReceipt";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
 import type { OrderStatus, PaymentMethod, PreferredLanguage, PrescriptionRequired, ServiceType } from "@prisma/client";
+import type { CustomerStatusKey } from "@/lib/orders/statusLabels";
+
+/** Confirming before the rider is on the way with the goods means nothing. */
+const CAN_CONFIRM: OrderStatus[] = [
+  "RIDER_GOING_TO_DELIVERY",
+  "RIDER_ARRIVED_AT_DELIVERY",
+  "DELIVERY_PROOF_SUBMITTED",
+  "DELIVERED",
+];
 
 export interface ConfirmationOrder {
   orderCode: string;
@@ -55,6 +67,16 @@ export interface ConfirmationOrder {
   quoteAcceptedAt: string | null;
   quoteDeclinedAt: string | null;
   quotedFeeXaf: number | null;
+  /** The customer's own proof that the goods arrived. */
+  customerConfirmedAt: string | null;
+  customerConfirmMethod: string | null;
+  /** Pre-rendered so the timeline is correct before the first poll lands. */
+  steps: { key: CustomerStatusKey; done: boolean; current: boolean; at: string | null }[];
+  deliveredAt: string | null;
+  riderName: string | null;
+  amountPaidXaf: number | null;
+  paymentReference: string | null;
+  paymentVerifiedAt: string | null;
 }
 
 export function OrderConfirmation({
@@ -68,11 +90,9 @@ export function OrderConfirmation({
   offerAccount?: boolean;
 }) {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const statusKey = CUSTOMER_STATUS_KEY[order.orderStatus];
   const isCancelled = statusKey === "cancelled";
-  const currentIdx = CUSTOMER_TIMELINE.indexOf(statusKey);
   const verified = order.verified;
   // Payment submission and the shareable summary both expose private details,
   // so they stay behind the ownership check.
@@ -116,6 +136,30 @@ export function OrderConfirmation({
     deliveryZoneName: order.deliveryZoneName ?? undefined,
     estimatedFeeXaf: order.estimatedFeeXaf,
     paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery",
+    legalNotice: getLegalNotice(fr ? "fr" : "en"),
+  };
+
+  // The receipt is only meaningful once the customer has said they received
+  // the goods, so it appears at exactly that moment and not before.
+  const receiptData: ReceiptPdfData = {
+    orderCode: order.orderCode,
+    locale: fr ? "fr" : "en",
+    issuedAt: new Date(),
+    customerName: order.customerName,
+    customerWhatsapp: order.customerWhatsapp,
+    serviceLabel: t(`services.${order.serviceType}.name`),
+    itemDescription: order.itemDescription,
+    pickupLocation: order.pickupLocation,
+    deliveryLocation: order.deliveryLocation,
+    amountPaidXaf: order.amountPaidXaf,
+    paymentMethodLabel: pdfData.paymentMethodLabel,
+    paymentReference: order.paymentReference,
+    paymentVerified: payment.paymentStatus === "VERIFIED",
+    paymentVerifiedAt: order.paymentVerifiedAt ? new Date(order.paymentVerifiedAt) : null,
+    deliveredAt: order.deliveredAt ? new Date(order.deliveredAt) : null,
+    confirmMethod: order.customerConfirmMethod,
+    confirmedAt: order.customerConfirmedAt ? new Date(order.customerConfirmedAt) : null,
+    riderName: order.riderName,
     legalNotice: getLegalNotice(fr ? "fr" : "en"),
   };
 
@@ -168,6 +212,27 @@ export function OrderConfirmation({
       {/* Pay for delivery (merchant code) */}
       {showPayment && <PaymentCard info={payment} />}
 
+      {/* Proof of payment and delivery, issued only once the goods are
+          confirmed received. */}
+      {verified && order.customerConfirmedAt && (
+        <DownloadReceiptButton
+          data={receiptData}
+          label={fr ? "Télécharger le reçu" : "Download your receipt"}
+        />
+      )}
+
+      {/* The customer's own proof of receipt — the other half of the rider's
+          delivery proof, and what closes the order honestly. */}
+      {verified && !isCancelled && (
+        <ConfirmReceipt
+          orderCode={order.orderCode}
+          confirmedAt={order.customerConfirmedAt}
+          confirmMethod={order.customerConfirmMethod}
+          canConfirm={CAN_CONFIRM.includes(order.orderStatus)}
+          fr={fr}
+        />
+      )}
+
       {/* A complaint belongs on the order it is about — no code to type, no
           context to re-explain, and our reply comes back here. */}
       {verified && <OrderCaseThread orderCode={order.orderCode} fr={fr} />}
@@ -182,49 +247,16 @@ export function OrderConfirmation({
       {/* Status timeline */}
       <div className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
         <h2 className="mb-3 font-display text-base font-semibold">{t("confirmation.statusTitle")}</h2>
-        {isCancelled ? (
-          <p className="text-sm font-medium text-restricted">{t("customerStatus.cancelled")}</p>
-        ) : (
-          <ol className="flex flex-col gap-0">
-            {CUSTOMER_TIMELINE.map((step, i) => {
-              const done = i < currentIdx;
-              const current = i === currentIdx;
-              return (
-                <li key={step} className="flex items-start gap-3">
-                  <div className="flex flex-col items-center">
-                    <span
-                      className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full border text-xs",
-                        done && "border-safe bg-safe/20 text-safe",
-                        current && "border-gold-400 bg-gold-400/15 text-gold-400",
-                        !done && !current && "border-ink-700 text-mist-500"
-                      )}
-                    >
-                      {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                    </span>
-                    {i < CUSTOMER_TIMELINE.length - 1 && (
-                      <span className={cn("h-5 w-px", done ? "bg-safe/50" : "bg-ink-700")} />
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      "pt-0.5 text-sm",
-                      current ? "font-semibold text-gold-300" : done ? "text-mist-300" : "text-mist-500"
-                    )}
-                  >
-                    {t(`customerStatus.${step}`)}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        )}
+        <LiveTimeline
+          orderCode={order.orderCode}
+          initialSteps={order.steps}
+          cancelled={isCancelled}
+          confirmedAt={order.customerConfirmedAt}
+          fr={fr}
+        />
         {order.customerVisibleNotes && (
           <p className="mt-3 rounded-xl bg-ink-800 p-3 text-xs text-mist-300">{order.customerVisibleNotes}</p>
         )}
-        <Button variant="ghost" size="sm" className="mt-3" onClick={() => router.refresh()}>
-          <RefreshCw className="h-4 w-4" /> {t("confirmation.refresh")}
-        </Button>
       </div>
 
       {/* WhatsApp hand-off — the message contains the full order, so it needs ownership */}

@@ -25,6 +25,7 @@ export async function GET() {
     zoneNoticeEn: settings.zoneNoticeEn,
     zoneNoticeFr: settings.zoneNoticeFr,
     enabledServices: resolveEnabledServices(settings),
+    testMode: settings.testMode,
   });
 }
 
@@ -71,6 +72,15 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.mtnUssdTemplate === "string") data.mtnUssdTemplate = body.mtnUssdTemplate || null;
     if (typeof body.orangeMerchantCode === "string") data.orangeMerchantCode = body.orangeMerchantCode || null;
     if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
+  }
+
+  // Test mode decides whether orders count as real trading, so it is
+  // OWNER-only like everything else that moves the numbers.
+  if (typeof body.testMode === "boolean") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change test mode" }, { status: 403 });
+    }
+    data.testMode = body.testMode;
   }
 
   // The revenue share decides how every franc is divided, so it is OWNER-only
