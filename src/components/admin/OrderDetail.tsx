@@ -61,10 +61,14 @@ export interface OrderDetailData {
   pickupLandmark: string | null;
   pickupZone: string | null;
   pickupSafety: SafetyLevel | null;
+  pickupGeoSource: string | null;
+  pickupGeoConfidence: number | null;
   deliveryLocation: string;
   deliveryLandmark: string | null;
   deliveryZone: string | null;
   deliverySafety: SafetyLevel | null;
+  deliveryGeoSource: string | null;
+  deliveryGeoConfidence: number | null;
   merchantName: string | null;
   merchantWhatsapp: string | null;
   itemDescription: string;
@@ -113,6 +117,24 @@ const REJECTION_REASONS = [
   "RIDER_UNAVAILABLE",
   "OTHER",
 ] as const;
+
+/**
+ * Coordinates with a source were *guessed* from the customer's typed address,
+ * not pinned by them. Dispatch has to know that before routing a rider — a weak
+ * match is a hint, never an address.
+ */
+function GeoNote({ source, confidence }: { source: string | null; confidence: number | null }) {
+  if (!source) return null;
+  const weak = (confidence ?? 0) < 0.6;
+  const origin = source === "CATALOGUE" ? "our location list" : "OpenStreetMap";
+  return (
+    <span className={`block text-xs ${weak ? "text-gold-300" : "text-mist-500"}`}>
+      Position estimated from the typed address via {origin}
+      {confidence != null ? ` (${Math.round(confidence * 100)}% match)` : ""}
+      {weak ? " — confirm with the customer before dispatching." : ""}
+    </span>
+  );
+}
 
 const card = "rounded-2xl border border-ink-700 bg-ink-900 p-4";
 const inputCls =
@@ -281,6 +303,7 @@ export function OrderDetail({
                   {order.pickupLocation}
                   {order.pickupLandmark ? <span className="block text-xs text-mist-500">{order.pickupLandmark}</span> : null}
                   {order.pickupZone ? <span className="block text-xs text-violet-300">{order.pickupZone} · {order.pickupSafety}</span> : null}
+                  <GeoNote source={order.pickupGeoSource} confidence={order.pickupGeoConfidence} />
                 </span>
               }
             />
@@ -291,6 +314,7 @@ export function OrderDetail({
                   {order.deliveryLocation}
                   {order.deliveryLandmark ? <span className="block text-xs text-mist-500">{order.deliveryLandmark}</span> : null}
                   {order.deliveryZone ? <span className="block text-xs text-violet-300">{order.deliveryZone} · {order.deliverySafety}</span> : null}
+                  <GeoNote source={order.deliveryGeoSource} confidence={order.deliveryGeoConfidence} />
                 </span>
               }
             />
