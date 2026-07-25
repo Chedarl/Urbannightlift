@@ -38,6 +38,7 @@ export function SettingsManager({
     orangeMerchantCode: string;
     orangeUssdTemplate: string;
     riderSharePercent: number;
+    testMode: boolean;
   };
 }) {
   const { t } = useTranslation();
@@ -62,6 +63,7 @@ export function SettingsManager({
         orangeUssdTemplate: form.orangeUssdTemplate,
         enabledServices: form.enabledServices,
         riderSharePercent: form.riderSharePercent,
+        testMode: form.testMode,
       }),
     });
     setSaved(true);
@@ -165,6 +167,37 @@ export function SettingsManager({
               <input className={inputCls} value={form.orangeUssdTemplate} onChange={(e) => setForm({ ...form, orangeUssdTemplate: e.target.value })} placeholder="#150*..." />
             </label>
           </div>
+        </div>
+
+        {/* Test mode. Deliberately loud when on: an operation that quietly
+            stays in test mode after launch reports no revenue at all. */}
+        <div
+          className={
+            form.testMode
+              ? "rounded-xl border border-gold-400/60 bg-gold-400/10 p-3"
+              : "rounded-xl border border-ink-700 bg-ink-950 p-3"
+          }
+        >
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.testMode}
+              onChange={(e) => setForm({ ...form, testMode: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-mist-100">Test mode</span>
+              <span className="block text-xs text-mist-400">
+                Every new order is flagged as a test and kept out of revenue, counts and exports. Use it to rehearse
+                the whole operation before launch, then switch it off on launch night.
+              </span>
+              {form.testMode && (
+                <span className="mt-1 block text-xs font-semibold text-gold-200">
+                  On — orders placed right now do not count as real trading.
+                </span>
+              )}
+            </span>
+          </label>
         </div>
 
         {/* The revenue share. Changing it applies to future deliveries only —

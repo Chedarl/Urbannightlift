@@ -30,6 +30,7 @@ export default async function SettingsPage() {
         orangeMerchantCode: settings.orangeMerchantCode ?? "",
         orangeUssdTemplate: settings.orangeUssdTemplate ?? "",
         riderSharePercent: settings.riderSharePercent,
+        testMode: settings.testMode,
       }}
     />
   );

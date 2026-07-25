@@ -427,6 +427,17 @@ model Order {
   cashSettledAt      DateTime?
   cashSettledByUserId String?
 
+  /// ── Proof of receipt ──
+  /// The customer's own confirmation that the goods arrived: they enter the
+  /// delivery code, sign, or photograph the handover. The rider's proof says
+  /// we delivered; this says they received. A dispute needs both sides.
+  customerConfirmedAt    DateTime?
+  /// CODE | SIGNATURE | PHOTO
+  customerConfirmMethod  String?
+  /// Private storage path for a signature or handover photo. Never public.
+  customerProofUrl       String?
+  customerConfirmNote    String?
+
   /// ── Housekeeping ──
   /// Test orders and archived orders are excluded from every operational view,
   /// count, and export by default. Nothing is ever deleted to make the numbers
@@ -744,6 +755,10 @@ model OperatingSettings {
   /// designed around 60% rider / 40% company; changing it here applies to
   /// future deliveries only, never to ones already completed.
   riderSharePercent  Int           @default(60)
+  /// While on, every new order is flagged as a test so pre-launch rehearsals
+  /// never contaminate revenue, counts or exports. The owner turns it off on
+  /// launch night.
+  testMode           Boolean       @default(false)
   zoneNoticeEn       String?
   zoneNoticeFr       String?
   mtnMerchantCode    String? // customer-facing MTN MoMo merchant number

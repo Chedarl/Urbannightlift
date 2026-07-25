@@ -184,6 +184,9 @@ export async function POST(req: NextRequest) {
         riskFlag: Boolean(riskFlag),
         highValueFlag,
         screenshotUrl: input.screenshotUrl || null,
+        // Pre-launch rehearsals must never contaminate revenue or counts. The
+        // owner switches this off on launch night.
+        isTest: settings.testMode,
         otpCode,
       },
     });

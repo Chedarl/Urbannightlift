@@ -110,6 +110,9 @@ export interface OrderDetailData {
   cashSettledAt: string | null;
   isTest: boolean;
   archived: boolean;
+  customerConfirmedAt: string | null;
+  customerConfirmMethod: string | null;
+  customerProofUrl: string | null;
   riderLat: number | null;
   riderLng: number | null;
   riderLocationAt: string | null;
@@ -702,6 +705,68 @@ export function OrderDetail({
                 </Button>
               </div>
             </div>
+          </section>
+
+          {/* The customer's own confirmation. Dispatch needs to see both
+              sides of the handover, not just the rider's word for it. */}
+          <section className={card}>
+            <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">Proof of receipt</h2>
+            {order.customerConfirmedAt ? (
+              <div className="flex flex-col gap-1.5 text-sm">
+                <Row
+                  label="Customer confirmed"
+                  value={
+                    <span className="text-safe">
+                      {new Date(order.customerConfirmedAt).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  }
+                />
+                <Row
+                  label="Method"
+                  value={
+                    order.customerConfirmMethod === "SIGNATURE"
+                      ? "Signed on their device"
+                      : order.customerConfirmMethod === "PHOTO"
+                        ? "Photo of the handover"
+                        : "Entered the delivery code"
+                  }
+                />
+                {order.customerProofUrl && (
+                  <Row
+                    label="Evidence"
+                    value={
+                      <button
+                        type="button"
+                        className="text-violet-300 underline"
+                        onClick={async () => {
+                          const res = await fetch(
+                            `/api/media?path=${encodeURIComponent(order.customerProofUrl!)}`
+                          );
+                          if (!res.ok) {
+                            setError("Couldn't open the file");
+                            return;
+                          }
+                          const { url } = await res.json();
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                      >
+                        View signature / photo
+                      </button>
+                    }
+                  />
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-mist-500">
+                The customer hasn&apos;t confirmed receipt yet. They can enter their delivery code, sign, or send a
+                photo from their own order page.
+              </p>
+            )}
           </section>
 
           {/* Earnings — the 60/40 split, frozen at delivery. */}

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
 import { hasOrderAccess } from "@/lib/orders/orderAccess";
 import { getCustomerId } from "@/lib/auth/customer";
+import { CUSTOMER_STATUS_KEY, CUSTOMER_TIMELINE } from "@/lib/orders/statusLabels";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,17 @@ export default async function ConfirmationPage({
 }) {
   const { orderCode } = await params;
   const [order, settings, verified, customerId] = await Promise.all([
-    prisma.order.findUnique({ where: { orderCode: orderCode.toUpperCase() }, include: { customer: true, pickupZone: true, deliveryZone: true } }),
+    prisma.order.findUnique({
+      where: { orderCode: orderCode.toUpperCase() },
+      include: {
+        customer: true,
+        pickupZone: true,
+        deliveryZone: true,
+        assignedRider: { select: { fullName: true } },
+        payments: { orderBy: { createdAt: "desc" }, take: 1 },
+        statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: "asc" } },
+      },
+    }),
     getOperatingSettings(),
     hasOrderAccess(orderCode),
     getCustomerId(),
@@ -32,6 +43,24 @@ export default async function ConfirmationPage({
   // a credential. Until the visitor proves ownership we withhold the delivery
   // OTP and the personal details, and show a verification prompt instead.
   const redact = <T,>(value: T): T | null => (verified ? value : null);
+
+  // Rendered server-side so the timeline is already correct on first paint;
+  // the client then keeps it ticking without a reload.
+  const reachedAt: Record<string, string> = {};
+  for (const h of order.statusHistory) {
+    const key = CUSTOMER_STATUS_KEY[h.toStatus];
+    if (key && !reachedAt[key]) reachedAt[key] = h.createdAt.toISOString();
+  }
+  const currentKey = CUSTOMER_STATUS_KEY[order.orderStatus];
+  const currentIndex = CUSTOMER_TIMELINE.indexOf(currentKey);
+  const steps = CUSTOMER_TIMELINE.map((key, i) => ({
+    key,
+    done: currentIndex >= 0 && i < currentIndex,
+    current: key === currentKey,
+    at: reachedAt[key] ?? null,
+  }));
+
+  const payment = order.payments[0] ?? null;
 
   return (
     <>
@@ -74,6 +103,14 @@ export default async function ConfirmationPage({
             quoteAcceptedAt: order.quoteAcceptedAt?.toISOString() ?? null,
             quoteDeclinedAt: order.quoteDeclinedAt?.toISOString() ?? null,
             quotedFeeXaf: order.quotedFeeXaf,
+            customerConfirmedAt: order.customerConfirmedAt?.toISOString() ?? null,
+            customerConfirmMethod: order.customerConfirmMethod,
+            steps,
+            deliveredAt: order.completedAt?.toISOString() ?? null,
+            riderName: order.assignedRider?.fullName ?? null,
+            amountPaidXaf: order.finalDeliveryFeeXaf ?? order.quotedFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
+            paymentReference: redact(payment?.transactionReference ?? null),
+            paymentVerifiedAt: payment?.verifiedAt?.toISOString() ?? null,
           }}
           payment={{
             orderCode: order.orderCode,
