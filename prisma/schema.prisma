@@ -183,18 +183,43 @@ model User {
 model Customer {
   id                String            @id @default(cuid())
   fullName          String
-  whatsappNumber    String
+  whatsappNumber    String            @unique
   alternativePhone  String?
   preferredLanguage PreferredLanguage @default(EN)
   totalOrders       Int               @default(0)
   notes             String?
+  /// Set = the customer claimed an account with a login PIN. Null = guest.
+  /// This is an Urban Night Lift login PIN only — never a MoMo/Orange PIN.
+  pinHash           String?
+  /// Brute-force protection: a phone number is public, so the PIN needs a lockout.
+  pinAttempts       Int               @default(0)
+  pinLockedUntil    DateTime?
+  lastLoginAt       DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  orders   Order[]
-  payments Payment[]
+  orders    Order[]
+  payments  Payment[]
+  addresses CustomerAddress[]
 
   @@index([whatsappNumber])
+}
+
+/// A delivery/pickup place a customer saved for reuse at checkout.
+model CustomerAddress {
+  id           String   @id @default(cuid())
+  customerId   String
+  label        String
+  locationText String
+  landmark     String?
+  lat          Float?
+  lng          Float?
+  zoneId       String?
+  createdAt    DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
 }
 
 model Zone {

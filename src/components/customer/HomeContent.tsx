@@ -6,6 +6,7 @@ import {
   UtensilsCrossed, Pill, ShoppingBasket, Package, Zap, ClipboardList, Store,
   MessageCircle, ArrowRight, Clock, MapPinned, ShieldCheck, Wallet, Star,
   Bike, FileText, Mail, Phone, MapPin, Globe, AtSign, Send, Share2, BellRing,
+  UserPlus, UserCircle, Repeat, Bookmark, History,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getClosedNotice } from "@/lib/i18n/legal";
@@ -51,9 +52,11 @@ const AREAS = ["Yaoundé I", "Yaoundé II", "Yaoundé III", "Yaoundé IV", "Yaou
 export function HomeContent({
   mode,
   enabledServices,
+  signedIn,
 }: {
   mode: OperatingMode;
   enabledServices: ServiceType[];
+  signedIn: boolean;
 }) {
   const { locale } = useTranslation();
   const fr = locale === "fr";
@@ -92,6 +95,22 @@ export function HomeContent({
             <LanguageSwitch />
             <Link href="/track" className="hidden rounded-full border border-violet-500/60 bg-violet-600/20 px-4 py-1.5 text-sm font-semibold text-violet-200 hover:bg-violet-600/30 sm:inline-flex">
               {fr ? "Suivre" : "Track Order"}
+            </Link>
+            {/* Account entry point. The full label needs room, so small screens
+                get an icon-only button — there is no hamburger menu here. */}
+            <Link
+              href={signedIn ? "/account" : "/account/signup"}
+              aria-label={signedIn ? (fr ? "Mon compte" : "My account") : (fr ? "Créer un compte" : "Sign up")}
+              className="hidden rounded-full bg-gold-400 px-4 py-1.5 text-sm font-semibold text-ink-950 hover:bg-gold-300 md:inline-flex"
+            >
+              {signedIn ? (fr ? "Mon compte" : "My account") : (fr ? "Créer un compte" : "Sign up")}
+            </Link>
+            <Link
+              href={signedIn ? "/account" : "/account/signup"}
+              aria-label={signedIn ? (fr ? "Mon compte" : "My account") : (fr ? "Créer un compte" : "Sign up")}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gold-400 text-ink-950 md:hidden"
+            >
+              {signedIn ? <UserCircle className="h-5 w-5" /> : <UserPlus className="h-4 w-4" />}
             </Link>
           </div>
         </div>
@@ -248,10 +267,60 @@ export function HomeContent({
       <section className="mx-auto max-w-6xl px-4 pb-12">
         <div className="flex flex-col items-start gap-4 overflow-hidden rounded-3xl border border-violet-700/40 bg-gradient-to-r from-violet-900/40 to-ink-900 p-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="font-display text-xl font-bold">{fr ? "Bientôt : notre application mobile" : "Faster with our mobile app"}</h3>
-            <p className="mt-1 max-w-md text-sm text-mist-300">{fr ? "Commandez, suivez en temps réel et profitez d'offres exclusives." : "Place orders, track in real time and get exclusive offers on the app."}</p>
+            <h3 className="font-display text-xl font-bold">{fr ? "Installez l'application" : "Install the app"}</h3>
+            <p className="mt-1 max-w-md text-sm text-mist-300">{fr ? "Ajoutez Urban Night Lift à votre écran d'accueil : commandez et suivez vos livraisons en un tap." : "Add Urban Night Lift to your home screen — order and track deliveries in one tap."}</p>
           </div>
-          <span className="rounded-full border border-mist-500/40 px-4 py-2 text-xs font-semibold text-mist-300">{fr ? "Bientôt disponible" : "Coming soon"}</span>
+          <InstallPrompt variant="app" className="shrink-0 px-5 py-2.5" />
+        </div>
+      </section>
+
+      {/* ───── Create an account ───── */}
+      <section className="mx-auto max-w-6xl px-4 pb-12">
+        <div className="overflow-hidden rounded-3xl border border-gold-400/40 bg-gradient-to-r from-gold-400/10 via-ink-900 to-ink-900 p-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h3 className="font-display text-xl font-bold">
+                {signedIn
+                  ? fr ? "Votre compte Urban Night Lift" : "Your Urban Night Lift account"
+                  : fr ? "Créez votre compte" : "Create your account"}
+              </h3>
+              <p className="mt-1 max-w-md text-sm text-mist-300">
+                {signedIn
+                  ? fr
+                    ? "Retrouvez vos commandes, vos adresses et recommandez en un tap."
+                    : "See your orders, your saved addresses, and reorder in one tap."
+                  : fr
+                    ? "Commandez plus vite et gardez tout votre historique. Si vous avez déjà commandé avec votre numéro WhatsApp, vos commandes apparaîtront automatiquement."
+                    : "Order faster and keep your full history. Already ordered with your WhatsApp number? Those orders appear automatically."}
+              </p>
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist-400">
+                <li className="inline-flex items-center gap-1.5"><History className="h-3.5 w-3.5 text-gold-400" />{fr ? "Historique des commandes" : "Order history"}</li>
+                <li className="inline-flex items-center gap-1.5"><Repeat className="h-3.5 w-3.5 text-gold-400" />{fr ? "Recommander en un tap" : "One-tap reorder"}</li>
+                <li className="inline-flex items-center gap-1.5"><Bookmark className="h-3.5 w-3.5 text-gold-400" />{fr ? "Adresses enregistrées" : "Saved addresses"}</li>
+              </ul>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-3">
+              {signedIn ? (
+                <Link href="/account" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
+                  <UserCircle className="h-4 w-4" /> {fr ? "Mon compte" : "My account"}
+                </Link>
+              ) : (
+                <>
+                  <Link href="/account/signup" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
+                    <UserPlus className="h-4 w-4" /> {fr ? "Créer un compte" : "Sign up"}
+                  </Link>
+                  <Link href="/account/login" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-gold-400/60">
+                    {fr ? "Se connecter" : "Log in"}
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+          <p className="mt-4 text-[11px] text-mist-500">
+            {fr
+              ? "Pas besoin de compte pour commander. Connexion par numéro WhatsApp et code — nous ne demandons jamais votre code MoMo ou Orange Money."
+              : "No account needed to order. Sign in with your WhatsApp number and a PIN — we never ask for your MoMo or Orange Money PIN."}
+          </p>
         </div>
       </section>
 
@@ -267,7 +336,9 @@ export function HomeContent({
             <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Entreprise" : "Company"}</p>
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
               <li><a href="#top" className="hover:text-mist-200">{fr ? "À propos" : "About us"}</a></li>
-              <li><Link href="/rider/login" className="hover:text-mist-200">{fr ? "Devenir livreur" : "Become a rider"}</Link></li>
+              <li><Link href="/account/signup" className="hover:text-mist-200">{fr ? "Créer un compte" : "Create an account"}</Link>
+              <Link href="/account" className="hover:text-mist-200">{fr ? "Mon compte" : "My account"}</Link>
+              <Link href="/rider/login" className="hover:text-mist-200">{fr ? "Devenir livreur" : "Become a rider"}</Link></li>
               <li><Link href="/help" className="hover:text-mist-200">Contact</Link></li>
             </ul>
           </div>

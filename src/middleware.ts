@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { CUSTOMER_COOKIE, verifyCustomerToken } from "@/lib/auth/customer";
 
 const CANONICAL_HOST = "urbannighlift.com";
 
@@ -20,6 +21,23 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  // Customer accounts use their own signed cookie (not Supabase), verified here
+  // with jose so the edge runtime never needs Prisma.
+  if (pathname === "/account" || pathname.startsWith("/account/")) {
+    const isAuthPage = pathname === "/account/login" || pathname === "/account/signup";
+    if (isAuthPage) return NextResponse.next();
+    const token = request.cookies.get(CUSTOMER_COOKIE)?.value;
+    const customerId = token ? await verifyCustomerToken(token) : null;
+    if (!customerId) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/account/login";
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   const isGated = pathname.startsWith("/admin") || pathname.startsWith("/rider");
   if (!isGated) return NextResponse.next();
 
