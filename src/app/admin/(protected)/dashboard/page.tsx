@@ -23,7 +23,11 @@ const ACTIVE_STATUSES = [
 export default async function AdminDashboardPage() {
   const settings = await getOperatingSettings();
   const { start, end } = tonightWindow(settings.operatingStartHour);
-  const visible = visibilityWhere();
+  // During a pre-launch rehearsal the orders being placed ARE test orders, so
+  // the dashboard has to show them or the owner sees an empty console and
+  // concludes the site is broken. They stay flagged and excluded from
+  // earnings; this only affects what dispatch can see tonight.
+  const visible = visibilityWhere(false, settings.testMode);
   const now = Date.now();
   const reviewCutoff = new Date(now - REVIEW_SLA_MINUTES * 60_000);
   const assignmentCutoff = new Date(now - ASSIGNMENT_SLA_MINUTES * 60_000);
@@ -117,6 +121,7 @@ export default async function AdminDashboardPage() {
       .reduce((sum, o) => sum + (o.finalDeliveryFeeXaf ?? o.estimatedDeliveryFeeXaf ?? 0), 0),
     riderActive: tonightOrders.some((o) => ACTIVE_STATUSES.includes(o.orderStatus)),
     riderName: rider?.fullName ?? "—",
+    testMode: settings.testMode,
   };
 
   return <DashboardStats stats={stats} mode={settings.mode} attention={attentionRows} />;

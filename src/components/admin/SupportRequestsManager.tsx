@@ -118,6 +118,15 @@ export function SupportRequestsManager({ requests }: { requests: SupportRequestI
             </div>
 
             <div className="mt-2 flex flex-col gap-2">
+              {/* Defensive: a request stored before the thread existed (or by any
+                  path that forgot to write one) still has its text in the
+                  message column. Never leave support looking at a blank card. */}
+              {r.messages.length === 0 && r.message && (
+                <div className="self-start max-w-[85%] rounded-xl bg-ink-800 p-2.5 text-sm text-mist-300">
+                  <p className="text-[11px] text-mist-500">{r.fullName}</p>
+                  <p className="mt-0.5 whitespace-pre-wrap leading-relaxed">{r.message}</p>
+                </div>
+              )}
               {r.messages.map((m, i) => (
                 <div
                   key={i}

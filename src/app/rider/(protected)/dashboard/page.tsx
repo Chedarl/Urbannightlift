@@ -25,7 +25,13 @@ export default async function RiderDashboardPage() {
 
   const [tonightOrders, totalDeliveries] = await Promise.all([
     prisma.order.findMany({
-      where: { assignedRiderId: rider.id, createdAt: { gte: start, lt: end }, isTest: false, archivedAt: null },
+      where: {
+        assignedRiderId: rider.id,
+        createdAt: { gte: start, lt: end },
+        archivedAt: null,
+        // A rider rehearsing before launch still has to see the job.
+        ...(settings.testMode ? {} : { isTest: false }),
+      },
       orderBy: { updatedAt: "asc" },
       include: {
         customer: { select: { fullName: true } },
