@@ -8,6 +8,21 @@ import { OperatingModeControls } from "@/components/admin/OperatingModeControls"
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
+/** 0–23, labelled so nobody has to translate 18 into 6 PM in their head. */
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+function hourLabel(h: number): string {
+  const hour = ((h % 24) + 24) % 24;
+  const suffix = hour < 12 ? "AM" : "PM";
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:00 ${suffix}`;
+}
+
+/** How many hours the window spans, handling the wrap past midnight. */
+function nightLength(start: number, end: number): number {
+  return start <= end ? end - start : 24 - start + end;
+}
+
 const inputCls =
   "w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-violet-500 focus:outline-none";
 
@@ -47,6 +62,11 @@ export function SettingsManager({
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState(settings);
 
+  const openHoursLength = nightLength(form.operatingStartHour, form.operatingEndHour);
+  // A night service open more than half the day almost always means an AM/PM
+  // mix-up, which is exactly the mistake the old number field allowed.
+  const openHoursSuspicious = openHoursLength > 12;
+
   async function save() {
     setSaved(false);
     await fetch("/api/settings", {
@@ -80,16 +100,45 @@ export function SettingsManager({
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
+        {/* Named hours, not bare numbers. These are 24-hour values, so a plain
+            number field silently accepts "6" from someone who means 6 PM — and
+            that single character moves the whole operating night, the open/closed
+            badge and what counts as tonight on the dashboard. */}
         <div className="grid grid-cols-2 gap-3">
           <label className="text-xs text-mist-500">
             {t("admin.settings.startHour")}
-            <input className={inputCls} type="number" min={0} max={23} value={form.operatingStartHour} onChange={(e) => setForm({ ...form, operatingStartHour: Number(e.target.value) })} />
+            <select
+              className={inputCls}
+              value={form.operatingStartHour}
+              onChange={(e) => setForm({ ...form, operatingStartHour: Number(e.target.value) })}
+            >
+              {HOURS.map((h) => (
+                <option key={h} value={h}>
+                  {hourLabel(h)}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="text-xs text-mist-500">
             {t("admin.settings.endHour")}
-            <input className={inputCls} type="number" min={1} max={24} value={form.operatingEndHour} onChange={(e) => setForm({ ...form, operatingEndHour: Number(e.target.value) })} />
+            <select
+              className={inputCls}
+              value={form.operatingEndHour}
+              onChange={(e) => setForm({ ...form, operatingEndHour: Number(e.target.value) })}
+            >
+              {HOURS.map((h) => (
+                <option key={h} value={h}>
+                  {hourLabel(h)}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
+        <p className={openHoursSuspicious ? "text-xs text-gold-200" : "text-xs text-mist-400"}>
+          We take orders from <strong>{hourLabel(form.operatingStartHour)}</strong> to{" "}
+          <strong>{hourLabel(form.operatingEndHour)}</strong> ({openHoursLength} hours a night).
+          {openHoursSuspicious && " That is unusually long for a night service — check you picked PM, not AM."}
+        </p>
         <label className="text-xs text-mist-500">
           {t("admin.settings.noticeEn")}
           <input className={inputCls} value={form.zoneNoticeEn} onChange={(e) => setForm({ ...form, zoneNoticeEn: e.target.value })} />
