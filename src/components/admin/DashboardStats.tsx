@@ -20,6 +20,7 @@ export interface DashboardStatsData {
   revenue: number;
   riderActive: boolean;
   riderName: string;
+  testMode: boolean;
 }
 
 function Stat({
@@ -75,6 +76,16 @@ export function DashboardStats({
           </Link>
         </div>
       </div>
+
+      {stats.testMode && (
+        <div className="rounded-2xl border border-gold-400/60 bg-gold-400/10 p-4">
+          <p className="font-display text-sm font-semibold text-gold-200">Test mode is on</p>
+          <p className="mt-1 text-xs text-mist-300">
+            Orders below include rehearsal orders and are excluded from revenue and exports. Switch test mode off in
+            Settings on launch night so real trading starts counting.
+          </p>
+        </div>
+      )}
 
       {/* Above the stats on purpose: what is stuck matters more than what has
           already gone right. */}

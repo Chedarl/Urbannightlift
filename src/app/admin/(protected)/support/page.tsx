@@ -35,10 +35,14 @@ export default async function SupportPage() {
           assignedToName: null,
           // The customer spoke last, so nobody has answered them yet. This is
           // the queue that actually matters — "new" only counts arrivals.
-          waitingOnUs:
-            r.status !== "RESOLVED" &&
-            r.lastCustomerMessageAt != null &&
-            (r.lastStaffMessageAt == null || r.lastStaffMessageAt < r.lastCustomerMessageAt),
+          // Falls back to createdAt: a request stored before the thread
+          // existed has no lastCustomerMessageAt, and an unanswered question
+          // must never drop out of the queue because of a missing timestamp.
+          waitingOnUs: (() => {
+            if (r.status === "RESOLVED") return false;
+            const asked = r.lastCustomerMessageAt ?? r.createdAt;
+            return r.lastStaffMessageAt == null || r.lastStaffMessageAt < asked;
+          })(),
           messages: r.messages.map((m) => ({
             body: m.body,
             authorType: m.authorType,

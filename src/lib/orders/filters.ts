@@ -56,12 +56,20 @@ const STATUS_GROUPS: Partial<Record<OrderFilter, OrderStatus[]>> = {
  * and export, so the numbers describe the real business by default — the whole
  * point of having the flags. Pass includeHidden to look at them deliberately.
  */
-export function visibilityWhere(includeHidden = false): Prisma.OrderWhereInput {
-  return includeHidden ? {} : { isTest: false, archivedAt: null };
+export function visibilityWhere(includeHidden = false, includeTest = false): Prisma.OrderWhereInput {
+  if (includeHidden) return {};
+  // Archived orders are always hidden. Test orders are hidden unless asked
+  // for — which test mode does, because hiding the orders you are rehearsing
+  // with makes the console look broken at exactly the wrong moment.
+  return includeTest ? { archivedAt: null } : { isTest: false, archivedAt: null };
 }
 
-export function buildOrderWhere(filter: OrderFilter, includeHidden = false): Prisma.OrderWhereInput {
-  const visible = visibilityWhere(includeHidden);
+export function buildOrderWhere(
+  filter: OrderFilter,
+  includeHidden = false,
+  includeTest = false
+): Prisma.OrderWhereInput {
+  const visible = visibilityWhere(includeHidden, includeTest);
   if (filter === "HIGH_VALUE") return { ...visible, highValueFlag: true };
   if (filter === "MEDICINE") return { ...visible, isMedicine: true };
   if (filter === "RISK") return { ...visible, riskFlag: true };

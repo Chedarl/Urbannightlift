@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { buildOrderWhere, buildOrderSearchWhere, normalizeFilter } from "@/lib/orders/filters";
+import { getOperatingSettings } from "@/lib/settings";
 import { OrdersTable } from "@/components/admin/OrdersTable";
 
 export const dynamic = "force-dynamic";
@@ -11,14 +12,17 @@ export default async function AdminOrdersPage({
 }) {
   const { filter: filterParam, q = "", hidden } = await searchParams;
   const filter = normalizeFilter(filterParam);
+  // While rehearsing before launch, the orders being placed are test orders —
+  // so the list has to include them or the console looks empty.
+  const settings = await getOperatingSettings();
   // Test and archived orders are out of sight unless you ask for them.
   const includeHidden = hidden === "1";
   const search = buildOrderSearchWhere(q);
 
   const orders = await prisma.order.findMany({
     where: q
-      ? { AND: [buildOrderWhere(filter, includeHidden), search] }
-      : buildOrderWhere(filter, includeHidden),
+      ? { AND: [buildOrderWhere(filter, includeHidden, settings.testMode), search] }
+      : buildOrderWhere(filter, includeHidden, settings.testMode),
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
