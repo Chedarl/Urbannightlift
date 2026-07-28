@@ -53,9 +53,14 @@ export default async function MerchantsPage({
           select: { id: true, name: true, priceXaf: true },
         },
       },
-      // Places with a phone number can actually be called, so they come first —
-      // they are the ones that can be verified today.
-      orderBy: [{ verified: "desc" }, { popularityRank: "desc" }, { merchantName: "asc" }],
+      // A business that filled in its own page answered us, which is the best
+      // lead there is; then whoever was seen trading most recently.
+      orderBy: [
+        { verified: "desc" },
+        { lastSeenActiveAt: "desc" },
+        { popularityRank: "desc" },
+        { merchantName: "asc" },
+      ],
       skip: (pageNum - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
@@ -99,9 +104,13 @@ export default async function MerchantsPage({
         website: m.website,
         notes: m.notes,
         source: m.source,
+        socialUrl: m.socialUrl,
+        socialPlatform: m.socialPlatform,
+        logoUrl: m.logoUrl,
         verified: m.verified,
         active: m.active,
         phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
+        lastConfirmedAt: m.lastConfirmedAt?.toISOString() ?? null,
         products: m.products,
       }))}
       onDuty={onDuty.map((d) => ({

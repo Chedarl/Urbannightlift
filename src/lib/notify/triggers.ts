@@ -14,6 +14,19 @@ import { sendPush } from "@/lib/notify/push";
 
 const DISPATCH_ROLES = ["OWNER", "DISPATCHER", "SUPPORT"];
 
+/** A merchant signing up at 11 PM is worth calling back at 11 PM. */
+export async function notifyMerchantSignup(merchantName: string, categoryLabel: string) {
+  await sendPush(
+    { roles: DISPATCH_ROLES },
+    {
+      title: "A business wants to join",
+      body: `${merchantName} — ${categoryLabel}`,
+      url: "/admin/merchants?tab=queue",
+      tag: "merchant-signup",
+    }
+  ).catch(() => 0);
+}
+
 export async function notifyNewOrder(orderCode: string, orderId: string, serviceLabel: string) {
   await sendPush(
     { roles: DISPATCH_ROLES },

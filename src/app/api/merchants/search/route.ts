@@ -3,15 +3,20 @@ import { prisma } from "@/lib/prisma";
 import { scoreMatch } from "@/lib/locations/normalize";
 import { distanceKm } from "@/lib/orders/pricing";
 import { yaoundeHour } from "@/lib/orders/tonight";
+import { daysSince, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
 import type { MerchantCategory } from "@prisma/client";
 
 /**
  * GET /api/merchants/search?q=&category=&lat=&lng=
  *
  * Who a customer can order from, ranked. Only merchants a human has verified
- * appear here — the catalogue holds hundreds of places imported from
- * OpenStreetMap, and sending a rider to one nobody has called is exactly the
- * failure this whole feature exists to stop.
+ * appear here — an earlier attempt to fill the catalogue from a public map
+ * produced hundreds of businesses that had closed, and sending a rider to one of
+ * those is exactly the failure this feature exists to stop.
+ *
+ * Freshness is part of the ranking for the same reason: shops in this market
+ * open, move and shut quickly, so one confirmed this month outranks one nobody
+ * has touched since.
  *
  * Uses the same fuzzy matcher as the location search, so "boulangerie",
  * "Boulangérie" and "boulangeri" all find the same shop.
@@ -33,7 +38,9 @@ export interface MerchantResult {
   open24h: boolean;
   onDutyTonight: boolean;
   phone: string | null;
-  photoUrl: string | null;
+  logoUrl: string | null;
+  socialUrl: string | null;
+  socialPlatform: SocialPlatform | null;
   productCount: number;
   distanceKm: number | null;
 }
@@ -76,7 +83,10 @@ export async function GET(req: NextRequest) {
       open24h: true,
       phone: true,
       whatsappNumber: true,
-      photoUrl: true,
+      logoUrl: true,
+      socialUrl: true,
+      socialPlatform: true,
+      lastConfirmedAt: true,
       aliases: true,
       popularityRank: true,
       _count: { select: { products: { where: { available: true } } } },
@@ -109,6 +119,12 @@ export async function GET(req: NextRequest) {
       if (openNow) score += 12;
       if (onDuty.has(m.id)) score += 20; // a pharmacy on duty tonight is the answer
       if (m._count.products > 0) score += 6; // we know their prices
+
+      // Recently confirmed still trading beats one nobody has checked in months.
+      const age = daysSince(m.lastConfirmedAt);
+      if (age != null && age <= 30) score += 8;
+      else if (age == null || age > STALE_AFTER_DAYS) score -= 4;
+
       score += Math.min(m.popularityRank, 100) * 0.05;
 
       let d: number | null = null;
@@ -133,7 +149,9 @@ export async function GET(req: NextRequest) {
         open24h: m.open24h,
         onDutyTonight: onDuty.has(m.id),
         phone: m.phone?.trim() || m.whatsappNumber?.trim() || null,
-        photoUrl: m.photoUrl,
+        logoUrl: m.logoUrl,
+        socialUrl: m.socialUrl,
+        socialPlatform: (m.socialPlatform as SocialPlatform | null) ?? null,
         productCount: m._count.products,
         distanceKm: d,
       };
