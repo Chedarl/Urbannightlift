@@ -139,7 +139,7 @@ export function GroceryForm() {
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-green-300" /> {fr ? "Lieu du magasin" : "Store location"}</p>
-            <LocationField label={fr ? "Lieu du magasin" : "Store location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du magasin" : "Store location")} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu du magasin" : "Store location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du magasin" : "Store location")} onChange={(l) => applySel("pickup", l)} />
           </div>
         </div>
 

@@ -113,6 +113,8 @@ export interface OrderDetailData {
   customerConfirmedAt: string | null;
   customerConfirmMethod: string | null;
   customerProofUrl: string | null;
+  customerNotifiedAt: string | null;
+  customerNotifiedStage: string | null;
   riderLat: number | null;
   riderLng: number | null;
   riderLocationAt: string | null;
@@ -586,6 +588,60 @@ export function OrderDetail({
                 <Check className="h-4 w-4" /> {t("admin.order.confirmPayment")}
               </Button>
             </div>
+          </section>
+
+          {/* Telling the customer. Push only reaches people who opted in, so
+              the reliable channel is still a person sending WhatsApp — and the
+              order records that it happened, so nobody has to assume. */}
+          <section className={card}>
+            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Tell the customer</h2>
+            {order.customerNotifiedAt ? (
+              <p className="mb-2 text-xs text-safe">
+                Last told{" "}
+                {new Date(order.customerNotifiedAt).toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {order.customerNotifiedStage ? ` (${order.customerNotifiedStage.toLowerCase()})` : ""}
+              </p>
+            ) : (
+              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+                Nobody has told this customer anything yet.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={buildWaLink(
+                  normalizePhone(order.customerWhatsapp),
+                  order.quotedFeeXaf != null
+                    ? `Urban Night Lift — order ${order.orderCode}. Good news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF. Confirm on your order page and we'll assign a rider straight away.`
+                    : `Urban Night Lift — order ${order.orderCode}. We've received your order and are reviewing it now.`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "QUOTE" })}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-ink-950"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> Send price on WhatsApp
+              </a>
+              <a
+                href={buildWaLink(
+                  normalizePhone(order.customerWhatsapp),
+                  `Urban Night Lift — order ${order.orderCode}. Your rider is on the way with your order. Have your delivery code ready.`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "DISPATCH" })}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-1.5 text-xs font-semibold text-mist-200"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> Send dispatch update
+              </a>
+            </div>
+            <p className="mt-2 text-[11px] text-mist-500">
+              Sending opens WhatsApp with the message written for you and marks the order as told.
+            </p>
           </section>
 
           {/* Quote — accept the order at a price and send it to the customer.

@@ -23,7 +23,16 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
-export function EnableNotifications({ className = "" }: { className?: string }) {
+export function EnableNotifications({
+  className = "",
+  orderCode,
+  label,
+}: {
+  className?: string;
+  /** Lets a guest subscribe for an order they can prove they own. */
+  orderCode?: string;
+  label?: string;
+}) {
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -104,6 +113,7 @@ export function EnableNotifications({ className = "" }: { className?: string }) 
           endpoint: sub.endpoint,
           p256dh: json.keys?.p256dh,
           auth: json.keys?.auth,
+          orderCode,
         }),
       }).then((r) => r.ok);
 
@@ -178,7 +188,7 @@ export function EnableNotifications({ className = "" }: { className?: string }) 
 
   return (
     <button type="button" onClick={enable} disabled={busy} className={`${base} border-gold-400/50 bg-gold-400/10 text-gold-200 hover:bg-gold-400/20 ${className}`}>
-      <Bell className="h-3.5 w-3.5" /> {busy ? "Enabling…" : "Turn on alerts"}
+      <Bell className="h-3.5 w-3.5" /> {busy ? "Enabling…" : (label ?? "Turn on alerts")}
     </button>
   );
 }
