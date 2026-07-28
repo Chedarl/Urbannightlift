@@ -14,6 +14,11 @@ name: DB setup
 
 on:
   workflow_dispatch:
+    inputs:
+      import_merchants:
+        description: "Also import Yaoundé merchants from OpenStreetMap (safe to re-run; nothing becomes visible until verified in admin)"
+        type: boolean
+        default: true
 
 jobs:
   db-setup:
@@ -37,3 +42,9 @@ jobs:
         run: npx prisma migrate deploy
       - name: Seed data
         run: npx prisma db seed
+      # Adds ~960 Yaoundé restaurants, pharmacies and shops with coordinates.
+      # They land unverified and stay invisible to customers until someone
+      # calls them, so re-running this is harmless.
+      - name: Import merchants from OpenStreetMap
+        if: ${{ inputs.import_merchants }}
+        run: npm run import:merchants

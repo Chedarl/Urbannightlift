@@ -14,6 +14,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
+import { ProductSuggestions } from "@/components/customer/order/fields/ProductSuggestions";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
@@ -126,6 +127,27 @@ export function FoodForm() {
     setVendorName(name);
     setValue("merchantId", "");
     setValue("serviceDetails.vendorName" as never, name as never);
+  }
+
+  /**
+   * Put a tapped suggestion into the order.
+   *
+   * It fills the first still-empty row rather than always appending, so tapping
+   * three dishes on a fresh form gives three rows and not one empty one plus
+   * three. A known price also feeds the budget estimate, which is the number
+   * the customer actually cares about.
+   */
+  function addSuggested(name: string, priceXaf: number | null) {
+    const blank = items.findIndex((it) => !it?.name?.trim());
+    if (blank >= 0) {
+      setValue(`serviceDetails.items.${blank}.name` as never, name as never, { shouldValidate: true });
+    } else {
+      append({ name, qty: 1, notes: "" } as never);
+    }
+    if (priceXaf != null) {
+      const current = Number((sd?.budgetXaf as number | string | undefined) ?? 0) || 0;
+      setValue("serviceDetails.budgetXaf" as never, (current + priceXaf) as never);
+    }
   }
 
   function setQty(i: number, delta: number) {
@@ -273,6 +295,17 @@ export function FoodForm() {
           </button>
           {missing.includes(fr ? "Articles de la commande" : "Items in your order") && <p data-error="true" className="mt-2 text-xs text-restricted">{fr ? "Ajoutez au moins un article." : "Add at least one item."}</p>}
         </div>
+
+        {/* Something to tap instead of an empty box: the merchant's own priced
+            items when we know them, otherwise common dishes with an indicative
+            range so nobody has to invent a budget. */}
+        <ProductSuggestions
+          merchantId={merchant?.id ?? null}
+          merchantName={merchant?.merchantName ?? null}
+          accent={ACCENT}
+          fr={fr}
+          onAdd={addSuggested}
+        />
 
         {/* Food preferences */}
         <div className={card}>

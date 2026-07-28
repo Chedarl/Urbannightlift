@@ -127,7 +127,10 @@ export default async function AdminOrderPage({
         deliveryGeoSource: order.deliveryGeoSource,
         deliveryGeoConfidence: order.deliveryGeoConfidence,
         merchantName: order.merchant?.merchantName ?? null,
-        merchantWhatsapp: order.merchant?.whatsappNumber ?? null,
+        // Imported merchants often have only a landline in `phone`; an empty
+        // whatsappNumber would otherwise render a dead "call the vendor" link.
+        merchantWhatsapp:
+          order.merchant?.whatsappNumber?.trim() || order.merchant?.phone?.trim() || null,
         itemDescription: order.itemDescription,
         serviceDetails: (order.serviceDetails ?? null) as Record<string, unknown> | null,
         quantity: order.quantity,
