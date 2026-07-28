@@ -230,11 +230,28 @@ export function OrderDetail({
     order.quotedFeeXaf ?? order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? 0
   );
   const [quoteNote, setQuoteNote] = useState("");
+  const [quoteLinkCopied, setQuoteLinkCopied] = useState(false);
   const [housekeepingReason, setHousekeepingReason] = useState("");
   const [adminNote, setAdminNote] = useState(order.adminNotes ?? "");
   const [customerNote, setCustomerNote] = useState(order.customerVisibleNotes ?? "");
 
   const locale = order.preferredLanguage === "FR" ? "fr" : "en";
+
+  // Short enough to read down a phone line or paste into a chat without
+  // wrapping — this address is handled by people, not just clicked.
+  const origin = typeof window === "undefined" ? "https://urbannighlift.com" : window.location.origin;
+  const quoteLink = `${origin}/q/${order.orderCode}`;
+  const trackLink = `${origin}/order/confirmation/${order.orderCode}`;
+
+  async function copyQuoteLink() {
+    try {
+      await navigator.clipboard.writeText(quoteLink);
+    } catch {
+      window.prompt("Copy this link and send it to the customer:", quoteLink);
+    }
+    setQuoteLinkCopied(true);
+    setTimeout(() => setQuoteLinkCopied(false), 2500);
+  }
   const waMessage = buildOrderMessage({
     orderCode: order.orderCode,
     createdAt: order.createdAt,
@@ -620,7 +637,7 @@ export function OrderDetail({
                 href={buildWaLink(
                   normalizePhone(order.customerWhatsapp),
                   order.quotedFeeXaf != null
-                    ? `Urban Night Lift — order ${order.orderCode}. Good news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF. Confirm on your order page and we'll assign a rider straight away.`
+                    ? `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
                     : `Urban Night Lift — order ${order.orderCode}. We've received your order and are reviewing it now.`
                 )}
                 target="_blank"
@@ -633,7 +650,7 @@ export function OrderDetail({
               <a
                 href={buildWaLink(
                   normalizePhone(order.customerWhatsapp),
-                  `Urban Night Lift — order ${order.orderCode}. Your rider is on the way with your order. Have your delivery code ready.`
+                  `Urban Night Lift — order ${order.orderCode}. Your rider is on the way with your order. Have your delivery code ready.\n\nTrack it here:\n${trackLink}`
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -653,7 +670,8 @@ export function OrderDetail({
           <section className={card}>
             <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Accept &amp; price this order</h2>
             <p className="mb-3 text-xs text-mist-500">
-              The customer is notified and has to agree to the price before a rider is assigned.
+              Saving the price does not message the customer on its own — send them the link that
+              appears below. No rider can be assigned until they accept it.
             </p>
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
@@ -669,7 +687,7 @@ export function OrderDetail({
                   disabled={pending}
                   onClick={() => call(`/api/orders/${order.id}/quote`, { feeXaf: quoteFee, note: quoteNote })}
                 >
-                  {order.quoteSentAt ? "Re-send quote" : "Send quote"}
+                  {order.quoteSentAt ? "Update price" : "Save price"}
                 </Button>
               </div>
               <input
@@ -688,9 +706,38 @@ export function OrderDetail({
                   Customer declined the price{order.quoteDeclineReason ? ` — ${order.quoteDeclineReason}` : ""}
                 </p>
               ) : order.quoteSentAt ? (
-                <p className="text-xs text-gold-300">Quote sent — waiting for the customer to accept.</p>
+                <p className="text-xs text-gold-300">Priced — the customer still has to be sent the link and accept.</p>
               ) : (
                 <p className="text-xs text-mist-500">Not priced yet.</p>
+              )}
+
+              {/* Saving a price notifies nobody a guest can receive: push only
+                  reaches people who opted in. The link is the delivery, so it
+                  sits here, next to the number it refers to. */}
+              {order.quoteSentAt && !order.quoteAcceptedAt && !order.quoteDeclinedAt && (
+                <div className="rounded-xl border border-gold-400/30 bg-gold-400/5 p-3">
+                  <p className="text-[11px] text-gold-200">
+                    Send this link to the customer — it shows the price and the Accept button.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <code className="rounded-lg bg-ink-800 px-2 py-1 text-xs text-mist-200">{quoteLink}</code>
+                    <Button size="sm" variant="outline" onClick={copyQuoteLink}>
+                      {quoteLinkCopied ? "Copied" : "Copy link"}
+                    </Button>
+                    <a
+                      href={buildWaLink(
+                        normalizePhone(order.customerWhatsapp),
+                        `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${(order.quotedFeeXaf ?? 0).toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "QUOTE" })}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-ink-950"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> Send it now
+                    </a>
+                  </div>
+                </div>
               )}
             </div>
           </section>
