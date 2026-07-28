@@ -6,19 +6,21 @@ import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, UtensilsCrossed, Store, ShoppingCart, ShoppingBasket, Trash2, Plus, Minus,
-  Flame, Clock, Wallet, MapPin, Phone, Banknote, ClipboardList, ChevronRight, ShieldCheck, Info,
+  Flame, Wallet, MapPin, Phone, Banknote, ClipboardList, ChevronRight, ShieldCheck, Info,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
+import type { MerchantResult } from "@/app/api/merchants/search/route";
 
 const ACCENT = "#f59e0b";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -43,6 +45,8 @@ export function FoodForm() {
   const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
   const [zones, setZones] = useState<{ id: string; zoneName: string; tier: ZoneTier; feeXaf: number; medicineFeeXaf: number }[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
+  const [merchant, setMerchant] = useState<MerchantResult | null>(null);
+  const [vendorName, setVendorName] = useState("");
 
   const { register, handleSubmit, watch, setValue, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -101,6 +105,27 @@ export function FoodForm() {
       setValue("deliveryLat", loc?.latitude ?? null);
       setValue("deliveryLng", loc?.longitude ?? null);
     }
+  }
+
+  /**
+   * A verified merchant brings its own pin, phone and zone, so choosing one
+   * fills the pickup location too — which is the whole point: the rider leaves
+   * with a place, not a name to ask strangers about.
+   */
+  function pickMerchant(m: MerchantResult, loc: SelectedLocation) {
+    setMerchant(m);
+    setVendorName(m.merchantName);
+    setValue("merchantId", m.id);
+    setValue("serviceDetails.vendorName" as never, m.merchantName as never);
+    applySel("pickup", loc);
+  }
+
+  /** Not in our catalogue — keep the typed name and ask for the location. */
+  function useTypedVendor(name: string) {
+    setMerchant(null);
+    setVendorName(name);
+    setValue("merchantId", "");
+    setValue("serviceDetails.vendorName" as never, name as never);
   }
 
   function setQty(i: number, delta: number) {
@@ -177,13 +202,26 @@ export function FoodForm() {
         {/* Restaurant name + location */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
-            <p className={label}><Store className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Nom du restaurant / vendeur" : "Restaurant / vendor name"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Le Basilic, Chez Maman" : "e.g. Le Basilic, Mama's Kitchen"} {...register("serviceDetails.vendorName" as never)} />
+            <MerchantField
+              category="FOOD"
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Nom du restaurant / vendeur" : "Restaurant / vendor name"}
+              placeholder={fr ? "ex. Le Basilic, Chez Maman" : "e.g. Le Basilic, Mama's Kitchen"}
+              value={vendorName}
+              merchantId={merchant?.id ?? null}
+              onPick={pickMerchant}
+              onFreeText={useTypedVendor}
+            />
           </div>
-          <div className={card}>
-            <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Lieu du restaurant" : "Restaurant location"}</p>
-            <LocationField mode="pickup" label={fr ? "Lieu du restaurant" : "Restaurant location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du restaurant" : "Restaurant location")} onChange={(l) => applySel("pickup", l)} />
-          </div>
+          {/* A chosen merchant already carries its own pin, so asking for the
+              location again would only invite a contradiction. */}
+          {!merchant && (
+            <div className={card}>
+              <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Lieu du restaurant" : "Restaurant location"}</p>
+              <LocationField mode="pickup" label={fr ? "Lieu du restaurant" : "Restaurant location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du restaurant" : "Restaurant location")} onChange={(l) => applySel("pickup", l)} />
+            </div>
+          )}
         </div>
 
         {/* Order source */}

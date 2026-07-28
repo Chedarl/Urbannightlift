@@ -25,9 +25,12 @@ export default async function OrderFormPage({
   const [{ service }, settings, merchants] = await Promise.all([
     searchParams,
     getOperatingSettings(),
+    // The picker shows a shortlist; the merchant autocomplete on the food and
+    // medicine forms searches the whole verified catalogue.
     prisma.merchant.findMany({
-      where: { verified: true, active: true },
-      orderBy: { merchantName: "asc" },
+      where: { verified: true, active: true, acceptingOrders: true },
+      orderBy: [{ popularityRank: "desc" }, { merchantName: "asc" }],
+      take: 100,
       select: { id: true, merchantName: true, category: true, address: true, landmark: true, openingHours: true },
     }),
   ]);

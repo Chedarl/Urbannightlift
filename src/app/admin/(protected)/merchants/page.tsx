@@ -1,25 +1,93 @@
 import { prisma } from "@/lib/prisma";
 import { MerchantsManager } from "@/components/admin/MerchantsManager";
+import { normalizeLoose } from "@/lib/locations/normalize";
+import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function MerchantsPage() {
-  const merchants = await prisma.merchant.findMany({ orderBy: { merchantName: "asc" } });
+const PAGE_SIZE = 30;
+
+/**
+ * Two lists, not one.
+ *
+ * The catalogue holds hundreds of places imported from OpenStreetMap, so
+ * loading them all into one page would be unusable and would blur the only
+ * distinction that matters: a merchant customers can order from versus one
+ * nobody has called yet. The queue is the default view, because working
+ * through it is what turns imported rows into a usable catalogue.
+ */
+export default async function MerchantsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; q?: string; page?: string }>;
+}) {
+  const { tab = "queue", q = "", page = "1" } = await searchParams;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const search = q.trim();
+
+  const where: Prisma.MerchantWhereInput = {
+    ...(tab === "live" ? { verified: true, active: true } : {}),
+    ...(tab === "queue" ? { verified: false } : {}),
+    ...(search
+      ? {
+          OR: [
+            { merchantName: { contains: search, mode: "insensitive" } },
+            { searchKey: { contains: normalizeLoose(search) } },
+            { neighbourhood: { contains: search, mode: "insensitive" } },
+            { address: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [merchants, total, counts] = await Promise.all([
+    prisma.merchant.findMany({
+      where,
+      // Places with a phone number can actually be called, so they come first —
+      // they are the ones that can be verified today.
+      orderBy: [{ verified: "desc" }, { popularityRank: "desc" }, { merchantName: "asc" }],
+      skip: (pageNum - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.merchant.count({ where }),
+    Promise.all([
+      prisma.merchant.count({ where: { verified: true, active: true } }),
+      prisma.merchant.count({ where: { verified: false } }),
+    ]),
+  ]);
+
   return (
     <MerchantsManager
       merchants={merchants.map((m) => ({
         id: m.id,
         merchantName: m.merchantName,
         category: m.category,
+        subcategory: m.subcategory,
         whatsappNumber: m.whatsappNumber,
         phone: m.phone,
         address: m.address,
         landmark: m.landmark,
+        neighbourhood: m.neighbourhood,
+        latitude: m.latitude,
+        longitude: m.longitude,
         openingHours: m.openingHours,
+        nightOpen: m.nightOpen,
+        open24h: m.open24h,
+        acceptingOrders: m.acceptingOrders,
+        website: m.website,
         notes: m.notes,
+        source: m.source,
         verified: m.verified,
         active: m.active,
+        phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
       }))}
+      tab={tab === "live" ? "live" : tab === "all" ? "all" : "queue"}
+      query={search}
+      page={pageNum}
+      pageSize={PAGE_SIZE}
+      total={total}
+      liveCount={counts[0]}
+      queueCount={counts[1]}
     />
   );
 }

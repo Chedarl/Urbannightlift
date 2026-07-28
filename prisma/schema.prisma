@@ -256,6 +256,7 @@ model Zone {
   pickupOrders     Order[]           @relation("PickupZone")
   deliveryOrders   Order[]           @relation("DeliveryZone")
   serviceLocations ServiceLocation[]
+  merchants        Merchant[]
 }
 
 enum Arrondissement {
@@ -312,22 +313,113 @@ model ServiceLocation {
   @@index([popularityRank])
 }
 
+/// A place we collect from: restaurant, pharmacy, supermarket, shop.
+///
+/// Customers used to type the vendor's name free-hand, so a rider arrived in a
+/// neighbourhood asking strangers for a place that might not exist under that
+/// name. Rows imported from OpenStreetMap land here unverified and invisible;
+/// only a merchant a human has actually called is shown to a customer.
 model Merchant {
-  id             String           @id @default(cuid())
-  merchantName   String
-  category       MerchantCategory
-  whatsappNumber String
-  phone          String?
-  address        String
-  landmark       String?
-  openingHours   String?
-  notes          String?
-  verified       Boolean          @default(false)
-  active         Boolean          @default(true)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  merchantName    String
+  category        MerchantCategory
+  /// The raw source tag (restaurant, bakery, pharmacy, supermarket…) kept for
+  /// display and ranking without multiplying the category enum.
+  subcategory     String?
+  whatsappNumber  String
+  phone           String?
+  address         String
+  landmark        String?
+  neighbourhood   String?
+  arrondissement  Arrondissement?
+  latitude        Float?
+  longitude       Float?
+  zoneId          String?
+  zone            Zone?            @relation(fields: [zoneId], references: [id])
+  openingHours    String?
+  /// Open during our trading night — the only availability that matters here.
+  nightOpen       Boolean          @default(false)
+  open24h         Boolean          @default(false)
+  /// Temporarily off without losing the record (kitchen closed, phone down).
+  acceptingOrders Boolean          @default(true)
+  website         String?
+  photoUrl        String?
+  notes           String?
+  aliases         String[]
+  /// Normalized name + aliases, for the same fuzzy search the locations use.
+  searchKey       String           @default("")
+  source          String           @default("admin") // admin | osm | customer
+  osmId           String?          @unique
+  popularityRank  Int              @default(0)
+  verified        Boolean          @default(false)
+  active          Boolean          @default(true)
+  /// Stamped when someone actually reached them on the phone.
+  phoneVerifiedAt DateTime?
+  lastConfirmedAt DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  orders Order[]
+  orders     Order[]
+  products   MerchantProduct[]
+  dutyShifts PharmacyDuty[]
+
+  @@index([category, verified, active])
+  @@index([verified, active])
+  @@index([popularityRank])
+}
+
+/// What a merchant sells, with a price. Deliberately small — five accurate
+/// prices beat a full menu nobody keeps current — so the customer can order a
+/// real dish at a real price instead of guessing a budget.
+model MerchantProduct {
+  id             String   @id @default(cuid())
+  merchantId     String
+  merchant       Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name           String
+  nameFr         String?
+  priceXaf       Int?
+  unit           String?
+  photoUrl       String?
+  available      Boolean  @default(true)
+  popularityRank Int      @default(0)
+  /// Where the price came from: typed by staff, or drafted from the merchant's
+  /// own published menu and then approved.
+  source         String   @default("admin")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([merchantId, available])
+}
+
+/// Common night dishes with indicative price ranges, shown when a merchant has
+/// no products yet so the food page is never empty and nobody has to invent a
+/// budget from nothing. Not tied to any merchant, and labelled as indicative.
+model PopularDish {
+  id             String   @id @default(cuid())
+  nameEn         String
+  nameFr         String
+  category       String   @default("FOOD")
+  priceMinXaf    Int
+  priceMaxXaf    Int
+  popularityRank Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@index([active, popularityRank])
+}
+
+/// Cameroon's night pharmacy duty ("pharmacie de garde") rotates weekly, so
+/// which pharmacy is open tonight is a date range, not a column on the pharmacy.
+model PharmacyDuty {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  startsOn   DateTime
+  endsOn     DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([startsOn, endsOn])
 }
 
 model Order {
@@ -423,20 +515,20 @@ model Order {
   /// On cash on delivery the rider physically holds our money. Recording what
   /// they collected, and when it was settled, is the difference between a
   /// managed float and an honour system.
-  cashCollectedXaf   Int?
-  cashSettledAt      DateTime?
+  cashCollectedXaf    Int?
+  cashSettledAt       DateTime?
   cashSettledByUserId String?
 
   /// ── Proof of receipt ──
   /// The customer's own confirmation that the goods arrived: they enter the
   /// delivery code, sign, or photograph the handover. The rider's proof says
   /// we delivered; this says they received. A dispute needs both sides.
-  customerConfirmedAt    DateTime?
+  customerConfirmedAt   DateTime?
   /// CODE | SIGNATURE | PHOTO
-  customerConfirmMethod  String?
+  customerConfirmMethod String?
   /// Private storage path for a signature or handover photo. Never public.
-  customerProofUrl       String?
-  customerConfirmNote    String?
+  customerProofUrl      String?
+  customerConfirmNote   String?
 
   /// ── Did the customer actually hear from us? ──
   /// Push is opt-in and many customers never enable it, so dispatch needs to
@@ -454,9 +546,9 @@ model Order {
   archivedByUserId String?
   archiveReason    String?
 
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-  completedAt             DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
   statusHistory  OrderStatusHistory[]
   payments       Payment[]
@@ -483,21 +575,21 @@ model Order {
 /// Rows are append-only: nothing in the app updates or deletes them, and a log
 /// row outlives the entity it describes so a deletion is still accountable.
 model AuditLog {
-  id         String   @id @default(cuid())
+  id          String   @id @default(cuid())
   /// Staff User.id. Null only for system-generated actions.
-  actorId    String?
-  actorName  String
-  actorRole  String
+  actorId     String?
+  actorName   String
+  actorRole   String
   /// e.g. "order.fee_changed", "order.rider_assigned", "order.deleted".
-  action     String
-  entityType String
-  entityId   String
+  action      String
+  entityType  String
+  entityId    String
   /// Human-readable label that survives the entity, e.g. an order code.
   entityLabel String?
   /// Changed fields only, as { field: { from, to } }.
-  changes    Json?
-  reason     String?
-  createdAt  DateTime @default(now())
+  changes     Json?
+  reason      String?
+  createdAt   DateTime @default(now())
 
   @@index([entityType, entityId])
   @@index([createdAt])
@@ -517,20 +609,20 @@ model AuditLog {
 /// The result is an operation that gets more accurate the more it delivers,
 /// with no data purchase and no per-lookup cost.
 model VerifiedPlace {
-  id             String   @id @default(cuid())
+  id              String   @id @default(cuid())
   /// Scoped to a customer: their "home" is theirs. Null = confirmed often
   /// enough by different customers to be trusted for everyone.
-  customerId     String?
+  customerId      String?
   /// Lowercased, accent-stripped form used for matching.
-  normalizedText String
+  normalizedText  String
   /// What the customer actually typed, kept for dispatchers to read.
-  rawText        String
-  latitude       Float
-  longitude      Float
+  rawText         String
+  latitude        Float
+  longitude       Float
   /// How many separate deliveries have landed here. Higher = more trustworthy.
-  confirmations  Int      @default(1)
+  confirmations   Int      @default(1)
   lastConfirmedAt DateTime @default(now())
-  createdAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@unique([customerId, normalizedText])
   @@index([normalizedText])
@@ -543,16 +635,16 @@ model VerifiedPlace {
 /// existed, the reason did not. Recording the reason turns "deliveries fail
 /// sometimes" into a ranked list of fixable causes.
 model DeliveryFailure {
-  id           String   @id @default(cuid())
-  orderId      String
-  order        Order    @relation(fields: [orderId], references: [id])
-  reason       String
-  note         String?
-  riderId      String?
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  reason        String
+  note          String?
+  riderId       String?
   /// The delivery fee we had already committed a rider's time against.
-  costXaf      Int?
-  attemptNumber Int     @default(1)
-  createdAt    DateTime @default(now())
+  costXaf       Int?
+  attemptNumber Int      @default(1)
+  createdAt     DateTime @default(now())
 
   @@index([orderId])
   @@index([reason])
@@ -663,29 +755,29 @@ enum SupportStatus {
 /// Customer help/support request captured from the Help Center so support runs
 /// on a standard protocol instead of a direct WhatsApp DM.
 model SupportRequest {
-  id             String          @id @default(cuid())
-  fullName       String
-  whatsappNumber String?
-  email          String?
-  orderCode      String?
-  category       SupportCategory @default(OTHER)
-  message        String
-  status         SupportStatus   @default(NEW)
-  handledByUserId String?
+  id                    String          @id @default(cuid())
+  fullName              String
+  whatsappNumber        String?
+  email                 String?
+  orderCode             String?
+  category              SupportCategory @default(OTHER)
+  message               String
+  status                SupportStatus   @default(NEW)
+  handledByUserId       String?
   /// Linked to the order and customer it is about, so a complaint is never an
   /// orphaned message and a customer's history is visible when you answer.
-  orderId          String?
-  order            Order?   @relation(fields: [orderId], references: [id])
-  customerId       String?
-  customer         Customer? @relation(fields: [customerId], references: [id])
-  assignedToUserId String?
+  orderId               String?
+  order                 Order?          @relation(fields: [orderId], references: [id])
+  customerId            String?
+  customer              Customer?       @relation(fields: [customerId], references: [id])
+  assignedToUserId      String?
   /// Drives the "waiting on us" queue: a case where the customer spoke last is
   /// a case nobody has answered.
   lastCustomerMessageAt DateTime?
   lastStaffMessageAt    DateTime?
   resolvedAt            DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   messages CaseMessage[]
 
@@ -702,17 +794,17 @@ model SupportRequest {
 /// sees replies on their own order, and staff can keep private notes on the
 /// same timeline without exposing them.
 model CaseMessage {
-  id       String   @id @default(cuid())
-  caseId   String
-  case     SupportRequest @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  body     String
+  id           String         @id @default(cuid())
+  caseId       String
+  case         SupportRequest @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  body         String
   /// CUSTOMER or STAFF. Staff messages carry the author's user id.
   authorType   String
   authorUserId String?
   authorName   String
   /// Internal notes are never returned to the customer.
-  internal Boolean  @default(false)
-  createdAt DateTime @default(now())
+  internal     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
 
   @@index([caseId])
 }

@@ -296,9 +296,48 @@ async function seedMerchants() {
   ];
   for (const m of merchants) {
     const existing = await prisma.merchant.findFirst({ where: { merchantName: m.merchantName } });
-    if (!existing) await prisma.merchant.create({ data: m });
+    if (!existing) {
+      await prisma.merchant.create({
+        data: { ...m, nightOpen: true, searchKey: m.merchantName.toLowerCase().replace(/[^a-z0-9]/g, "") },
+      });
+    }
   }
   console.log(`✓ ${merchants.length} merchants`);
+}
+
+/**
+ * Typical Yaoundé night dishes with the price ranges people actually pay.
+ *
+ * OpenStreetMap has no menus, and most vendors have no website, so a newly
+ * imported merchant has no products. Without something to tap, the customer is
+ * back to guessing a budget — the complaint that started this work. These are
+ * shown as *indicative* prices and never attached to a merchant; a real price
+ * only comes from the merchant's own product list.
+ */
+async function seedPopularDishes() {
+  const dishes = [
+    { nameEn: "Grilled fish (poisson braisé)", nameFr: "Poisson braisé", priceMinXaf: 2500, priceMaxXaf: 6000, popularityRank: 100 },
+    { nameEn: "Poulet DG", nameFr: "Poulet DG", priceMinXaf: 3500, priceMaxXaf: 8000, popularityRank: 95 },
+    { nameEn: "Grilled chicken (poulet braisé)", nameFr: "Poulet braisé", priceMinXaf: 2500, priceMaxXaf: 5000, popularityRank: 92 },
+    { nameEn: "Soya (grilled beef skewers)", nameFr: "Soya (brochettes de bœuf)", priceMinXaf: 500, priceMaxXaf: 2000, popularityRank: 90 },
+    { nameEn: "Ndolé with plantain", nameFr: "Ndolé plantain", priceMinXaf: 2000, priceMaxXaf: 4500, popularityRank: 88 },
+    { nameEn: "Eru with water fufu", nameFr: "Eru et water fufu", priceMinXaf: 1500, priceMaxXaf: 3500, popularityRank: 85 },
+    { nameEn: "Jollof rice with chicken", nameFr: "Riz jollof au poulet", priceMinXaf: 1500, priceMaxXaf: 3500, popularityRank: 82 },
+    { nameEn: "Fried rice", nameFr: "Riz sauté", priceMinXaf: 1500, priceMaxXaf: 3000, popularityRank: 78 },
+    { nameEn: "Beignets–haricot–bouillie", nameFr: "Beignets haricot bouillie", priceMinXaf: 500, priceMaxXaf: 1500, popularityRank: 75 },
+    { nameEn: "Koki with plantain", nameFr: "Koki plantain", priceMinXaf: 1000, priceMaxXaf: 2500, popularityRank: 70 },
+    { nameEn: "Achu soup", nameFr: "Achu", priceMinXaf: 1500, priceMaxXaf: 3500, popularityRank: 68 },
+    { nameEn: "Shawarma", nameFr: "Shawarma", priceMinXaf: 1500, priceMaxXaf: 3000, popularityRank: 65 },
+    { nameEn: "Pizza (medium)", nameFr: "Pizza (moyenne)", priceMinXaf: 5000, priceMaxXaf: 10000, popularityRank: 60 },
+    { nameEn: "Attiéké with fish", nameFr: "Attiéké poisson", priceMinXaf: 2000, priceMaxXaf: 4500, popularityRank: 58 },
+    { nameEn: "Bread and omelette", nameFr: "Pain omelette", priceMinXaf: 500, priceMaxXaf: 1500, popularityRank: 55 },
+    { nameEn: "Natural juice (1 L)", nameFr: "Jus naturel (1 L)", priceMinXaf: 1000, priceMaxXaf: 3500, popularityRank: 50 },
+  ];
+  for (const d of dishes) {
+    const existing = await prisma.popularDish.findFirst({ where: { nameEn: d.nameEn } });
+    if (!existing) await prisma.popularDish.create({ data: d });
+  }
+  console.log(`✓ ${dishes.length} indicative dish prices`);
 }
 
 function locSearchKey(primary: string, aliases: string[]): string {
@@ -438,6 +477,7 @@ async function main() {
   await seedLocations();
   await seedUsers();
   await seedMerchants();
+  await seedPopularDishes();
   await ensureStorageBuckets();
   await verifyAdminLogin();
   console.log("\nSeed complete.");

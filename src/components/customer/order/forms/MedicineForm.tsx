@@ -5,20 +5,22 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft, Pill, ShieldCheck, FileText, Stethoscope, User, Phone, Building2, Trash2,
-  Plus, Minus, Upload, UserCheck, Repeat, Snowflake, Clock, MapPin, Banknote, ClipboardList, ChevronRight,
+  ArrowLeft, Pill, ShieldCheck, FileText, Stethoscope, User, Phone, Trash2,
+  Plus, Minus, Upload, UserCheck, Repeat, Snowflake, MapPin, Banknote, ClipboardList, ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
+import type { MerchantResult } from "@/app/api/merchants/search/route";
 
 const ACCENT = "#2dd4bf";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -38,6 +40,8 @@ export function MedicineForm() {
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
+  const [merchant, setMerchant] = useState<MerchantResult | null>(null);
+  const [pharmacyName, setPharmacyName] = useState("");
 
   const { register, handleSubmit, watch, setValue, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -82,6 +86,28 @@ export function MedicineForm() {
     () => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel), { isMedicine: true }),
     [pickupSel, deliverySel, zones]
   );
+
+  /**
+   * Choosing a catalogued pharmacy also sets the pickup point, so the rider is
+   * sent to a door rather than a name. The badge in the picker marks the
+   * pharmacie de garde — the duty rotates weekly, so tonight's is the only one
+   * worth riding to.
+   */
+  function pickMerchant(m: MerchantResult, loc: SelectedLocation) {
+    setMerchant(m);
+    setPharmacyName(m.merchantName);
+    setValue("merchantId", m.id);
+    setValue("serviceDetails.pharmacy" as never, m.merchantName as never);
+    applySel("pickup", loc);
+  }
+
+  /** Not catalogued — keep the name and ask where it is. */
+  function useTypedPharmacy(name: string) {
+    setMerchant(null);
+    setPharmacyName(name);
+    setValue("merchantId", "");
+    setValue("serviceDetails.pharmacy" as never, name as never);
+  }
 
   function applySel(which: "pickup" | "delivery", loc: SelectedLocation | null) {
     const text = loc ? `${loc.primaryName}${loc.neighbourhood ? ` — ${loc.neighbourhood}` : ""}` : "";
@@ -222,16 +248,33 @@ export function MedicineForm() {
             </div>
           </div>
           <div className={card}>
-            <p className={label}><Building2 className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Nom de la pharmacie" : "Pharmacy name"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Pharmacie du Stade" : "e.g. Pharmacie du Stade"} {...register("serviceDetails.pharmacy" as never)} />
+            <MerchantField
+              category="PHARMACY"
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Nom de la pharmacie" : "Pharmacy name"}
+              placeholder={fr ? "ex. Pharmacie du Stade" : "e.g. Pharmacie du Stade"}
+              value={pharmacyName}
+              merchantId={merchant?.id ?? null}
+              onPick={pickMerchant}
+              onFreeText={useTypedPharmacy}
+            />
           </div>
         </div>
 
-        {/* Pharmacy location */}
-        <div className={card}>
-          <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
-          <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} />
-        </div>
+        {/* Pharmacy location — only asked for when no catalogued pharmacy was
+            chosen, since a chosen one already carries its own pin. */}
+        {!merchant && (
+          <div className={card}>
+            <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
+            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} />
+            <p className="mt-2 text-[11px] text-mist-500">
+              {fr
+                ? "Vous ne savez pas laquelle est ouverte ? Laissez vide — nous trouvons la pharmacie de garde la plus proche."
+                : "Not sure which is open? Leave this and we'll find the nearest pharmacy on duty."}
+            </p>
+          </div>
+        )}
 
         {/* Medicine list */}
         <div className={card}>
