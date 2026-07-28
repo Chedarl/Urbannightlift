@@ -28,6 +28,8 @@ export default async function MerchantsPage({
   const where: Prisma.MerchantWhereInput = {
     ...(tab === "live" ? { verified: true, active: true } : {}),
     ...(tab === "queue" ? { verified: false } : {}),
+    // The duty tab renders the roster, not the merchant list — keep its query cheap.
+    ...(tab === "duty" ? { id: "" } : {}),
     ...(search
       ? {
           OR: [
@@ -40,9 +42,17 @@ export default async function MerchantsPage({
       : {}),
   };
 
-  const [merchants, total, counts] = await Promise.all([
+  const now = new Date();
+  const [merchants, total, counts, onDuty, pharmacies] = await Promise.all([
     prisma.merchant.findMany({
       where,
+      include: {
+        products: {
+          where: { available: true },
+          orderBy: [{ popularityRank: "desc" }, { name: "asc" }],
+          select: { id: true, name: true, priceXaf: true },
+        },
+      },
       // Places with a phone number can actually be called, so they come first —
       // they are the ones that can be verified today.
       orderBy: [{ verified: "desc" }, { popularityRank: "desc" }, { merchantName: "asc" }],
@@ -54,6 +64,18 @@ export default async function MerchantsPage({
       prisma.merchant.count({ where: { verified: true, active: true } }),
       prisma.merchant.count({ where: { verified: false } }),
     ]),
+    // Cameroon's night pharmacy duty rotates weekly, so this is whoever is on
+    // duty right now rather than a permanent property of a pharmacy.
+    prisma.pharmacyDuty.findMany({
+      where: { endsOn: { gte: now } },
+      include: { merchant: { select: { merchantName: true } } },
+      orderBy: { endsOn: "asc" },
+    }),
+    prisma.merchant.findMany({
+      where: { category: "PHARMACY", verified: true, active: true },
+      orderBy: { merchantName: "asc" },
+      select: { id: true, merchantName: true, neighbourhood: true },
+    }),
   ]);
 
   return (
@@ -80,8 +102,16 @@ export default async function MerchantsPage({
         verified: m.verified,
         active: m.active,
         phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
+        products: m.products,
       }))}
-      tab={tab === "live" ? "live" : tab === "all" ? "all" : "queue"}
+      onDuty={onDuty.map((d) => ({
+        id: d.id,
+        merchantId: d.merchantId,
+        merchantName: d.merchant.merchantName,
+        endsOn: d.endsOn.toISOString(),
+      }))}
+      pharmacies={pharmacies}
+      tab={tab === "live" ? "live" : tab === "all" ? "all" : tab === "duty" ? "duty" : "queue"}
       query={search}
       page={pageNum}
       pageSize={PAGE_SIZE}

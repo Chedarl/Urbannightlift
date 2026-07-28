@@ -57,7 +57,10 @@ export default async function RiderOrderPage({
         quantity: order.quantity,
         declaredValueXaf: order.declaredValueXaf,
         merchantName: order.merchant?.merchantName ?? null,
-        merchantWhatsapp: order.merchant?.whatsappNumber ?? null,
+        // Imported merchants often have only a landline in `phone`; an empty
+        // whatsappNumber would otherwise render a dead "call the vendor" link.
+        merchantWhatsapp:
+          order.merchant?.whatsappNumber?.trim() || order.merchant?.phone?.trim() || null,
         specialInstructions: order.specialInstructions,
         preferredDeliveryTime: order.preferredDeliveryTime,
         riderPaysAtPickup: order.riderPaysAtPickup,

@@ -9,6 +9,8 @@ import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
 import { normalizePhone, cn } from "@/lib/utils";
 import { buildWaLink } from "@/lib/whatsapp/links";
+import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantProducts";
+import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
 
 /**
@@ -43,6 +45,7 @@ export interface MerchantItem {
   verified: boolean;
   active: boolean;
   phoneVerifiedAt: string | null;
+  products: ProductRow[];
 }
 
 const inputCls =
@@ -53,6 +56,8 @@ const empty: Partial<MerchantItem> = { category: "FOOD", verified: true, active:
 
 export function MerchantsManager({
   merchants,
+  onDuty,
+  pharmacies,
   tab,
   query,
   page,
@@ -62,7 +67,9 @@ export function MerchantsManager({
   queueCount,
 }: {
   merchants: MerchantItem[];
-  tab: "queue" | "live" | "all";
+  onDuty: DutyRow[];
+  pharmacies: PharmacyOption[];
+  tab: "queue" | "live" | "all" | "duty";
   query: string;
   page: number;
   pageSize: number;
@@ -109,10 +116,11 @@ export function MerchantsManager({
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
-  const TABS: { id: "queue" | "live" | "all"; label: string; count?: number }[] = [
+  const TABS: { id: "queue" | "live" | "all" | "duty"; label: string; count?: number }[] = [
     { id: "queue", label: "To verify", count: queueCount },
     { id: "live", label: "Live for customers", count: liveCount },
     { id: "all", label: "All" },
+    { id: "duty", label: "Pharmacy duty", count: onDuty.length },
   ];
 
   return (
@@ -143,6 +151,10 @@ export function MerchantsManager({
         ))}
       </div>
 
+      {tab === "duty" ? (
+        <PharmacyDutyRoster onDuty={onDuty} pharmacies={pharmacies} />
+      ) : (
+      <>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -294,6 +306,16 @@ export function MerchantsManager({
                 </p>
               )}
               {m.notes && <p className="mt-1 text-[11px] text-mist-500">{m.notes}</p>}
+
+              {/* Prices only matter once a merchant is real to customers. */}
+              {m.verified && (
+                <MerchantProducts
+                  merchantId={m.id}
+                  merchantName={m.merchantName}
+                  hasWebsite={Boolean(m.website)}
+                  products={m.products}
+                />
+              )}
             </div>
           );
         })}
@@ -317,6 +339,8 @@ export function MerchantsManager({
             )}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
