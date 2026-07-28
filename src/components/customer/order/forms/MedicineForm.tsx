@@ -14,6 +14,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
+import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -295,8 +296,13 @@ export function MedicineForm() {
         {/* Preferred pickup time + delivery address */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
-            <p className={label}><Clock className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Heure de ramassage souhaitée" : "Preferred pickup time"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Ce soir, 21h30" : "e.g. Tonight, 9:30 PM"} {...register("preferredDeliveryTime")} />
+            <DeliveryTimeField
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Heure de ramassage souhaitée" : "Preferred pickup time"}
+              value={watch("preferredDeliveryTime")}
+              onChange={(v) => setValue("preferredDeliveryTime", v)}
+            />
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>

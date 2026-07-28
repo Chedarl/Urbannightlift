@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
+import { normalizePreferredTime } from "@/lib/orders/timeSlots";
 import { notifyNewOrder } from "@/lib/notify/triggers";
 import {
   ORDER_ACCESS_COOKIE,
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
         prescriptionRequired: input.isMedicine ? input.prescriptionRequired ?? null : null,
         itemAlreadyPaid: input.itemAlreadyPaid,
         riderPaysAtPickup: input.riderPaysAtPickup,
-        preferredDeliveryTime: input.preferredDeliveryTime || null,
+        preferredDeliveryTime: normalizePreferredTime(input.preferredDeliveryTime),
         specialInstructions: input.specialInstructions || null,
         estimatedDeliveryFeeXaf: estimatedFee,
         paymentMethod: input.paymentMethod,

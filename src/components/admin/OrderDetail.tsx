@@ -19,6 +19,7 @@ import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { formatDetailedStatus } from "@/lib/orders/statusLabels";
+import { formatSlot } from "@/lib/orders/timeSlots";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
 import { formatXaf, normalizePhone, cn } from "@/lib/utils";
@@ -214,7 +215,7 @@ export function OrderDetail({
   /** Deleting an order is owner-only, so the control is owner-only too. */
   isOwner?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, locale: uiLocale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -352,7 +353,10 @@ export function OrderDetail({
             )}
             <Row label={t("orderForm.itemAlreadyPaid")} value={order.itemAlreadyPaid ? t("common.yes") : t("common.no")} />
             <Row label={t("orderForm.riderPaysAtPickup")} value={order.riderPaysAtPickup ? t("common.yes") : t("common.no")} />
-            <Row label={t("orderForm.preferredDeliveryTime")} value={order.preferredDeliveryTime} />
+            <Row
+              label={t("orderForm.preferredDeliveryTime")}
+              value={formatSlot(order.preferredDeliveryTime, uiLocale === "fr")}
+            />
             <Row label={t("orderForm.specialInstructions")} value={order.specialInstructions} />
           </section>
 

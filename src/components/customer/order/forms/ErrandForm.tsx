@@ -14,6 +14,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
+import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -161,8 +162,13 @@ export function ErrandForm() {
         {/* Time + budget */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
-            <p className={label}><Clock className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Créneau horaire souhaité" : "Preferred time window"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Ce soir, 18h – 21h" : "e.g. Today, 6:00 PM – 9:00 PM"} {...register("preferredDeliveryTime")} />
+            <DeliveryTimeField
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Créneau horaire souhaité" : "Preferred time window"}
+              value={watch("preferredDeliveryTime")}
+              onChange={(v) => setValue("preferredDeliveryTime", v)}
+            />
           </div>
           <div className={card}>
             <p className={label}><Wallet className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Budget / montant estimé (XAF)" : "Budget or expected amount (XAF)"}</p>

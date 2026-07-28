@@ -14,6 +14,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
+import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -205,8 +206,13 @@ export function GroceryForm() {
             <input className={cn(input, "mt-2")} type="number" min={0} step={500} inputMode="numeric" placeholder={fr ? "ex. 25 000" : "e.g. 25,000"} {...register("serviceDetails.budgetXaf" as never)} />
           </div>
           <div className={card}>
-            <p className={label}><Clock className="h-3.5 w-3.5 text-green-300" /> {fr ? "Heure de livraison souhaitée" : "Preferred pickup / delivery time"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Ce soir, 22h30" : "e.g. Tonight, 10:30 PM"} {...register("preferredDeliveryTime")} />
+            <DeliveryTimeField
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Heure de livraison souhaitée" : "Preferred pickup / delivery time"}
+              value={watch("preferredDeliveryTime")}
+              onChange={(v) => setValue("preferredDeliveryTime", v)}
+            />
           </div>
         </div>
 

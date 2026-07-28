@@ -14,6 +14,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
+import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -268,9 +269,13 @@ export function FoodForm() {
             </div>
           </div>
           <div className={card}>
-            <p className={label}><Clock className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Heure de livraison souhaitée" : "Preferred delivery time"}</p>
-            <p className="mb-2 text-[11px] text-mist-500">{fr ? "Quand devons-nous livrer ?" : "When should we deliver?"}</p>
-            <input className={input} placeholder={fr ? "ex. Ce soir, 22h30" : "e.g. Tonight, 10:30 PM"} {...register("preferredDeliveryTime")} />
+            <DeliveryTimeField
+              accent={ACCENT}
+              fr={fr}
+              label={fr ? "Heure de livraison souhaitée" : "Preferred delivery time"}
+              value={watch("preferredDeliveryTime")}
+              onChange={(v) => setValue("preferredDeliveryTime", v)}
+            />
           </div>
         </div>
 
