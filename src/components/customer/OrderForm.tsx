@@ -24,6 +24,7 @@ import { getExperience } from "@/lib/services/experiences";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
 import { FoodForm } from "@/components/customer/order/forms/FoodForm";
 import { GroceryForm } from "@/components/customer/order/forms/GroceryForm";
@@ -410,7 +411,13 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
               </button>
             ))}
           </div>
-          <input className={inputCls} style={focusRing} placeholder={t("orderForm.preferredDeliveryTime")} {...register("preferredDeliveryTime")} />
+          <DeliveryTimeField
+            accent={exp.accent}
+            fr={locale === "fr"}
+            label={t("orderForm.preferredDeliveryTime")}
+            value={watch("preferredDeliveryTime")}
+            onChange={(v) => setValue("preferredDeliveryTime", v)}
+          />
           <label className={cn("flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-ink-700 bg-ink-800 px-3 py-3 text-sm", uploadedName ? "text-safe" : "text-mist-500")}>
             <ImageUp className="h-5 w-5" />
             {uploading ? t("orderForm.uploading") : uploadedName ? `${t("orderForm.uploaded")}: ${uploadedName}` : t("orderForm.uploadImage")}

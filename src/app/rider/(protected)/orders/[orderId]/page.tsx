@@ -59,6 +59,7 @@ export default async function RiderOrderPage({
         merchantName: order.merchant?.merchantName ?? null,
         merchantWhatsapp: order.merchant?.whatsappNumber ?? null,
         specialInstructions: order.specialInstructions,
+        preferredDeliveryTime: order.preferredDeliveryTime,
         riderPaysAtPickup: order.riderPaysAtPickup,
         safetyNotes:
           [order.pickupZone, order.deliveryZone]

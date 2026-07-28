@@ -41,6 +41,9 @@ export const orderSchema = z.object({
   serviceDetails: z.record(z.string(), z.unknown()).optional().nullable(),
   quantity: z.coerce.number().int().min(1).max(99),
   declaredValueXaf: z.coerce.number().int().min(0).max(10_000_000),
+  // "ASAP" or a 24-hour "HH:MM" chosen from the operating window. Older orders
+  // and saved drafts hold free text, so anything else is still accepted here and
+  // normalized on the server rather than failing the customer at the last step.
   preferredDeliveryTime: z.string().trim().max(100).optional().or(z.literal("")),
   specialInstructions: z.string().trim().max(1000).optional().or(z.literal("")),
   itemAlreadyPaid: z.boolean(),

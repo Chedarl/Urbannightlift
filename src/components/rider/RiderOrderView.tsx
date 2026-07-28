@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink } from "@/lib/whatsapp/links";
+import { formatSlot } from "@/lib/orders/timeSlots";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { RiderLocationShare } from "@/components/rider/RiderLocationShare";
 import { Button } from "@/components/shared/Button";
@@ -30,6 +31,7 @@ export interface RiderOrderData {
   merchantName: string | null;
   merchantWhatsapp: string | null;
   specialInstructions: string | null;
+  preferredDeliveryTime: string | null;
   riderPaysAtPickup: boolean;
   safetyNotes: string | null;
   hasPickupProof: boolean;
@@ -86,7 +88,7 @@ const inputCls =
   "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-violet-500 focus:outline-none";
 
 export function RiderOrderView({ order }: { order: RiderOrderData }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -285,6 +287,11 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
         <p className="mt-1 text-xs text-mist-500">
           {t("rider.order.declaredValue")}: {formatXaf(order.declaredValueXaf)}
         </p>
+        {order.preferredDeliveryTime && (
+          <p className="mt-1 text-xs text-gold-300">
+            {t("orderForm.preferredDeliveryTime")}: {formatSlot(order.preferredDeliveryTime, locale === "fr")}
+          </p>
+        )}
         {order.riderPaysAtPickup && (
           <Badge tone="caution" className="mt-2">{t("orderForm.riderPaysAtPickup")}</Badge>
         )}
