@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft, ShoppingBasket, Store, ShoppingCart, Trash2, Plus, Minus, Repeat, Wallet, Clock,
-  MapPin, Phone, Banknote, ClipboardList, ChevronRight, ShieldCheck, Apple, Milk, Cookie, CupSoda, Home, Package,
+  ArrowLeft, ShoppingBasket, Store, ShoppingCart, Trash2, Plus, Minus, Repeat, Wallet, MapPin, Phone, Banknote, ClipboardList, ChevronRight, ShieldCheck, Apple, Milk, Cookie, CupSoda, Home, Package,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";

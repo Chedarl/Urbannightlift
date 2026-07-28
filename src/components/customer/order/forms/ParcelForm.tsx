@@ -6,7 +6,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, Package, User, Phone, MapPin, FileText, Smartphone, Shirt, MoreHorizontal, Scale, DollarSign,
-  Wine, Lock, Camera, Clock, ClipboardList, Banknote, ChevronRight, ShieldCheck, Signature, ShieldCheck as ShieldIcon,
+  Wine, Lock, Camera, ClipboardList, Banknote, ChevronRight, ShieldCheck, Signature, ShieldCheck as ShieldIcon,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";

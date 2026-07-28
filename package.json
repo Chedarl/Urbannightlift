@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import:merchants": "tsx scripts/import-osm-merchants.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
