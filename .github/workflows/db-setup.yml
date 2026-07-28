@@ -15,10 +15,10 @@ name: DB setup
 on:
   workflow_dispatch:
     inputs:
-      import_merchants:
-        description: "Also import Yaoundé merchants from OpenStreetMap (safe to re-run; nothing becomes visible until verified in admin)"
+      purge_imported_merchants:
+        description: "Remove the merchants imported from OpenStreetMap (they were mostly defunct). Keeps any attached to an order."
         type: boolean
-        default: true
+        default: false
 
 jobs:
   db-setup:
@@ -42,9 +42,9 @@ jobs:
         run: npx prisma migrate deploy
       - name: Seed data
         run: npx prisma db seed
-      # Adds ~960 Yaoundé restaurants, pharmacies and shops with coordinates.
-      # They land unverified and stay invisible to customers until someone
-      # calls them, so re-running this is harmless.
-      - name: Import merchants from OpenStreetMap
-        if: ${{ inputs.import_merchants }}
-        run: npm run import:merchants
+      # One-off cleanup: the OpenStreetMap import turned out to be mostly
+      # businesses that no longer trade. Safe to re-run — it only touches rows
+      # with source="osm" and never deletes one attached to an order.
+      - name: Purge merchants imported from OpenStreetMap
+        if: ${{ inputs.purge_imported_merchants }}
+        run: npm run purge:imported-merchants

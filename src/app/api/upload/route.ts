@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const PUBLIC_BUCKETS = ["order-screenshots"];
+// `order-screenshots` takes guest payment proof from the order form, and
+// `merchant-logos` takes a logo from a merchant filling in their own page —
+// both before anyone has signed in. `delivery-proofs` is staff-only.
+const PUBLIC_BUCKETS = ["order-screenshots", "merchant-logos"];
 const STAFF_BUCKETS = ["delivery-proofs"];
 
 /**

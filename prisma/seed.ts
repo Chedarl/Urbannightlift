@@ -460,9 +460,17 @@ async function ensureStorageBuckets() {
   const admin = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  for (const bucket of ["order-screenshots", "delivery-proofs"]) {
+  // Prescriptions and delivery photos must never be publicly readable; a
+  // merchant's logo must, because it renders on the order page and a signed URL
+  // would expire mid-session.
+  const buckets: { name: string; public: boolean }[] = [
+    { name: "order-screenshots", public: false },
+    { name: "delivery-proofs", public: false },
+    { name: "merchant-logos", public: true },
+  ];
+  for (const { name: bucket, public: isPublic } of buckets) {
     const { error } = await admin.storage.createBucket(bucket, {
-      public: false,
+      public: isPublic,
       fileSizeLimit: 5 * 1024 * 1024,
       allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
     });

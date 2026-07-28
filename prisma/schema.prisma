@@ -343,13 +343,24 @@ model Merchant {
   /// Temporarily off without losing the record (kitchen closed, phone down).
   acceptingOrders Boolean          @default(true)
   website         String?
+  /// Their Facebook / Instagram / TikTok page. Stored as a link to tap, not
+  /// scraped: the platforms give no way to search for a business, and block
+  /// unauthenticated reads. What it is for is judging at a glance whether a
+  /// business is still posting — which is how the owner actually checks.
+  socialUrl       String?
+  socialPlatform  String?          // FACEBOOK | INSTAGRAM | TIKTOK | OTHER
+  /// Shown to customers so they recognize the place. Uploaded with the
+  /// merchant's permission, never taken from a third-party listing.
+  logoUrl         String?
   photoUrl        String?
   notes           String?
   aliases         String[]
   /// Normalized name + aliases, for the same fuzzy search the locations use.
   searchKey       String           @default("")
-  source          String           @default("admin") // admin | osm | customer
+  source          String           @default("admin") // admin | social | signup | osm
   osmId           String?          @unique
+  /// When someone last saw this business posting, replying, or trading.
+  lastSeenActiveAt DateTime?
   popularityRank  Int              @default(0)
   verified        Boolean          @default(false)
   active          Boolean          @default(true)

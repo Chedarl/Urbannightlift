@@ -3,24 +3,32 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Check, X, Phone, MapPin, Search, Moon, Clock, ExternalLink } from "lucide-react";
+import {
+  Plus, Check, X, Phone, MapPin, Search, Moon, Clock, ExternalLink, Link2, Send, CalendarCheck,
+} from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
 import { normalizePhone, cn } from "@/lib/utils";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantProducts";
+import { MerchantListImport } from "@/components/admin/MerchantListImport";
+import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
 import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
 
 /**
- * The merchant catalogue, and the queue that fills it.
+ * The merchant catalogue, and the three doors that fill it.
  *
- * Hundreds of restaurants, pharmacies and shops are imported from
- * OpenStreetMap with coordinates but no confirmation that they still exist,
- * still trade at night, or answer their phone. None of them reach a customer
- * until someone here has actually called. Verifying is therefore the main job
- * this screen exists for, which is why the queue is the first thing shown.
+ * The first attempt imported a public map and produced hundreds of businesses
+ * that had already closed — unusable, and dangerous if a rider had been sent to
+ * one. What replaced it are three sources with a person behind each: a list the
+ * owner has checked and pastes in, a business that fills in its own page, and a
+ * merchant added by hand after someone saw it posting on Instagram or TikTok.
+ *
+ * Nothing reaches a customer unverified, and nothing stays trusted forever —
+ * shops here open, move and shut quickly, so the screen shows how long ago each
+ * one was last confirmed.
  */
 
 export interface MerchantItem {
@@ -42,9 +50,13 @@ export interface MerchantItem {
   website: string | null;
   notes: string | null;
   source: string;
+  socialUrl: string | null;
+  socialPlatform: string | null;
+  logoUrl: string | null;
   verified: boolean;
   active: boolean;
   phoneVerifiedAt: string | null;
+  lastConfirmedAt: string | null;
   products: ProductRow[];
 }
 
@@ -84,6 +96,7 @@ export function MerchantsManager({
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<Partial<MerchantItem>>(empty);
   const [search, setSearch] = useState(query);
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   function go(next: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -103,6 +116,22 @@ export function MerchantsManager({
     setCreating(false);
     setForm(empty);
     startTransition(() => router.refresh());
+  }
+
+  /**
+   * The link to send a business over WhatsApp or an Instagram DM. A merchant who
+   * fills it in has proved they are trading tonight, which is the one thing no
+   * outside data source could tell us.
+   */
+  async function copyInvite() {
+    const url = `${window.location.origin}/merchant/join`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt("Copy this link and send it to the merchant:", url);
+    }
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2500);
   }
 
   async function patch(id: string, body: Record<string, unknown>) {
@@ -127,9 +156,15 @@ export function MerchantsManager({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold">{t("admin.merchants.title")}</h1>
-        <Button size="sm" onClick={() => setCreating((v) => !v)}>
-          <Plus className="h-4 w-4" /> {t("admin.merchants.add")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <MerchantListImport />
+          <Button size="sm" variant="outline" onClick={copyInvite}>
+            <Send className="h-4 w-4" /> {inviteCopied ? "Link copied" : "Invite a merchant"}
+          </Button>
+          <Button size="sm" onClick={() => setCreating((v) => !v)}>
+            <Plus className="h-4 w-4" /> {t("admin.merchants.add")}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -178,8 +213,9 @@ export function MerchantsManager({
 
       {tab === "queue" && (
         <p className="rounded-xl border border-gold-400/30 bg-gold-400/5 px-3 py-2 text-xs text-gold-200">
-          These came from the public map and are invisible to customers. Call the number, confirm they
-          trade at night, then mark them verified — that is the moment they become orderable.
+          Leads — invisible to customers until you verify them. Message the number, confirm they trade
+          at night, then tap Verify; that is the moment they become orderable. Businesses that filled in
+          their own page are the strongest leads here: they answered.
         </p>
       )}
 
@@ -216,10 +252,16 @@ export function MerchantsManager({
 
         {merchants.map((m) => {
           const callable = m.phone || m.whatsappNumber;
+          const age = daysSince(m.lastConfirmedAt);
+          const stale = m.verified && (age == null || age > STALE_AFTER_DAYS);
           return (
             <div key={m.id} className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
+                  {m.logoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={m.logoUrl} alt="" className="h-8 w-8 rounded-lg border border-ink-700 object-cover" />
+                  )}
                   <span className="font-display font-semibold">{m.merchantName}</span>
                   <Badge tone="violet">{t(`admin.merchants.categories.${m.category}`)}</Badge>
                   {m.subcategory && <span className="text-[11px] text-mist-500">{m.subcategory}</span>}
@@ -239,7 +281,15 @@ export function MerchantsManager({
                   )}
                   {!m.acceptingOrders && <Badge tone="caution">Not taking orders</Badge>}
                   {!m.active && <Badge tone="muted">inactive</Badge>}
-                  {m.source === "osm" && !m.verified && <Badge tone="muted">from the map</Badge>}
+                  {m.source === "signup" && <Badge tone="violet">Signed up themselves</Badge>}
+                  {m.source === "list" && <Badge tone="muted">From your list</Badge>}
+                  {m.source === "osm" && <Badge tone="caution">Old map import</Badge>}
+                  {stale && (
+                    <Badge tone="caution">
+                      <Clock className="h-3 w-3" />
+                      {age == null ? "Never confirmed" : `${age} days since confirmed`}
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -253,6 +303,18 @@ export function MerchantsManager({
                       <Phone className="h-3.5 w-3.5" /> Call
                     </a>
                   )}
+                  {m.socialUrl && (
+                    <a
+                      href={m.socialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 px-2.5 py-1.5 text-xs text-mist-300 hover:text-mist-100"
+                      title="Open their page — check they are still posting"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      {PLATFORM_LABEL[(m.socialPlatform as SocialPlatform) ?? "OTHER"]}
+                    </a>
+                  )}
                   {m.latitude != null && m.longitude != null && (
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${m.latitude},${m.longitude}`}
@@ -262,6 +324,17 @@ export function MerchantsManager({
                     >
                       <MapPin className="h-3.5 w-3.5" /> Map
                     </a>
+                  )}
+                  {m.verified && (
+                    <Button
+                      size="sm"
+                      variant={stale ? "primary" : "outline"}
+                      onClick={() => patch(m.id, { stillTrading: true })}
+                      disabled={pending}
+                      title="Re-confirm you have checked this business recently"
+                    >
+                      <CalendarCheck className="h-4 w-4" /> Still trading
+                    </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => patch(m.id, { nightOpen: !m.nightOpen })} disabled={pending}>
                     <Moon className="h-4 w-4" /> {m.nightOpen ? "Night: yes" : "Night: no"}

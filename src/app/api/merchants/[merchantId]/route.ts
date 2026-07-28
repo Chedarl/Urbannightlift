@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { recordAudit, diffFields } from "@/lib/audit";
 import { buildSearchKey } from "@/lib/locations/normalize";
+import { detectPlatform } from "@/lib/merchants/social";
 
 const FIELDS = [
   "merchantName",
@@ -21,6 +22,9 @@ const FIELDS = [
   "open24h",
   "acceptingOrders",
   "website",
+  "socialUrl",
+  "socialPlatform",
+  "logoUrl",
   "photoUrl",
   "notes",
   "popularityRank",
@@ -50,6 +54,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ me
     if (body.phoneVerified === true) data.phoneVerifiedAt = new Date();
   }
 
+  // "Still trading" is a re-confirmation, not an edit: someone has just checked
+  // that this business is open. Businesses here move and close quickly, so a
+  // confirmation has to be dated rather than assumed to hold forever.
+  if (body.stillTrading === true) {
+    data.lastConfirmedAt = new Date();
+    data.lastSeenActiveAt = new Date();
+  }
+
+  if (typeof body.socialUrl === "string") {
+    const social = detectPlatform(body.socialUrl);
+    data.socialUrl = social?.url ?? null;
+    data.socialPlatform = social?.platform ?? null;
+  }
+
   if (typeof data.merchantName === "string") {
     data.searchKey = buildSearchKey(data.merchantName as string, before.aliases);
   }
@@ -58,7 +76,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ me
 
   await recordAudit({
     actor: { id: user.id, fullName: user.fullName, role: user.role },
-    action: data.verified === true && !before.verified ? "merchant.verified" : "merchant.updated",
+    action:
+      data.verified === true && !before.verified
+        ? "merchant.verified"
+        : body.stillTrading === true
+          ? "merchant.reconfirmed"
+          : "merchant.updated",
     entityType: "merchant",
     entityId: merchant.id,
     entityLabel: merchant.merchantName,
