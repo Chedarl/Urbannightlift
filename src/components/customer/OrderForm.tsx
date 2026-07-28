@@ -335,6 +335,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
           */}
           {(!merchantLayout || !selectedMerchant) && (
             <LocationField
+              mode="pickup"
               label={LOC_LABELS[service].pickup[locale === "fr" ? "fr" : "en"]}
               accent={exp.accent}
               value={pickupSel}

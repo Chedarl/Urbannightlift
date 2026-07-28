@@ -56,12 +56,15 @@ export function LocationField({
   onChange,
   accent = "#9645de",
   error,
+  mode = "delivery",
 }: {
   label: string;
   value: SelectedLocation | null;
   onChange: (loc: SelectedLocation | null) => void;
   accent?: string;
   error?: boolean;
+  /** Which side this field collects. The prompt should never offer both. */
+  mode?: "pickup" | "delivery";
 }) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
@@ -220,7 +223,11 @@ export function LocationField({
             data-error={error ? "true" : undefined}
           >
             <Search className="h-4 w-4" style={{ color: accent }} />
-            {fr ? "Où devons-nous récupérer ou livrer ?" : "Where should we pick up or deliver?"}
+            {/* The prompt names only the side it is actually collecting, so a
+                delivery field never invites a pickup address. */}
+            {mode === "pickup"
+              ? fr ? "Où devons-nous récupérer ?" : "Where should we pick up?"
+              : fr ? "Où devons-nous livrer ?" : "Where should we deliver?"}
           </button>
         )}
       </div>

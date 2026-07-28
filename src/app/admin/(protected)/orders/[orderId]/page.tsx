@@ -169,6 +169,8 @@ export default async function AdminOrderPage({
         customerConfirmedAt: order.customerConfirmedAt?.toISOString() ?? null,
         customerConfirmMethod: order.customerConfirmMethod,
         customerProofUrl: order.customerProofUrl,
+        customerNotifiedAt: order.customerNotifiedAt?.toISOString() ?? null,
+        customerNotifiedStage: order.customerNotifiedStage,
         riderLat: order.riderLat,
         riderLng: order.riderLng,
         riderLocationAt: order.riderLocationAt?.toISOString() ?? null,

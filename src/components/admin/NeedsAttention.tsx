@@ -27,6 +27,7 @@ export interface AttentionRow {
 const REFRESH_MS = 20_000;
 
 const KIND_LABEL: Record<string, string> = {
+  CUSTOMER_NOT_TOLD: "Priced, but nobody has told the customer",
   PAYMENT_UNVERIFIED: "Payment sent — verify it",
   RIDER_SILENT: "Rider hasn't accepted",
   NO_RIDER: "Paid, no rider assigned",
@@ -36,6 +37,7 @@ const KIND_LABEL: Record<string, string> = {
 
 /** How loudly to shout. Money already taken outranks everything else. */
 const KIND_TONE: Record<string, string> = {
+  CUSTOMER_NOT_TOLD: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   PAYMENT_UNVERIFIED: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   RIDER_SILENT: "border-caution/40 bg-caution/10 text-gold-200",
   NO_RIDER: "border-caution/40 bg-caution/10 text-gold-200",

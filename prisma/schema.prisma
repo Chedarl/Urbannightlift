@@ -438,6 +438,13 @@ model Order {
   customerProofUrl       String?
   customerConfirmNote    String?
 
+  /// ── Did the customer actually hear from us? ──
+  /// Push is opt-in and many customers never enable it, so dispatch needs to
+  /// see whether anyone has actually told this customer their order was
+  /// accepted or dispatched. An assumed notification is the same as none.
+  customerNotifiedAt    DateTime?
+  customerNotifiedStage String?
+
   /// ── Housekeeping ──
   /// Test orders and archived orders are excluded from every operational view,
   /// count, and export by default. Nothing is ever deleted to make the numbers

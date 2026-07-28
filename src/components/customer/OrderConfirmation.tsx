@@ -19,6 +19,7 @@ import { QuoteCard } from "@/components/customer/QuoteCard";
 import { OrderCaseThread } from "@/components/customer/OrderCaseThread";
 import { LiveTimeline } from "@/components/customer/LiveTimeline";
 import { ConfirmReceipt } from "@/components/customer/ConfirmReceipt";
+import { OrderAlerts } from "@/components/customer/OrderAlerts";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
@@ -184,6 +185,12 @@ export function OrderConfirmation({
 
       {!verified && (
         <VerifyOrderCard orderCode={order.orderCode} maskedPhone={order.customerWhatsapp} />
+      )}
+
+      {/* Alerts, offered right after ordering — the moment they most want to
+          know what happens next, and while their ownership proof is fresh. */}
+      {verified && !isCancelled && !order.customerConfirmedAt && (
+        <OrderAlerts orderCode={order.orderCode} fr={fr} />
       )}
 
       {/* The quote. Sits above everything else because until the customer

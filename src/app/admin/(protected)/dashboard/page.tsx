@@ -58,6 +58,8 @@ export default async function AdminDashboardPage() {
           { paymentStatus: "SUBMITTED_UNVERIFIED" },
           // Priced, but the customer has not answered the quote.
           { quoteSentAt: { not: null }, quoteAcceptedAt: null, quoteDeclinedAt: null },
+          // Priced and nobody has told them — the quote is waiting on us, not them.
+          { quoteSentAt: { not: null }, customerNotifiedAt: null },
           // Paid and ready, with no rider on it.
           { orderStatus: "PAYMENT_VERIFIED", assignedRiderId: null },
           // Assigned, but the rider has not accepted.
@@ -75,6 +77,7 @@ export default async function AdminDashboardPage() {
         quoteSentAt: true,
         quoteAcceptedAt: true,
         quoteDeclinedAt: true,
+        customerNotifiedAt: true,
         assignedRiderId: true,
         assignedAt: true,
         riderAcceptedAt: true,
@@ -87,7 +90,8 @@ export default async function AdminDashboardPage() {
   /** The single most urgent thing wrong with an order, in escalation order. */
   const attentionRows = attention.map((o) => {
     let kind: string;
-    if (o.paymentStatus === "SUBMITTED_UNVERIFIED") kind = "PAYMENT_UNVERIFIED";
+    if (o.quoteSentAt && !o.customerNotifiedAt) kind = "CUSTOMER_NOT_TOLD";
+    else if (o.paymentStatus === "SUBMITTED_UNVERIFIED") kind = "PAYMENT_UNVERIFIED";
     else if (o.assignedRiderId && !o.riderAcceptedAt) kind = "RIDER_SILENT";
     else if (o.orderStatus === "PAYMENT_VERIFIED" && !o.assignedRiderId) kind = "NO_RIDER";
     else if (o.quoteSentAt && !o.quoteAcceptedAt && !o.quoteDeclinedAt) kind = "QUOTE_UNANSWERED";

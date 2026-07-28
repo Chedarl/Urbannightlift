@@ -145,7 +145,7 @@ export function ParcelForm() {
             </div>
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de ramassage" : "Pickup address"}</p>
-          <LocationField label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} />
+          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} />
         </div>
 
         {/* Receiver */}

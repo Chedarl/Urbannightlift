@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { getCustomerId } from "@/lib/auth/customer";
 import { pushPublicKey } from "@/lib/notify/push";
+import { hasOrderAccess } from "@/lib/orders/orderAccess";
 
 /**
  * Web Push registration.
@@ -30,9 +31,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
   }
 
-  const [staff, customerId] = await Promise.all([getSessionUser(), getCustomerId()]);
+  const [staff, accountCustomerId] = await Promise.all([getSessionUser(), getCustomerId()]);
+
+  // Most orders are placed as a guest, so requiring an account here meant the
+  // people who most need to hear "your order is accepted" and "your rider is on
+  // the way" could never subscribe at all. A guest who can prove they own an
+  // order — the same ownership check used for the OTP and payment — may
+  // subscribe for that order's customer.
+  let guestCustomerId: string | null = null;
+  const orderCode = typeof body.orderCode === "string" ? body.orderCode.trim() : "";
+  if (!staff && !accountCustomerId && orderCode) {
+    if (await hasOrderAccess(orderCode)) {
+      const order = await prisma.order.findUnique({
+        where: { orderCode: orderCode.toUpperCase() },
+        select: { customerId: true },
+      });
+      guestCustomerId = order?.customerId ?? null;
+    }
+  }
+
+  const customerId = accountCustomerId ?? guestCustomerId;
   if (!staff && !customerId) {
-    return NextResponse.json({ error: "Sign in to enable notifications" }, { status: 401 });
+    return NextResponse.json(
+      { error: "We couldn't confirm this order is yours, so alerts weren't enabled." },
+      { status: 401 }
+    );
   }
 
   const userAgent = req.headers.get("user-agent")?.slice(0, 300) ?? null;

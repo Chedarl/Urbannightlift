@@ -150,7 +150,7 @@ export function ErrandForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Lieu de départ" : "Pickup location"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
-            <LocationField label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} />
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><Flag className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Destination" : "Destination / drop-off"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
