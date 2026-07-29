@@ -1,6 +1,13 @@
 import "server-only";
 
 import { sendPush } from "@/lib/notify/push";
+import {
+  emailNewOrder,
+  emailRiderApplication,
+  emailAmbassadorSignup,
+  emailMerchantSignup,
+  emailPaymentSubmitted,
+} from "@/lib/email/operations";
 
 /**
  * The moments worth interrupting someone for.
@@ -15,7 +22,8 @@ import { sendPush } from "@/lib/notify/push";
 const DISPATCH_ROLES = ["OWNER", "DISPATCHER", "SUPPORT"];
 
 /** A merchant signing up at 11 PM is worth calling back at 11 PM. */
-export async function notifyMerchantSignup(merchantName: string, categoryLabel: string) {
+export async function notifyMerchantSignup(merchantName: string, categoryLabel: string, merchantId?: string) {
+  if (merchantId) await emailMerchantSignup(merchantId);
   await sendPush(
     { roles: DISPATCH_ROLES },
     {
@@ -29,6 +37,10 @@ export async function notifyMerchantSignup(merchantName: string, categoryLabel: 
 
 /** Riders are the constraint on how many orders a night can take. */
 export async function notifyRiderApplication(applicationId: string, fullName: string) {
+  // Push reaches whoever has the console open; email reaches the owner
+  // wherever they are, and leaves a record that we were told.
+  await emailRiderApplication(applicationId);
+
   await sendPush(
     { roles: DISPATCH_ROLES },
     {
@@ -41,7 +53,8 @@ export async function notifyRiderApplication(applicationId: string, fullName: st
 }
 
 /** An ambassador is a standing commitment to pay somebody — approve deliberately. */
-export async function notifyAmbassadorSignup(code: string, fullName: string) {
+export async function notifyAmbassadorSignup(code: string, fullName: string, ambassadorId?: string) {
+  if (ambassadorId) await emailAmbassadorSignup(ambassadorId);
   await sendPush(
     { roles: DISPATCH_ROLES },
     {
@@ -54,6 +67,8 @@ export async function notifyAmbassadorSignup(code: string, fullName: string) {
 }
 
 export async function notifyNewOrder(orderCode: string, orderId: string, serviceLabel: string) {
+  await emailNewOrder(orderId);
+
   await sendPush(
     { roles: DISPATCH_ROLES },
     {
@@ -66,6 +81,7 @@ export async function notifyNewOrder(orderCode: string, orderId: string, service
 }
 
 export async function notifyPaymentSubmitted(orderCode: string, orderId: string, amountXaf: number | null) {
+  await emailPaymentSubmitted(orderId);
   await sendPush(
     { roles: DISPATCH_ROLES },
     {

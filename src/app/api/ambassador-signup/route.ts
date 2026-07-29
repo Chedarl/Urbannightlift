@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await notifyAmbassadorSignup(ambassador.code, ambassador.fullName).catch(() => {});
+  await notifyAmbassadorSignup(ambassador.code, ambassador.fullName, ambassador.id).catch(() => {});
 
   return NextResponse.json({ ok: true, code: ambassador.code }, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { createCustomerSession, hashPin, isValidPin } from "@/lib/auth/customer";
+import { emailNewCustomer } from "@/lib/email/operations";
 
 /**
  * POST /api/account/signup — create (or claim) a customer account.
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       });
 
   await createCustomerSession(customer.id);
+  await emailNewCustomer(customer.id).catch(() => {});
 
   const claimedOrders = existing ? await prisma.order.count({ where: { customerId: customer.id } }) : 0;
   return NextResponse.json({ ok: true, claimedOrders }, { status: 201 });

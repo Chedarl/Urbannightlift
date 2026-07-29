@@ -56,6 +56,9 @@ export function SettingsManager({
     testMode: boolean;
     voiceOrderingEnabled: boolean;
     googleSiteVerification: string;
+    notificationEmail: string;
+    emailOnEveryOrder: boolean;
+    dailySummaryEmail: boolean;
   };
 }) {
   const { t } = useTranslation();
@@ -90,6 +93,9 @@ export function SettingsManager({
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
         googleSiteVerification: form.googleSiteVerification,
+        notificationEmail: form.notificationEmail,
+        emailOnEveryOrder: form.emailOnEveryOrder,
+        dailySummaryEmail: form.dailySummaryEmail,
       }),
     });
 
@@ -297,6 +303,55 @@ export function SettingsManager({
               )}
             </span>
           </label>
+        </div>
+
+        {/* Operational email. Where the business finds out things happened. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <p className="mb-1 text-sm font-semibold text-mist-100">Email notifications</p>
+          <label className="text-xs text-mist-500">
+            Send operational email to
+            <input
+              className={inputCls}
+              type="email"
+              value={form.notificationEmail}
+              onChange={(e) => setForm({ ...form, notificationEmail: e.target.value })}
+              placeholder="urbannighlift@gmail.com"
+            />
+          </label>
+          <label className="mt-3 flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.emailOnEveryOrder}
+              onChange={(e) => setForm({ ...form, emailOnEveryOrder: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-mist-100">An email for every order</span>
+              <span className="block text-xs text-mist-400">
+                Right for now, while every order counts. At thirty a night an inbox like this stops
+                being read — switch it off then and keep the nightly summary.
+              </span>
+            </span>
+          </label>
+          <label className="mt-3 flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.dailySummaryEmail}
+              onChange={(e) => setForm({ ...form, dailySummaryEmail: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm text-mist-100">Nightly summary at 4:30 AM</span>
+              <span className="block text-xs text-mist-400">
+                What came in, what was earned, what is still waiting on you. This is the one worth
+                keeping.
+              </span>
+            </span>
+          </label>
+          <p className="mt-2 text-[11px] text-mist-500">
+            Applications and signups always send an email — those need a decision. Documents people
+            upload are linked, never attached, so nobody&apos;s ID card sits in an inbox.
+          </p>
         </div>
 
         {/* Search Console ownership. Here rather than an environment variable

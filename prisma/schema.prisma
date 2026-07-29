@@ -1057,6 +1057,18 @@ model OperatingSettings {
   /// changes, and the verification fails for a reason nothing on screen
   /// explains. From settings it is live on the next page load.
   googleSiteVerification       String?
+
+  /// Where operational email goes. Not hardcoded, because the address a
+  /// business reads changes long before its code does.
+  notificationEmail            String?
+  /// An email for every single order. On from day one, when every order
+  /// matters and there are few of them. At thirty orders a night an inbox
+  /// like that stops being read, which is why it can be switched off without
+  /// losing the nightly summary below.
+  emailOnEveryOrder            Boolean       @default(true)
+  /// One email after the night closes: what came in, what was earned, what is
+  /// still waiting. This is the one worth keeping forever.
+  dailySummaryEmail            Boolean       @default(true)
   zoneNoticeEn                 String?
   zoneNoticeFr                 String?
   mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
@@ -1065,4 +1077,32 @@ model OperatingSettings {
   orangeUssdTemplate           String?
   updatedByUserId              String?
   updatedAt                    DateTime      @updatedAt
+}
+
+
+/// Every operational message we sent, and whether it arrived.
+///
+/// Push notifications vanish and email can silently fail, so without this
+/// there is no way to answer "were we told?" — about an order, an
+/// application, or a payment. Append-only, like the audit log and the
+/// ambassador ledger: rows are written and never edited, so the record of
+/// what was sent cannot drift from what happened.
+model NotificationLog {
+  id          String   @id @default(cuid())
+  channel     String // EMAIL | PUSH
+  event       String // order.created, rider.applied, ambassador.applied…
+  recipient   String
+  subject     String?
+  status      String // SENT | FAILED
+  /// The provider's own id, so a message can be traced in their dashboard.
+  providerId  String?
+  error       String?
+  /// What the message was about, so an order's whole trail can be pulled up.
+  entityType  String?
+  entityId    String?
+  createdAt   DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@index([entityType, entityId])
+  @@index([status])
 }

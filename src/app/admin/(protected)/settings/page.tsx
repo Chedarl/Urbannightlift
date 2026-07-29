@@ -33,6 +33,9 @@ export default async function SettingsPage() {
         testMode: settings.testMode,
         voiceOrderingEnabled: settings.voiceOrderingEnabled,
         googleSiteVerification: settings.googleSiteVerification ?? "",
+        notificationEmail: settings.notificationEmail ?? "",
+        emailOnEveryOrder: settings.emailOnEveryOrder,
+        dailySummaryEmail: settings.dailySummaryEmail,
       }}
     />
   );

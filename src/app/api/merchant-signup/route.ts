@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     products,
   });
 
-  await notifyMerchantSignup(result.merchantName, category.toLowerCase().replace("_", " "));
+  await notifyMerchantSignup(result.merchantName, category.toLowerCase().replace("_", " "), result.id);
 
   return NextResponse.json({ ok: true, merchantId: result.id });
 }
