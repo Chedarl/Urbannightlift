@@ -662,6 +662,11 @@ model Order {
   /// assigned until the customer has accepted that price. Without this a fee
   /// could be raised after ordering and the customer would first hear of it at
   /// the door — a completed trip with no revenue.
+  /// When somebody decided we would take this order, and who decided it.
+  /// Approval used to live only in the status history, which made "has step 1
+  /// been done?" a question you had to reconstruct rather than read.
+  approvedAt         DateTime?
+  approvedByUserId   String?
   quoteSentAt        DateTime?
   quoteAcceptedAt    DateTime?
   quoteDeclinedAt    DateTime?

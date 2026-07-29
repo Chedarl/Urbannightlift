@@ -20,6 +20,8 @@ import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { OrderStageBar } from "@/components/admin/OrderStageBar";
+import { WorkflowStep, WorkflowProgress } from "@/components/admin/WorkflowStep";
+import type { StepKey, StepState } from "@/lib/orders/workflow";
 import { dispatchBlocker, isPayOnDelivery, stageOf } from "@/lib/orders/dispatchRules";
 import { formatDetailedStatus } from "@/lib/orders/statusLabels";
 import { formatSlot } from "@/lib/orders/timeSlots";
@@ -49,6 +51,17 @@ interface ProofRow {
   photoUrl: string | null;
   riderNote: string | null;
   createdAt: string;
+}
+
+/** One step of the order as the server computed it — see src/lib/orders/workflow.ts. */
+export interface AdminWorkflowStep {
+  key: StepKey;
+  number: number;
+  title: string;
+  purpose: string;
+  state: StepState;
+  proof: string | null;
+  blockedBy: string | null;
 }
 
 export interface OrderDetailData {
@@ -213,10 +226,13 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 export function OrderDetail({
   order,
   riders,
+  steps,
   isOwner = false,
 }: {
   order: OrderDetailData;
   riders: RiderOption[];
+  /** The six steps, worked out on the server so the screen and the API agree. */
+  steps: AdminWorkflowStep[];
   /** Deleting an order is owner-only, so the control is owner-only too. */
   isOwner?: boolean;
 }) {
@@ -256,6 +272,25 @@ export function OrderDetail({
     customerConfirmedAt: order.customerConfirmedAt,
   };
   const stage = stageOf(gate);
+
+  /**
+   * Feeds one step's heading, state and evidence into the wrapper.
+   *
+   * Everything comes from the server's workflow rather than being re-derived
+   * here, so what the screen allows and what the API allows cannot drift apart.
+   */
+  function stepProps(key: StepKey) {
+    const step = steps.find((s) => s.key === key);
+    return {
+      number: step?.number ?? 0,
+      title: step?.title ?? "",
+      purpose: step?.purpose ?? "",
+      state: step?.state ?? ("LOCKED" as StepState),
+      proof: step?.proof ?? null,
+      blockedBy: step?.blockedBy ?? null,
+    };
+  }
+  const stepsDone = steps.filter((s) => s.state === "DONE").length;
   const dispatchStop = dispatchBlocker(gate);
   const payOnDelivery = isPayOnDelivery(order.paymentMethod);
 
@@ -526,9 +561,9 @@ export function OrderDetail({
         {/* Right column: actions */}
         <div className="flex flex-col gap-5">
           <OrderStageBar stage={stage} blocker={dispatchStop?.message ?? null} />
+          <WorkflowProgress done={stepsDone} total={steps.length} />
 
-          <section className={card}>
-            <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Step 1 · Review this order</h2>
+          <WorkflowStep {...stepProps("REVIEW")}>
 
             {/* The customer said it out loud instead of typing it. Listen
                 before pricing — the note usually holds detail the form fields
@@ -609,12 +644,11 @@ export function OrderDetail({
                 {t("admin.order.cancelOrder")}
               </Button>
             </div>
-          </section>
+          </WorkflowStep>
 
           {/* Quote — accept the order at a price and send it to the customer.
               No rider may be assigned until they have agreed to it. */}
-          <section className={card}>
-            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Step 2 · Price it and send the quote</h2>
+          <WorkflowStep {...stepProps("QUOTE")}>
             <p className="mb-3 text-xs text-mist-500">
               Saving the price does not message the customer on its own — send them the link that
               appears below. No rider can be assigned until they accept it.
@@ -686,7 +720,7 @@ export function OrderDetail({
                 </div>
               )}
             </div>
-          </section>
+          </WorkflowStep>
 
           {/* Telling the customer. Push only reaches people who opted in, so
               the reliable channel is still a person sending WhatsApp — and the
@@ -743,9 +777,8 @@ export function OrderDetail({
           </section>
 
           {/* Payment verification */}
-          <section className={card}>
+          <WorkflowStep {...stepProps("PAYMENT")}>
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
-              <Wallet className="h-4 w-4" /> Step 3 · Payment
             </h2>
             <p className="mb-3 text-xs text-mist-500">
               {payOnDelivery
@@ -790,12 +823,11 @@ export function OrderDetail({
                 <Check className="h-4 w-4" /> {t("admin.order.confirmPayment")}
               </Button>
             </div>
-          </section>
+          </WorkflowStep>
 
           {/* Rider + fees */}
-          <section className={card}>
+          <WorkflowStep {...stepProps("DISPATCH")}>
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
-              <UserCheck className="h-4 w-4" /> Step 4 · Dispatch a rider
             </h2>
             {dispatchStop && (
               <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
@@ -874,12 +906,11 @@ export function OrderDetail({
                 </Button>
               </div>
             </div>
-          </section>
+          </WorkflowStep>
 
           {/* The customer's own confirmation. Dispatch needs to see both
               sides of the handover, not just the rider's word for it. */}
-          <section className={card}>
-            <h2 className="mb-2 font-display text-sm font-semibold text-gold-300">Proof of receipt</h2>
+          <WorkflowStep {...stepProps("PROOF")}>
             {order.customerConfirmedAt ? (
               <div className="flex flex-col gap-1.5 text-sm">
                 <Row
@@ -936,12 +967,11 @@ export function OrderDetail({
                 photo from their own order page.
               </p>
             )}
-          </section>
+          </WorkflowStep>
 
           {/* Earnings — the 60/40 split, frozen at delivery. */}
           {order.riderPayoutXaf != null && order.companyEarningXaf != null && (
-            <section className={card}>
-              <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Step 6 · Earnings on this delivery</h2>
+            <WorkflowStep {...stepProps("SETTLE")}>
               <div className="flex flex-col gap-1.5 text-sm">
                 <Row label={`Rider (${order.riderSharePercent ?? 60}%)`} value={formatXaf(order.riderPayoutXaf)} />
                 <Row label={`Urban Night Lift (${100 - (order.riderSharePercent ?? 60)}%)`} value={formatXaf(order.companyEarningXaf)} />
@@ -964,7 +994,7 @@ export function OrderDetail({
                 The split is fixed at the rate in force when the order was delivered, so changing the rate later never
                 rewrites completed accounts.
               </p>
-            </section>
+            </WorkflowStep>
           )}
 
           {/* Housekeeping — test data, archiving, and (owner only) deletion. */}
