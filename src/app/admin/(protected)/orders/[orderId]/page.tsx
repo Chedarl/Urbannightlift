@@ -179,6 +179,8 @@ export default async function AdminOrderPage({
         riderLocationAt: order.riderLocationAt?.toISOString() ?? null,
         otpCode: order.otpCode,
         screenshotUrl: order.screenshotUrl,
+        voiceNoteUrl: order.voiceNoteUrl,
+        voiceNoteSeconds: order.voiceNoteSeconds,
         statusHistory: order.statusHistory.map((h) => ({
           toStatus: h.toStatus,
           fromStatus: h.fromStatus,

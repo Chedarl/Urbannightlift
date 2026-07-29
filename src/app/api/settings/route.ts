@@ -26,6 +26,8 @@ export async function GET() {
     zoneNoticeFr: settings.zoneNoticeFr,
     enabledServices: resolveEnabledServices(settings),
     testMode: settings.testMode,
+    // Public so the order forms know whether to offer the microphone at all.
+    voiceOrderingEnabled: settings.voiceOrderingEnabled,
   });
 }
 
@@ -81,6 +83,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Only the owner can change test mode" }, { status: 403 });
     }
     data.testMode = body.testMode;
+  }
+
+  // Voice ordering is built and tested but stays off until the owner decides
+  // the market wants it. Turning it on changes what customers are offered, so
+  // it is the owner's call, not a dispatcher's.
+  if (typeof body.voiceOrderingEnabled === "boolean") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can turn voice ordering on" }, { status: 403 });
+    }
+    data.voiceOrderingEnabled = body.voiceOrderingEnabled;
   }
 
   // The revenue share decides how every franc is divided, so it is OWNER-only

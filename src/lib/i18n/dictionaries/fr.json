@@ -309,7 +309,8 @@
       "users": "Personnel",
       "settings": "Paramètres",
       "earnings": "Revenus",
-      "ambassadors": "Ambassadeurs"
+      "ambassadors": "Ambassadeurs",
+      "riderApplications": "Candidatures"
     },
     "dashboard": {
       "title": "Opérations de ce soir",

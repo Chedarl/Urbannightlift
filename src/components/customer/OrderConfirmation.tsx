@@ -22,6 +22,7 @@ import { ConfirmReceipt } from "@/components/customer/ConfirmReceipt";
 import { OrderAlerts } from "@/components/customer/OrderAlerts";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 import { OrderAgain } from "@/components/customer/order/OrderAgain";
+import { RiderIdentityCard } from "@/components/customer/RiderIdentityCard";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
@@ -217,6 +218,10 @@ export function OrderConfirmation({
           fr={fr}
         />
       )}
+
+      {/* Who is coming — shown before the code, because knowing who to expect
+          is what makes handing over a code at 1 AM reasonable. */}
+      {verified && !isCancelled && <RiderIdentityCard orderCode={order.orderCode} fr={fr} />}
 
       {order.otpCode && !isCancelled && (
         <div className="rounded-2xl border border-violet-500/40 bg-violet-950/40 p-4 text-center">

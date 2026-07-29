@@ -53,6 +53,10 @@ export const orderSchema = z.object({
   isMedicine: z.boolean(),
   prescriptionRequired: z.enum(["YES", "NO", "NOT_SURE"]).optional(),
   screenshotUrl: z.string().max(500).optional().or(z.literal("")),
+  /// A voice note instead of a filled-in form. Stored path only — the file
+  /// itself lives in a private bucket and is never exposed publicly.
+  voiceNoteUrl: z.string().max(500).optional().or(z.literal("")),
+  voiceNoteSeconds: z.coerce.number().int().min(0).max(600).optional().nullable(),
 
   // Payment (tracking only — never credentials)
   paymentMethod: z.enum(["MTN_MOMO", "ORANGE_MONEY", "CASH"]),

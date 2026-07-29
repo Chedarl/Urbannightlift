@@ -13,7 +13,7 @@ import {
   Users,
   Settings,
   Wallet,
-  LogOut,
+  LogOut, Bike,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
@@ -31,6 +31,7 @@ const NAV = [
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
   { href: "/admin/merchants", key: "merchants", icon: Store },
   { href: "/admin/ambassadors", key: "ambassadors", icon: Megaphone },
+  { href: "/admin/riders/applications", key: "riderApplications", icon: Bike },
   { href: "/admin/complaints", key: "complaints", icon: AlertTriangle },
   { href: "/admin/support", key: "support", icon: Inbox },
   { href: "/admin/users", key: "users", icon: Users, ownerOnly: true },

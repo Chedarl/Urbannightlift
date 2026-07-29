@@ -13,6 +13,7 @@ import {
   StickyNote,
   Image as ImageIcon,
   Trash2,
+  Mic,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
@@ -123,6 +124,8 @@ export interface OrderDetailData {
   riderLocationAt: string | null;
   otpCode: string | null;
   screenshotUrl: string | null;
+  voiceNoteUrl: string | null;
+  voiceNoteSeconds: number | null;
   statusHistory: StatusHistoryRow[];
   proofs: ProofRow[];
   auditTrail: AuditRow[];
@@ -526,6 +529,27 @@ export function OrderDetail({
 
           <section className={card}>
             <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Step 1 · Review this order</h2>
+
+            {/* The customer said it out loud instead of typing it. Listen
+                before pricing — the note usually holds detail the form fields
+                never asked for. Served through the staff-gated media route
+                because it carries their voice and their address. */}
+            {order.voiceNoteUrl && (
+              <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-950/30 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-violet-200">
+                  <Mic className="h-3.5 w-3.5" /> Voice note from the customer
+                  {order.voiceNoteSeconds ? ` · ${order.voiceNoteSeconds}s` : ""}
+                </p>
+                <audio
+                  controls
+                  preload="none"
+                  src={`/api/media?path=${encodeURIComponent(order.voiceNoteUrl)}`}
+                  className="h-9 w-full"
+                />
+                <p className="mt-1 text-[11px] text-mist-500">Staff only — never shared with anyone else.</p>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <div className="grid grid-cols-2 gap-2">
                 <Button size="sm" onClick={() => setStatus("APPROVED")} disabled={pending}>

@@ -309,7 +309,8 @@
       "users": "Staff",
       "settings": "Settings",
       "earnings": "Earnings",
-      "ambassadors": "Ambassadors"
+      "ambassadors": "Ambassadors",
+      "riderApplications": "Rider applications"
     },
     "dashboard": {
       "title": "Tonight's operations",
