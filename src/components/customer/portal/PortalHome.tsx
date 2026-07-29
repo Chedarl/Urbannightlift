@@ -3,7 +3,6 @@
 import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   UtensilsCrossed,
   Pill,
@@ -24,7 +23,9 @@ import {
   Moon,
   Home as HomeIcon,
   Briefcase,
+  Sparkles,
 } from "lucide-react";
+import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { useTranslation } from "@/lib/i18n";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { refreshProfile } from "@/lib/account/profile";
@@ -126,6 +127,8 @@ export function PortalHome({ data }: { data: PortalData }) {
 
   const active = data.orders.find((o) => o.orderCode === data.activeOrderCode) ?? null;
   const firstName = (data.customer.fullName || "").trim().split(/\s+/)[0] || (fr ? "vous" : "there");
+  // Brand new: nothing to show yet, so lead with getting them set up.
+  const isNew = data.orders.length === 0 && data.addresses.length === 0;
 
   // A regular's usual leads the menu; everything else follows in the usual
   // order, paused services dropped. A newcomer just gets the standard order.
@@ -182,12 +185,7 @@ export function PortalHome({ data }: { data: PortalData }) {
       <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-violet-700/20 via-violet-900/5 to-transparent blur-2xl" />
 
       {/* ── Greeting: the portal knows who you are and what hour it is ── */}
-      <motion.header
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-start justify-between gap-3"
-      >
+      <header className="animate-fade-up flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm text-violet-300">
             <Moon className="h-3.5 w-3.5" /> {greeting(fr, new Date())},
@@ -203,10 +201,35 @@ export function PortalHome({ data }: { data: PortalData }) {
         >
           <LogOut className="h-3.5 w-3.5" /> {t("common.logout")}
         </button>
-      </motion.header>
+      </header>
 
       {/* ── The live order, if there is one: the "trip you're on" ── */}
       {active && <ActiveOrderCard order={active} fr={fr} />}
+
+      {/* ── First run: seed the portal so the second visit already feels
+             personal — save a Home place, and install the app. Shown only to a
+             brand-new customer with nothing yet, and never again once they act. ── */}
+      {isNew && (
+        <section className="animate-rise-in rounded-2xl border border-gold-400/35 bg-gradient-to-br from-gold-400/10 to-transparent p-4">
+          <p className="flex items-center gap-2 font-display text-sm font-semibold text-gold-200">
+            <Sparkles className="h-4 w-4" /> {fr ? "Bienvenue — préparons la nuit" : "Welcome — let's set you up"}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-mist-400">
+            {fr
+              ? "Enregistrez votre adresse et installez l'app : votre prochaine commande sera prête en quelques secondes."
+              : "Save your address and install the app, and your next order is ready in seconds."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/account/addresses"
+              className="flex items-center gap-1.5 rounded-xl bg-gold-400 px-3 py-2 text-xs font-bold text-ink-950 hover:bg-gold-300"
+            >
+              <HomeIcon className="h-3.5 w-3.5" /> {fr ? "Enregistrer mon adresse" : "Save my address"}
+            </Link>
+            <InstallPrompt className="rounded-xl border border-ink-700 px-3 py-2 text-xs font-semibold text-mist-200 hover:border-violet-500/50" />
+          </div>
+        </section>
+      )}
 
       {/* ── What do you need tonight — the menu, your usual first ── */}
       <section>
@@ -219,12 +242,10 @@ export function PortalHome({ data }: { data: PortalData }) {
             const Icon = ui.icon;
             const usual = i === 0 && data.favoriteService === type && !active;
             return (
-              <motion.div
+              <div
                 key={type}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.05 * i, ease: [0.22, 1, 0.36, 1] }}
-                className={cn(usual && "col-span-2")}
+                className={cn("animate-fade-up", usual && "col-span-2")}
+                style={{ animationDelay: `${0.04 * i}s` }}
               >
                 <Link
                   href={`/order/new?service=${type}`}
@@ -251,7 +272,7 @@ export function PortalHome({ data }: { data: PortalData }) {
                   </span>
                   <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-mist-500 transition-transform group-hover:translate-x-0.5" />
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -411,11 +432,7 @@ function ActiveOrderCard({ order, fr }: { order: PortalOrder; fr: boolean }) {
   const ui = SERVICE_UI[order.serviceType];
   const Icon = ui.icon;
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-    >
+    <div className="animate-rise-in">
       <Link
         href={`/order/confirmation/${order.orderCode}`}
         className={cn(
@@ -444,7 +461,7 @@ function ActiveOrderCard({ order, fr }: { order: PortalOrder; fr: boolean }) {
           {fr ? "Suivre" : "Track"}
         </span>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 

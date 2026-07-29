@@ -34,6 +34,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Speed is a feature here — many customers are on weak mobile connections.
+  // lucide-react is imported for a handful of icons across dozens of files; the
+  // barrel would otherwise pull the whole set into each chunk, so tree-shaking
+  // it per-import is the single biggest bundle win on the portal and admin.
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
+  compress: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
 };
 
 export default nextConfig;

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { AccountAuthForm } from "@/components/customer/account/AccountAuthForm";
 import { getCustomerId } from "@/lib/auth/customer";
 
@@ -15,11 +14,8 @@ export default async function AccountLoginPage({
     redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/account");
   }
   return (
-    <>
-      <CustomerHeader />
-      <main>
-        <AccountAuthForm mode="login" />
-      </main>
-    </>
+    <main>
+      <AccountAuthForm mode="login" />
+    </main>
   );
 }
