@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { OrderDetail } from "@/components/admin/OrderDetail";
+import { loadWorkflow } from "@/lib/orders/workflowGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,10 @@ export default async function AdminOrderPage({
       if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
       return b.zoneDeliveries - a.zoneDeliveries;
     });
+  // The six steps, decided on the server from what is actually recorded, so the
+  // console and the API cannot disagree about what has been done.
+  const workflow = (await loadWorkflow(orderId)) ?? [];
+
 
   return (
     <OrderDetail
@@ -205,6 +210,15 @@ export default async function AdminOrderPage({
         })),
       }}
       riders={riderOptions}
+      steps={workflow.map((w) => ({
+        key: w.key,
+        number: w.number,
+        title: w.title,
+        purpose: w.purpose,
+        state: w.state,
+        proof: w.proof,
+        blockedBy: w.blockedBy,
+      }))}
       isOwner={viewer?.role === "OWNER"}
     />
   );

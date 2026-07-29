@@ -4,6 +4,7 @@ import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/audit";
 import { notifyQuoteSent } from "@/lib/notify/triggers";
 import { isTransitionAllowed } from "@/lib/orders/statusMachine";
+import { guardStep } from "@/lib/orders/workflowGuard";
 
 /**
  * POST /api/orders/[orderId]/quote — dispatch accepts an order at a price and
@@ -36,6 +37,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   // Re-quoting an order the customer already agreed to withdraws that
   // agreement — they have to accept the new number.
   const isRequote = order.quoteAcceptedAt != null;
+
+  // Step two is finished once the customer accepts. Changing the price after
+  // that is legitimate but it is a decision, not a button that happens to
+  // still be on screen: the caller has to say so, and it is audited.
+  const blocked = await guardStep(orderId, "QUOTE");
+  if (blocked && !(isRequote && body.reopen === true)) {
+    return NextResponse.json(
+      {
+        error: isRequote
+          ? "The customer already accepted this price. Reopen the step to change it — they will have to accept again."
+          : blocked,
+        needsReopen: isRequote,
+      },
+      { status: 409 }
+    );
+  }
   const canApprove = order.orderStatus === "APPROVED" || isTransitionAllowed(order.orderStatus, "APPROVED", user.role);
   if (!canApprove) {
     return NextResponse.json(

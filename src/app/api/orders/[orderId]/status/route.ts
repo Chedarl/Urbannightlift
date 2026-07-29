@@ -78,6 +78,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       }
     }
     if (nextStatus === "REJECTED" && rejectionReason) data.rejectionReason = rejectionReason;
+    // Step one is finished the moment somebody approves, and the console reads
+    // that fact off the order rather than reconstructing it from history.
+    if (nextStatus === "APPROVED" && order.approvedAt == null) {
+      data.approvedAt = new Date();
+      data.approvedByUserId = user.id;
+    }
 
     const result = await tx.order.update({ where: { id: orderId }, data });
     await tx.orderStatusHistory.create({

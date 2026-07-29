@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/audit";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
+import { guardStep } from "@/lib/orders/workflowGuard";
 
 /**
  * POST /api/payments/[orderId]/verify — manual payment verification.
@@ -41,6 +42,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Money cannot be confirmed before the customer has agreed a price, and a
+  // payment already verified is not verified a second time. The console hides
+  // these controls once the step is finished; this is what makes the rule hold
+  // for a stale tab or two dispatchers on the same order.
+  if (status === "VERIFIED") {
+    const blocked = await guardStep(orderId, "PAYMENT");
+    if (blocked) return NextResponse.json({ error: blocked }, { status: 409 });
+  }
 
   // Verifying the money used to leave the order sitting in AWAITING_PAYMENT,
   // so the operational status said "waiting to be paid" about an order that had
