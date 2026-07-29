@@ -9,6 +9,8 @@ import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
 import { notifyNewOrder } from "@/lib/notify/triggers";
+import { resolveCode } from "@/lib/ambassadors/accrual";
+import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -140,10 +142,35 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // What the code is worth, if one was entered. Never allowed to fail the
+    // order: a wrong code buys nothing and the customer still gets their
+    // delivery. The amounts are frozen onto the order so changing the terms
+    // later never rewrites what somebody was already promised.
+    const referral = input.referralCode
+      ? await resolveCode({
+          rawCode: input.referralCode,
+          customerPhone: whatsapp,
+          customerId: customer.id,
+          feeXaf: estimatedFee ?? 0,
+          riderSharePercent: DEFAULT_RIDER_SHARE_PERCENT,
+        }).catch(() => null)
+      : null;
+
+    if (referral) {
+      // A customer belongs to whoever brought them, set once and never moved.
+      await tx.customer.updateMany({
+        where: { id: customer.id, referredByAmbassadorId: null },
+        data: { referredByAmbassadorId: referral.ambassadorId, referredAt: new Date() },
+      });
+    }
+
     const created = await tx.order.create({
       data: {
         orderCode,
         customerId: customer.id,
+        ambassadorId: referral?.ambassadorId ?? null,
+        discountXaf: referral?.discountXaf || null,
+        ambassadorCommissionXaf: referral?.commissionXaf || null,
         serviceType: input.serviceType,
         pickupLocation: merchant
           ? `${merchant.merchantName} — ${merchant.address}`

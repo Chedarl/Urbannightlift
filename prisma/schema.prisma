@@ -209,12 +209,19 @@ model Customer {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  /// Set on their first order with a code, and never moved afterwards — a
+  /// customer belongs to whoever actually brought them.
+  referredByAmbassadorId String?
+  referredByAmbassador   Ambassador? @relation(fields: [referredByAmbassadorId], references: [id])
+  referredAt             DateTime?
+
   orders    Order[]
   payments  Payment[]
   addresses CustomerAddress[]
   cases     SupportRequest[]
 
   @@index([whatsappNumber])
+  @@index([referredByAmbassadorId])
 }
 
 /// A delivery/pickup place a customer saved for reuse at checkout.
@@ -232,6 +239,63 @@ model CustomerAddress {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
+}
+
+/// Someone who brings us customers and takes a share of what they spend.
+///
+/// The marketing budget, paid out only against deliveries that actually
+/// happened. Their code is theirs to choose, because a code someone picked is
+/// a code they will actually say out loud.
+model Ambassador {
+  id             String           @id @default(cuid())
+  /// Uppercase, letters and digits, chosen by the ambassador.
+  code           String           @unique
+  fullName       String
+  whatsappNumber String           @unique
+  /// Where their money goes. Never a PIN or a secret — just the number.
+  payoutMethod   String? // MTN_MOMO | ORANGE_MONEY
+  payoutNumber   String?
+  status         AmbassadorStatus @default(PENDING)
+  approvedAt     DateTime?
+  approvedById   String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  customers Customer[]
+  orders    Order[]
+  ledger    AmbassadorLedger[]
+
+  @@index([status])
+}
+
+enum AmbassadorStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+/// Append-only record of every franc owed to, and paid to, an ambassador.
+///
+/// Same discipline as the audit log: money owed to people outside the company
+/// has to be reconstructable line by line, or the first dispute becomes an
+/// argument about whose spreadsheet is right.
+model AmbassadorLedger {
+  id           String     @id @default(cuid())
+  ambassadorId String
+  ambassador   Ambassador @relation(fields: [ambassadorId], references: [id], onDelete: Cascade)
+  /// The delivery that earned it. Null for payouts and manual adjustments.
+  orderId      String?
+  order        Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  /// Positive = owed to them. Negative = paid out or clawed back.
+  amountXaf    Int
+  type         String // COMMISSION | PAYOUT | ADJUSTMENT
+  note         String?
+  recordedById String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([orderId, type])
+  @@index([ambassadorId, createdAt])
 }
 
 model Zone {
@@ -320,55 +384,55 @@ model ServiceLocation {
 /// name. Rows imported from OpenStreetMap land here unverified and invisible;
 /// only a merchant a human has actually called is shown to a customer.
 model Merchant {
-  id              String           @id @default(cuid())
-  merchantName    String
-  category        MerchantCategory
+  id               String           @id @default(cuid())
+  merchantName     String
+  category         MerchantCategory
   /// The raw source tag (restaurant, bakery, pharmacy, supermarket…) kept for
   /// display and ranking without multiplying the category enum.
-  subcategory     String?
-  whatsappNumber  String
-  phone           String?
-  address         String
-  landmark        String?
-  neighbourhood   String?
-  arrondissement  Arrondissement?
-  latitude        Float?
-  longitude       Float?
-  zoneId          String?
-  zone            Zone?            @relation(fields: [zoneId], references: [id])
-  openingHours    String?
+  subcategory      String?
+  whatsappNumber   String
+  phone            String?
+  address          String
+  landmark         String?
+  neighbourhood    String?
+  arrondissement   Arrondissement?
+  latitude         Float?
+  longitude        Float?
+  zoneId           String?
+  zone             Zone?            @relation(fields: [zoneId], references: [id])
+  openingHours     String?
   /// Open during our trading night — the only availability that matters here.
-  nightOpen       Boolean          @default(false)
-  open24h         Boolean          @default(false)
+  nightOpen        Boolean          @default(false)
+  open24h          Boolean          @default(false)
   /// Temporarily off without losing the record (kitchen closed, phone down).
-  acceptingOrders Boolean          @default(true)
-  website         String?
+  acceptingOrders  Boolean          @default(true)
+  website          String?
   /// Their Facebook / Instagram / TikTok page. Stored as a link to tap, not
   /// scraped: the platforms give no way to search for a business, and block
   /// unauthenticated reads. What it is for is judging at a glance whether a
   /// business is still posting — which is how the owner actually checks.
-  socialUrl       String?
-  socialPlatform  String?          // FACEBOOK | INSTAGRAM | TIKTOK | OTHER
+  socialUrl        String?
+  socialPlatform   String? // FACEBOOK | INSTAGRAM | TIKTOK | OTHER
   /// Shown to customers so they recognize the place. Uploaded with the
   /// merchant's permission, never taken from a third-party listing.
-  logoUrl         String?
-  photoUrl        String?
-  notes           String?
-  aliases         String[]
+  logoUrl          String?
+  photoUrl         String?
+  notes            String?
+  aliases          String[]
   /// Normalized name + aliases, for the same fuzzy search the locations use.
-  searchKey       String           @default("")
-  source          String           @default("admin") // admin | social | signup | osm
-  osmId           String?          @unique
+  searchKey        String           @default("")
+  source           String           @default("admin") // admin | social | signup | osm
+  osmId            String?          @unique
   /// When someone last saw this business posting, replying, or trading.
   lastSeenActiveAt DateTime?
-  popularityRank  Int              @default(0)
-  verified        Boolean          @default(false)
-  active          Boolean          @default(true)
+  popularityRank   Int              @default(0)
+  verified         Boolean          @default(false)
+  active           Boolean          @default(true)
   /// Stamped when someone actually reached them on the phone.
-  phoneVerifiedAt DateTime?
-  lastConfirmedAt DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  phoneVerifiedAt  DateTime?
+  lastConfirmedAt  DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   orders     Order[]
   products   MerchantProduct[]
@@ -518,6 +582,14 @@ model Order {
   /// change over time; an order delivered under a 60/40 split must still read
   /// as 60/40 in next year's accounts, so the rate that applied is stored on
   /// the order itself rather than looked up later.
+  /// The ambassador whose code was used, and what it cost on this order.
+  /// Frozen here rather than recomputed, so changing the terms later never
+  /// rewrites what somebody was already told they had earned.
+  ambassadorId            String?
+  ambassador              Ambassador? @relation(fields: [ambassadorId], references: [id])
+  discountXaf             Int?
+  ambassadorCommissionXaf Int?
+
   riderSharePercent Int?
   riderPayoutXaf    Int?
   companyEarningXaf Int?
@@ -561,12 +633,13 @@ model Order {
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
 
-  statusHistory  OrderStatusHistory[]
-  payments       Payment[]
-  deliveryProofs DeliveryProof[]
-  incidents      Incident[]
-  failures       DeliveryFailure[]
-  cases          SupportRequest[]
+  statusHistory     OrderStatusHistory[]
+  payments          Payment[]
+  deliveryProofs    DeliveryProof[]
+  incidents         Incident[]
+  failures          DeliveryFailure[]
+  cases             SupportRequest[]
+  ambassadorLedgers AmbassadorLedger[]
 
   @@index([orderStatus])
   @@index([createdAt])
@@ -853,28 +926,32 @@ model AddressResolutionLog {
 
 // Singleton row (id = 1). App always upserts/reads id = 1.
 model OperatingSettings {
-  id                 Int           @id @default(1)
-  mode               OperatingMode @default(CLOSED)
-  operatingStartHour Int           @default(20)
-  operatingEndHour   Int           @default(24)
+  id                           Int           @id @default(1)
+  mode                         OperatingMode @default(CLOSED)
+  operatingStartHour           Int           @default(20)
+  operatingEndHour             Int           @default(24)
   /// Services currently offered to customers. Anything not listed shows as
   /// "coming soon" and is rejected server-side, so the owner can introduce
   /// services sequentially from the admin Settings page without a deploy.
-  enabledServices    ServiceType[]
+  enabledServices              ServiceType[]
   /// Share of each delivery fee that belongs to the rider. The business was
   /// designed around 60% rider / 40% company; changing it here applies to
   /// future deliveries only, never to ones already completed.
-  riderSharePercent  Int           @default(60)
+  riderSharePercent            Int           @default(60)
+  /// Ambassador terms. Editable by the owner, frozen onto each order when used.
+  referralDiscountXaf          Int           @default(500)
+  ambassadorCommissionPercent  Int           @default(10)
+  ambassadorCommissionOrderCap Int           @default(10)
   /// While on, every new order is flagged as a test so pre-launch rehearsals
   /// never contaminate revenue, counts or exports. The owner turns it off on
   /// launch night.
-  testMode           Boolean       @default(false)
-  zoneNoticeEn       String?
-  zoneNoticeFr       String?
-  mtnMerchantCode    String? // customer-facing MTN MoMo merchant number
-  mtnUssdTemplate    String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
-  orangeMerchantCode String? // customer-facing Orange Money merchant number
-  orangeUssdTemplate String?
-  updatedByUserId    String?
-  updatedAt          DateTime      @updatedAt
+  testMode                     Boolean       @default(false)
+  zoneNoticeEn                 String?
+  zoneNoticeFr                 String?
+  mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
+  mtnUssdTemplate              String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
+  orangeMerchantCode           String? // customer-facing Orange Money merchant number
+  orangeUssdTemplate           String?
+  updatedByUserId              String?
+  updatedAt                    DateTime      @updatedAt
 }

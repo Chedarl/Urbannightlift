@@ -59,6 +59,10 @@ export const orderSchema = z.object({
   paymentPhone: z.string().trim().max(20).optional().or(z.literal("")),
   transactionReference: z.string().trim().max(100).optional().or(z.literal("")),
 
+  /// An ambassador's code, if the customer was sent by one. Never required —
+  /// a wrong or expired code must quietly buy nothing rather than block an order.
+  referralCode: z.string().trim().max(20).optional().or(z.literal("")),
+
   acceptedTerms: z.literal(true),
 });
 

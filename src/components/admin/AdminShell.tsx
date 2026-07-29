@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
+import { Megaphone } from "lucide-react";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { signOutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/admin/earnings", key: "earnings", icon: Wallet },
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
   { href: "/admin/merchants", key: "merchants", icon: Store },
+  { href: "/admin/ambassadors", key: "ambassadors", icon: Megaphone },
   { href: "/admin/complaints", key: "complaints", icon: AlertTriangle },
   { href: "/admin/support", key: "support", icon: Inbox },
   { href: "/admin/users", key: "users", icon: Users, ownerOnly: true },
