@@ -4,6 +4,7 @@ import { normalizePhone } from "@/lib/utils";
 import { codeProblem, normalizeCode } from "@/lib/ambassadors/rules";
 import { getCurrentCustomer } from "@/lib/auth/customer";
 import { notifyAmbassadorSignup } from "@/lib/notify/triggers";
+import { ambassadorProgrammeOn } from "@/lib/ambassadors/programme";
 
 /**
  * POST /api/ambassador-signup — somebody proposing themselves as an ambassador.
@@ -22,6 +23,10 @@ import { notifyAmbassadorSignup } from "@/lib/notify/triggers";
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
+  // Hiding the page is not closing the route.
+  if (!(await ambassadorProgrammeOn())) {
+    return NextResponse.json({ error: "The ambassador programme is not open at the moment." }, { status: 403 });
+  }
   // An account comes first, so a code is always attached to somebody we can
   // identify and pay — and so nobody has to invent a second PIN for a second
   // login. Their Urban Night Lift account IS the ambassador login.

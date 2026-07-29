@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { getAmbassadorId } from "@/lib/auth/ambassador";
 import { AmbassadorLoginForm } from "@/components/ambassador/AmbassadorLoginForm";
 import { Logo } from "@/components/shared/Logo";
+import { requireAmbassadorProgramme } from "@/lib/ambassadors/programme";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ambassador sign in — Urban Night Lift" };
 
 export default async function AmbassadorLoginPage() {
+  await requireAmbassadorProgramme();
   if (await getAmbassadorId()) redirect("/ambassador/dashboard");
 
   return (

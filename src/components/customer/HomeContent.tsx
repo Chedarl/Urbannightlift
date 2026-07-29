@@ -485,10 +485,8 @@ export function HomeContent({
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
               <li><Link href={signedIn ? "/account" : "/account/signup"} className="hover:text-mist-200">{signedIn ? (fr ? "Mon compte" : "My account") : (fr ? "Créer un compte" : "Create an account")}</Link></li>
               <li><Link href="/rider/join" className="hover:text-mist-200">{fr ? "Devenir livreur" : "Become a rider"}</Link></li>
-              <li><Link href="/ambassador/join" className="hover:text-mist-200">{fr ? "Devenir ambassadeur" : "Become an ambassador"}</Link></li>
               <li><Link href="/merchant/join" className="hover:text-mist-200">{fr ? "Inscrire mon commerce" : "List my business"}</Link></li>
               <li><Link href="/rider/login" className="hover:text-mist-200">{fr ? "Connexion livreur" : "Rider sign in"}</Link></li>
-              <li><Link href="/ambassador/login" className="hover:text-mist-200">{fr ? "Connexion ambassadeur" : "Ambassador sign in"}</Link></li>
               <li><Link href="/help#contact" className="hover:text-mist-200">Contact</Link></li>
             </ul>
           </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeCode } from "@/lib/ambassadors/rules";
+import { ambassadorProgrammeOn } from "@/lib/ambassadors/programme";
 import {
   createAmbassadorSession,
   lockState,
@@ -18,6 +19,10 @@ import {
  * account, where staying silent would just look broken to the real owner.
  */
 export async function POST(req: NextRequest) {
+  // Hiding the page is not closing the route.
+  if (!(await ambassadorProgrammeOn())) {
+    return NextResponse.json({ error: "The ambassador programme is not open at the moment." }, { status: 403 });
+  }
   const body = await req.json().catch(() => ({}));
   const code = normalizeCode(typeof body.code === "string" ? body.code : "");
   const pin = typeof body.pin === "string" ? body.pin.trim() : "";

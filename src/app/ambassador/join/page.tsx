@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AmbassadorJoinForm } from "@/components/ambassador/AmbassadorJoinForm";
 import { JoinGate } from "@/components/shared/JoinGate";
 import { DEFAULT_TERMS } from "@/lib/ambassadors/rules";
+import { requireAmbassadorProgramme } from "@/lib/ambassadors/programme";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -14,6 +15,7 @@ export const metadata = {
  * applicant is promised is the same figure the accounting actually uses.
  */
 export default async function AmbassadorJoinPage() {
+  await requireAmbassadorProgramme();
   const settings = await prisma.operatingSettings.findUnique({
     where: { id: 1 },
     select: {
