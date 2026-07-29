@@ -15,6 +15,9 @@ import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -38,7 +41,7 @@ export function ParcelForm() {
   const [uploading, setUploading] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
 
-  const { register, handleSubmit, watch, setValue } = useForm<OrderInput>({
+  const { register, handleSubmit, watch, setValue, getValues } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
     defaultValues: {
       preferredLanguage: fr ? "FR" : "EN", serviceType: "SMALL_PARCEL", fullName: fr ? "Expéditeur" : "Sender",
@@ -54,6 +57,11 @@ export function ParcelForm() {
   const size = (sd?.size as string) ?? "S";
   const proofPref = (sd?.proofPref as string) ?? "PHOTO";
   const payment = watch("paymentMethod");
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
+  });
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
   useEffect(() => {
@@ -132,6 +140,8 @@ export function ParcelForm() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-5">
+        <WelcomeBack accent={ACCENT} fr={fr} />
+
         {/* Sender */}
         <div className={card}>
           <p className={cn(section, "mb-3 flex items-center gap-1.5")}><User className="h-4 w-4" /> {fr ? "Expéditeur" : "Sender details"}</p>
@@ -163,6 +173,7 @@ export function ParcelForm() {
             </div>
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de dépôt" : "Drop-off address"}</p>
+          <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
           <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} />
         </div>
 

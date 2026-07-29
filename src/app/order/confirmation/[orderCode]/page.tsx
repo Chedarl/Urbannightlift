@@ -95,6 +95,8 @@ export default async function ConfirmationPage({
             pickupLandmark: redact(order.pickupLandmark),
             deliveryLocation: verified ? order.deliveryLocation : "",
             deliveryLandmark: redact(order.deliveryLandmark),
+            deliveryLat: verified ? order.deliveryLat : null,
+            deliveryLng: verified ? order.deliveryLng : null,
             paymentMethod: order.paymentMethod,
             specialInstructions: redact(order.specialInstructions),
             customerVisibleNotes: order.customerVisibleNotes,

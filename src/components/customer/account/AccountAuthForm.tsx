@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, ShieldCheck, UserPlus, LogIn } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { refreshProfile } from "@/lib/account/profile";
 
 const inputCls =
   "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 focus:border-violet-500 focus:outline-none";
@@ -78,6 +79,7 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
         setError(messageFor(data.error ?? "invalid", data.minutesLeft));
         return;
       }
+      refreshProfile();
       router.push("/account");
       router.refresh();
     } catch {

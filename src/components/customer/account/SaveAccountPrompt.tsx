@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserPlus, Loader2, Check, ShieldCheck } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { refreshProfile } from "@/lib/account/profile";
 
 const inputCls =
   "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 focus:border-violet-500 focus:outline-none";
@@ -58,6 +59,7 @@ export function SaveAccountPrompt({
         return;
       }
       setState("done");
+      refreshProfile();
       router.refresh();
     } catch {
       setError(fr ? "Une erreur est survenue." : "Something went wrong.");
