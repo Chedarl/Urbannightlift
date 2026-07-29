@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AmbassadorJoinForm } from "@/components/ambassador/AmbassadorJoinForm";
+import { JoinGate } from "@/components/shared/JoinGate";
 import { DEFAULT_TERMS } from "@/lib/ambassadors/rules";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +24,20 @@ export default async function AmbassadorJoinPage() {
   });
 
   return (
-    <AmbassadorJoinForm
+    <JoinGate
+      accent="#d4af37"
+      fr={false}
+      title="Become an ambassador"
+      blurb="You know people. We'd rather pay you than pay for adverts."
+    >
+      <AmbassadorJoinForm
       fr={false}
       terms={{
         discountXaf: settings?.referralDiscountXaf ?? DEFAULT_TERMS.discountXaf,
         commissionPercent: settings?.ambassadorCommissionPercent ?? DEFAULT_TERMS.commissionPercent,
         orderCap: settings?.ambassadorCommissionOrderCap ?? DEFAULT_TERMS.orderCap,
       }}
-    />
+      />
+    </JoinGate>
   );
 }

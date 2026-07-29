@@ -92,10 +92,24 @@ export async function getAmbassadorId(): Promise<string | null> {
  */
 export async function getCurrentAmbassador(): Promise<Ambassador | null> {
   const id = await getAmbassadorId();
-  if (!id) return null;
-  const ambassador = await prisma.ambassador.findUnique({ where: { id } });
+
+  // Applying now starts with an ordinary Urban Night Lift account, so that
+  // account is the login — nobody needs a second PIN for a second door. The
+  // legacy cookie above still works for anyone who signed up before that,
+  // which is why both paths exist rather than one.
+  const ambassador = id
+    ? await prisma.ambassador.findUnique({ where: { id } })
+    : await ambassadorForCurrentCustomer();
+
   if (!ambassador || ambassador.status === "SUSPENDED") return null;
   return ambassador;
+}
+
+async function ambassadorForCurrentCustomer(): Promise<Ambassador | null> {
+  const { getCustomerId } = await import("@/lib/auth/customer");
+  const customerId = await getCustomerId();
+  if (!customerId) return null;
+  return prisma.ambassador.findFirst({ where: { customerId } });
 }
 
 export interface LockState {

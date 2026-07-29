@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Bike, IdCard, Camera, MapPin, Clock, ShieldCheck, Check, Upload, Loader2 } from "lucide-react";
 import { uploadFile } from "@/lib/uploads/client";
+import { useCustomerProfile } from "@/lib/account/profile";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,6 +33,9 @@ const VEHICLES = [
 ];
 
 export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: string }[]; fr: boolean }) {
+  // They signed up before reaching this form, so their name and number are
+  // already known — the account is the identity, not anything retyped here.
+  const { profile } = useCustomerProfile();
   const [f, setF] = useState({
     fullName: "",
     whatsappNumber: "",
@@ -158,7 +162,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
         <label className={label}>{fr ? "Nom complet (comme sur la pièce d'identité)" : "Full name (as on your ID)"}</label>
         <input
           className={cn(input, "mt-1.5")}
-          value={f.fullName}
+          value={f.fullName || profile?.fullName || ""}
           onChange={(e) => set("fullName", e.target.value)}
           placeholder={fr ? "ex. Paul Mbarga" : "e.g. Paul Mbarga"}
         />
@@ -167,18 +171,12 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
       <div className="grid gap-4 sm:grid-cols-2">
         <div className={card}>
           <label className={label}>{fr ? "Numéro WhatsApp" : "WhatsApp number"}</label>
-          <div className="mt-1.5 flex">
-            <span className="flex shrink-0 items-center rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">
-              +237
-            </span>
-            <input
-              className={cn(input, "rounded-l-none")}
-              inputMode="tel"
-              value={f.whatsappNumber}
-              onChange={(e) => set("whatsappNumber", e.target.value)}
-              placeholder="6 90 12 34 56"
-            />
-          </div>
+          <p className="mt-1.5 rounded-xl border border-ink-700 bg-ink-800/60 px-3 py-2.5 text-sm text-mist-200">
+            {profile ? `+${profile.whatsappNumber}` : "—"}
+          </p>
+          <p className="mt-1 text-[11px] text-mist-500">
+            {fr ? "Le numéro de votre compte — c'est là que nous appelons." : "The number on your account — this is where we call."}
+          </p>
         </div>
         <div className={card}>
           <label className={label}>{fr ? "Quartier où vous habitez" : "Neighbourhood you live in"}</label>
@@ -369,7 +367,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
 
       <button
         type="submit"
-        disabled={busy || !accepted || f.fullName.length < 3 || f.whatsappNumber.length < 8}
+        disabled={busy || !accepted || (f.fullName || profile?.fullName || "").length < 3}
         className="rounded-2xl bg-violet-500 py-3.5 font-display text-base font-bold text-mist-100 disabled:opacity-50"
       >
         {busy ? (fr ? "Envoi…" : "Sending…") : fr ? "Envoyer ma candidature" : "Send my application"}
