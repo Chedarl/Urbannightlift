@@ -1,17 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { MessageCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
-import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";
 import { getLegalNotice } from "@/lib/i18n/legal";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import { DownloadReceiptButton } from "@/components/customer/order/DownloadReceiptButton";
 import type { ReceiptPdfData } from "@/components/customer/order/receiptPdf";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
-import { LinkButton } from "@/components/shared/Button";
 import { PaymentCard, type PaymentInfo } from "@/components/customer/PaymentCard";
 import { VerifyOrderCard } from "@/components/customer/VerifyOrderCard";
 import { QuoteCard } from "@/components/customer/QuoteCard";
@@ -29,7 +26,6 @@ import { Farewell } from "@/components/customer/journey/Farewell";
 import { buildJourney, journeyComplete, stageOpen } from "@/lib/orders/customerJourney";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
-import { cn } from "@/lib/utils";
 import type { OrderStatus, PaymentMethod, PreferredLanguage, PrescriptionRequired, ServiceType } from "@prisma/client";
 import type { CustomerStatusKey } from "@/lib/orders/statusLabels";
 
@@ -147,26 +143,6 @@ export function OrderConfirmation({
   // Ownership gates every stage's controls: an order code travels through
   // screenshots, and none of this belongs to whoever happens to be holding one.
   const open = (key: Parameters<typeof stageOpen>[1]) => verified && !isCancelled && stageOpen(stages, key);
-
-  const waMessage = buildOrderMessage({
-    orderCode: order.orderCode,
-    createdAt: order.createdAt,
-    customerName: order.customerName,
-    customerWhatsapp: order.customerWhatsapp,
-    language: fr ? "fr" : "en",
-    serviceTypeLabel: t(`services.${order.serviceType}.name`),
-    itemDescription: order.itemDescription,
-    quantity: order.quantity,
-    declaredValueXaf: order.declaredValueXaf,
-    isFragile: order.isFragile,
-    isMedicine: order.isMedicine,
-    prescriptionRequired: order.prescriptionRequired,
-    pickupLocation: order.pickupLocation,
-    pickupLandmark: order.pickupLandmark,
-    deliveryLocation: order.deliveryLocation,
-    deliveryLandmark: order.deliveryLandmark,
-    paymentMethodLabel: order.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : order.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
-  });
 
   const pdfData: OrderPdfData = {
     orderCode: order.orderCode,
@@ -415,28 +391,11 @@ export function OrderConfirmation({
         </div>
       </details>
 
-      {/* WhatsApp hand-off — the message contains the full order, so it needs ownership */}
-      <div className={cn("flex flex-col gap-3", !verified && "hidden")}>
-        <p className="text-xs text-mist-500">{t("confirmation.whatsappHint")}</p>
-        <LinkButton
-          href={buildWaLink(MAIN_WHATSAPP_NUMBER, waMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="whatsapp"
-          size="lg"
-        >
-          <MessageCircle className="h-5 w-5" /> {t("confirmation.sendWhatsApp")}
-        </LinkButton>
-        <LinkButton
-          href={buildWaLink(MAIN_WHATSAPP_NUMBER, `Order ${order.orderCode} — ${order.customerName}`)}
-          target="_blank"
-          rel="noopener noreferrer"
-          variant="secondary"
-          size="md"
-        >
-          {t("confirmation.contactWhatsApp")}
-        </LinkButton>
-      </div>
+      {/* Nothing leaves the portal. This order, its proof and any question
+          about it all live on this screen — the WhatsApp hand-off that used to
+          sit here sent the whole order out to a chat we do not administer, which
+          is exactly what a private, account-only experience is meant to avoid.
+          "Something wrong with this order?" above is the way to reach us. */}
     </div>
   );
 }

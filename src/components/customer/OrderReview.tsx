@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
 import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
-import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
-import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
@@ -82,29 +80,6 @@ export function OrderReview() {
     );
   }
 
-  const waMessage = buildOrderMessage({
-    orderCode: "(pending)",
-    createdAt: new Date(),
-    customerName: draft.fullName,
-    customerWhatsapp: draft.whatsappNumber,
-    language: draft.preferredLanguage === "FR" ? "fr" : "en",
-    serviceTypeLabel: t(`services.${draft.serviceType}.name`),
-    itemDescription: draft.itemDescription,
-    quantity: draft.quantity,
-    declaredValueXaf: draft.declaredValueXaf,
-    isFragile: draft.isFragile,
-    isMedicine: draft.isMedicine,
-    prescriptionRequired: draft.prescriptionRequired ?? null,
-    pickupLocation: draft.pickupLocation,
-    pickupLandmark: draft.pickupLandmark,
-    deliveryLocation: draft.deliveryLocation,
-    deliveryLandmark: draft.deliveryLandmark,
-    paymentMethodLabel: draft.paymentMethod === "MTN_MOMO" ? "MTN MOMO" : draft.paymentMethod === "ORANGE_MONEY" ? "ORANGE MONEY" : "CASH ON DELIVERY",
-    paymentPhone: draft.paymentPhone,
-    transactionReference: draft.transactionReference,
-    specialInstructions: draft.specialInstructions,
-  });
-
   const fr = draft.preferredLanguage === "FR";
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
@@ -128,7 +103,7 @@ export function OrderReview() {
     legalNotice: getLegalNotice(fr ? "fr" : "en"),
   };
 
-  async function submit(openWhatsApp: boolean) {
+  async function submit() {
     if (!draft) return;
     setSubmitting(true);
     setError(false);
@@ -138,13 +113,15 @@ export function OrderReview() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
+      // Account-first: if the session lapsed between filling this in and
+      // submitting, send them to sign in and back, not to a dead error.
+      if (res.status === 401) {
+        router.push(`/account/login?next=${encodeURIComponent("/order/review")}`);
+        return;
+      }
       if (!res.ok) throw new Error("submit failed");
       const { orderCode } = await res.json();
       clearDraft();
-      if (openWhatsApp) {
-        const finalMessage = waMessage.replace("(pending)", orderCode);
-        window.open(buildWaLink(MAIN_WHATSAPP_NUMBER, finalMessage), "_blank");
-      }
       router.push(`/order/confirmation/${orderCode}`);
     } catch {
       setError(true);
@@ -220,11 +197,8 @@ export function OrderReview() {
       {error && <p className="text-sm text-restricted">{t("common.error")}</p>}
 
       <div className="flex flex-col gap-3">
-        <Button size="lg" onClick={() => submit(false)} disabled={submitting}>
+        <Button size="lg" onClick={() => submit()} disabled={submitting}>
           {submitting ? t("review.submitting") : t("review.submitOrder")}
-        </Button>
-        <Button variant="whatsapp" size="lg" onClick={() => submit(true)} disabled={submitting}>
-          <MessageCircle className="h-5 w-5" /> {t("review.sendWhatsApp")}
         </Button>
         <LinkButton href="/order/new" variant="outline" size="lg">
           {t("review.editOrder")}

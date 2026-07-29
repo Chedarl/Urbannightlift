@@ -132,6 +132,15 @@ export async function PATCH(req: NextRequest) {
     data.voiceOrderingEnabled = body.voiceOrderingEnabled;
   }
 
+  // Whether ordering requires an account. On by default; lifting it opens a
+  // guest path, which is a business decision, so it is the owner's alone.
+  if (typeof body.requireAccountToOrder === "boolean") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change account-first ordering" }, { status: 403 });
+    }
+    data.requireAccountToOrder = body.requireAccountToOrder;
+  }
+
   // The revenue share decides how every franc is divided, so it is OWNER-only
   // and audited. It applies to future deliveries only — completed orders keep
   // the rate they were delivered under.

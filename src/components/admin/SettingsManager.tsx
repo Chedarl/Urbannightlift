@@ -55,6 +55,7 @@ export function SettingsManager({
     riderSharePercent: number;
     testMode: boolean;
     voiceOrderingEnabled: boolean;
+    requireAccountToOrder: boolean;
     googleSiteVerification: string;
     notificationEmail: string;
     emailOnEveryOrder: boolean;
@@ -94,6 +95,7 @@ export function SettingsManager({
         riderSharePercent: form.riderSharePercent,
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
+        requireAccountToOrder: form.requireAccountToOrder,
         googleSiteVerification: form.googleSiteVerification,
         notificationEmail: form.notificationEmail,
         emailOnEveryOrder: form.emailOnEveryOrder,
@@ -320,6 +322,32 @@ export function SettingsManager({
               {form.voiceOrderingEnabled && (
                 <span className="mt-1 block text-xs font-semibold text-gold-200">
                   On — customers see the microphone on the order form.
+                </span>
+              )}
+            </span>
+          </label>
+        </div>
+
+        {/* Account-first ordering. On by default — every client signs up before
+            ordering, so every order lives in their private portal. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.requireAccountToOrder}
+              onChange={(e) => setForm({ ...form, requireAccountToOrder: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-mist-100">Require an account to order</span>
+              <span className="block text-xs text-mist-400">
+                Customers sign up before they can place an order, so every order sits inside their own
+                private portal and builds a real customer base. On by default. Turn it off only for a
+                launch promotion where a frictionless guest path matters more than the account.
+              </span>
+              {!form.requireAccountToOrder && (
+                <span className="mt-1 block text-xs font-semibold text-caution">
+                  Off — anyone can order as a guest without signing up.
                 </span>
               )}
             </span>

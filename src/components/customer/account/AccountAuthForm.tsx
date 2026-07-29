@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, ShieldCheck, UserPlus, LogIn } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { refreshProfile } from "@/lib/account/profile";
+
+/**
+ * Where to land after signing in. Only ever an internal path — a `next` that
+ * points off-site is ignored, so the redirect can never be turned into an
+ * open-redirect out of the portal.
+ */
+function safeNext(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/account";
+}
 
 const inputCls =
   "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 focus:border-violet-500 focus:outline-none";
@@ -20,7 +30,9 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
   const router = useRouter();
+  const next = safeNext(useSearchParams().get("next"));
   const isSignup = mode === "signup";
+  const q = next === "/account" ? "" : `?next=${encodeURIComponent(next)}`;
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -80,7 +92,7 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
         return;
       }
       refreshProfile();
-      router.push("/account");
+      router.push(next);
       router.refresh();
     } catch {
       setError(fr ? "Une erreur est survenue." : "Something went wrong.");
@@ -202,26 +214,20 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
         {isSignup ? (
           <>
             {fr ? "Vous avez déjà un compte ? " : "Already have an account? "}
-            <Link href="/account/login" className="font-semibold text-violet-300 hover:text-violet-200">
+            <Link href={`/account/login${q}`} className="font-semibold text-violet-300 hover:text-violet-200">
               {fr ? "Se connecter" : "Log in"}
             </Link>
           </>
         ) : (
           <>
             {fr ? "Pas encore de compte ? " : "No account yet? "}
-            <Link href="/account/signup" className="font-semibold text-violet-300 hover:text-violet-200">
+            <Link href={`/account/signup${q}`} className="font-semibold text-violet-300 hover:text-violet-200">
               {fr ? "Créer un compte" : "Create one"}
             </Link>
           </>
         )}
       </p>
 
-      <p className="text-center text-xs text-mist-500">
-        {fr ? "Vous pouvez aussi commander sans compte." : "You can also order without an account."}{" "}
-        <Link href="/order" className="text-mist-300 underline">
-          {fr ? "Commander" : "Order now"}
-        </Link>
-      </p>
     </div>
   );
 }

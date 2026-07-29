@@ -6,6 +6,7 @@ import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import { getCustomerId } from "@/lib/auth/customer";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
 import { notifyNewOrder } from "@/lib/notify/triggers";
@@ -52,6 +53,17 @@ export async function POST(req: NextRequest) {
   const settings = await getOperatingSettings();
   if (!isServiceEnabled(settings, input.serviceType)) {
     return NextResponse.json({ error: "Service not available yet", code: "SERVICE_DISABLED" }, { status: 403 });
+  }
+
+  // Account-first ordering, enforced on the server so a hand-made request cannot
+  // slip past the gate the pages put up. When it is on, the order is tied to the
+  // signed-in account rather than matched by whatever number was typed.
+  const sessionCustomerId = await getCustomerId();
+  if (settings.requireAccountToOrder && !sessionCustomerId) {
+    return NextResponse.json(
+      { error: "Please sign in to place an order.", code: "ACCOUNT_REQUIRED" },
+      { status: 401 }
+    );
   }
 
   const whatsapp = normalizePhone(input.whatsappNumber);
@@ -114,8 +126,12 @@ export async function POST(req: NextRequest) {
   const orderCode = `UNL-${orderCodeId()}`;
 
   const order = await prisma.$transaction(async (tx) => {
-    // Reuse a repeat guest customer matched by normalized WhatsApp number.
-    let customer = await tx.customer.findFirst({ where: { whatsappNumber: whatsapp } });
+    // A signed-in account owns its orders directly. Only when account-first is
+    // off (a deliberate guest promotion) do we fall back to matching a repeat
+    // customer by their normalized WhatsApp number.
+    let customer = sessionCustomerId
+      ? await tx.customer.findUnique({ where: { id: sessionCustomerId } })
+      : await tx.customer.findFirst({ where: { whatsappNumber: whatsapp } });
     if (customer) {
       // Keep the best name we have: a form-supplied placeholder ("Customer",
       // "Sender") must not clobber a real name captured on an earlier order.
