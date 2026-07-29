@@ -2,26 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { codeProblem, normalizeCode } from "@/lib/ambassadors/rules";
-import { hashPin, pinProblem } from "@/lib/auth/ambassador";
+import { getCurrentCustomer } from "@/lib/auth/customer";
 import { notifyAmbassadorSignup } from "@/lib/notify/triggers";
 
 /**
  * POST /api/ambassador-signup — somebody proposing themselves as an ambassador.
  *
- * They choose their own code and set their own PIN here, but the row lands
- * PENDING and the code buys nothing until an owner approves it. That ordering
- * matters: every approved row is a standing commitment to pay a stranger real
- * money out of our margin, so nobody self-approves.
+ * They must have an Urban Night Lift account before they can apply, and they
+ * choose their own code here — but the row lands PENDING and the code buys
+ * nothing until an owner approves it. That ordering matters: every approved row
+ * is a standing commitment to pay somebody real money out of our margin, so
+ * nobody self-approves.
  *
- * The PIN is an Urban Night Lift login PIN and nothing else. We never ask for a
- * MoMo or Orange Money PIN, and the payout number is just a number — never a
- * secret code.
+ * Signing in uses their ordinary account. We never ask for a MoMo or Orange
+ * Money PIN, and the payout number is just a number — never a secret code.
  */
 
 /** One application per number per day. */
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
+  // An account comes first, so a code is always attached to somebody we can
+  // identify and pay — and so nobody has to invent a second PIN for a second
+  // login. Their Urban Night Lift account IS the ambassador login.
+  const customer = await getCurrentCustomer();
+  if (!customer) {
+    return NextResponse.json(
+      { error: "Create your Urban Night Lift account first, then apply." },
+      { status: 401 }
+    );
+  }
+
   const body = await req.json().catch(() => ({}));
 
   // A field no human sees and no real application fills.
@@ -29,29 +40,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
+  // Identity comes from the account, never from the form.
+  const whatsappNumber = customer.whatsappNumber;
+  const fullName =
+    typeof body.fullName === "string" && body.fullName.trim().length >= 3
+      ? body.fullName.trim()
+      : customer.fullName;
   const code = normalizeCode(typeof body.code === "string" ? body.code : "");
-  const whatsappNumber = normalizePhone(typeof body.whatsappNumber === "string" ? body.whatsappNumber : "");
-  const pin = typeof body.pin === "string" ? body.pin.trim() : "";
 
   if (fullName.length < 3) {
     return NextResponse.json({ error: "Please give your full name." }, { status: 400 });
   }
-  if (whatsappNumber.length < 11) {
-    return NextResponse.json({ error: "A WhatsApp number is needed — it is how you get paid." }, { status: 400 });
-  }
   const codeIssue = codeProblem(code);
   if (codeIssue) return NextResponse.json({ error: codeIssue }, { status: 400 });
-
-  const pinIssue = pinProblem(pin);
-  if (pinIssue) return NextResponse.json({ error: pinIssue }, { status: 400 });
 
   if (body.acceptedTerms !== true) {
     return NextResponse.json({ error: "Please accept the ambassador terms." }, { status: 400 });
   }
 
   const clash = await prisma.ambassador.findFirst({
-    where: { OR: [{ code }, { whatsappNumber }] },
+    where: { OR: [{ code }, { whatsappNumber }, { customerId: customer.id }] },
     select: { id: true, code: true, status: true, updatedAt: true, whatsappNumber: true },
   });
 
@@ -73,7 +81,7 @@ export async function POST(req: NextRequest) {
           reach: typeof body.reach === "string" ? body.reach.slice(0, 500) : null,
           payoutMethod: typeof body.payoutMethod === "string" ? body.payoutMethod : null,
           payoutNumber: typeof body.payoutNumber === "string" ? normalizePhone(body.payoutNumber) : null,
-          pinHash: await hashPin(pin),
+          customerId: customer.id,
         },
       });
       return NextResponse.json({ ok: true, updated: true });
@@ -98,7 +106,7 @@ export async function POST(req: NextRequest) {
       reach: typeof body.reach === "string" ? body.reach.slice(0, 500) : null,
       payoutMethod: typeof body.payoutMethod === "string" ? body.payoutMethod : null,
       payoutNumber: typeof body.payoutNumber === "string" ? normalizePhone(body.payoutNumber) : null,
-      pinHash: await hashPin(pin),
+      customerId: customer.id,
       // Applying is not being approved. The code buys nothing until an owner
       // says so — resolveCode() refuses anything that is not ACTIVE.
       status: "PENDING",

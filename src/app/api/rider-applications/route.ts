@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { normalizePhone } from "@/lib/utils";
+import { getCurrentCustomer } from "@/lib/auth/customer";
 import { notifyRiderApplication } from "@/lib/notify/triggers";
 
 /**
@@ -23,6 +24,17 @@ const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VEHICLES = ["MOTORCYCLE", "SCOOTER", "BICYCLE", "CAR"];
 
 export async function POST(req: NextRequest) {
+  // An account comes first. Uploading an identity document used to be something
+  // a complete stranger could do; now every application has a name, a WhatsApp
+  // number and a PIN behind it before any file arrives.
+  const customer = await getCurrentCustomer();
+  if (!customer) {
+    return NextResponse.json(
+      { error: "Create your Urban Night Lift account first, then apply." },
+      { status: 401 }
+    );
+  }
+
   const body = await req.json().catch(() => ({}));
 
   // A field no human sees and no real application fills.
@@ -30,15 +42,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
-  const whatsappNumber = normalizePhone(typeof body.whatsappNumber === "string" ? body.whatsappNumber : "");
+  // Identity comes from the account, not from the form. Someone must not be
+  // able to file an application under a name and number that are not theirs.
+  const whatsappNumber = customer.whatsappNumber;
+  const fullName =
+    typeof body.fullName === "string" && body.fullName.trim().length >= 3
+      ? body.fullName.trim()
+      : customer.fullName;
   const phone = normalizePhone(typeof body.phone === "string" ? body.phone : "") || whatsappNumber;
 
   if (fullName.length < 3) {
     return NextResponse.json({ error: "Please give your full name as it appears on your ID." }, { status: 400 });
-  }
-  if (whatsappNumber.length < 11) {
-    return NextResponse.json({ error: "A WhatsApp number is needed — it is how we reach you." }, { status: 400 });
   }
   if (body.acceptedTerms !== true) {
     return NextResponse.json({ error: "Please confirm the details you gave are true." }, { status: 400 });
@@ -49,7 +63,7 @@ export async function POST(req: NextRequest) {
   // A repeat submission updates the pending row rather than making a twin —
   // two half-filled applications for one person is worse than one complete.
   const existing = await prisma.riderApplication.findFirst({
-    where: { whatsappNumber, status: "PENDING" },
+    where: { status: "PENDING", OR: [{ customerId: customer.id }, { whatsappNumber }] },
     select: { id: true, updatedAt: true },
   });
   if (existing && existing.updatedAt.getTime() > Date.now() - COOLDOWN_MS) {
@@ -61,6 +75,7 @@ export async function POST(req: NextRequest) {
   }
 
   const data = {
+    customerId: customer.id,
     fullName,
     phone,
     whatsappNumber,

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Megaphone, Wallet, KeyRound, ShieldCheck, Check, Sparkles } from "lucide-react";
+import { Megaphone, Wallet, ShieldCheck, Check, Sparkles } from "lucide-react";
 import { formatXaf, cn } from "@/lib/utils";
 
 /**
@@ -29,13 +29,10 @@ export function AmbassadorJoinForm({
 }) {
   const router = useRouter();
   const [f, setF] = useState({
-    fullName: "",
-    whatsappNumber: "",
     code: "",
     payoutMethod: "MTN_MOMO",
     payoutNumber: "",
     reach: "",
-    pin: "",
     companyWebsite: "", // honeypot
   });
   const [accepted, setAccepted] = useState(false);
@@ -133,32 +130,6 @@ export function AmbassadorJoinForm({
       </div>
 
       <div className={card}>
-        <label className={label}>{fr ? "Votre nom complet" : "Your full name"}</label>
-        <input
-          className={cn(input, "mt-1.5")}
-          value={f.fullName}
-          onChange={(e) => set("fullName", e.target.value)}
-          placeholder={fr ? "ex. Marie Ngo" : "e.g. Marie Ngo"}
-        />
-      </div>
-
-      <div className={card}>
-        <label className={label}>{fr ? "Votre numéro WhatsApp" : "Your WhatsApp number"}</label>
-        <div className="mt-1.5 flex">
-          <span className="flex shrink-0 items-center rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">
-            🇨🇲 +237
-          </span>
-          <input
-            className={cn(input, "rounded-l-none")}
-            inputMode="tel"
-            value={f.whatsappNumber}
-            onChange={(e) => set("whatsappNumber", e.target.value)}
-            placeholder="6 90 12 34 56"
-          />
-        </div>
-      </div>
-
-      <div className={card}>
         <label className={label}>{fr ? "Le code que vous voulez" : "The code you want"}</label>
         <input
           className={cn(input, "mt-1.5 uppercase tracking-wide")}
@@ -230,27 +201,6 @@ export function AmbassadorJoinForm({
         />
       </div>
 
-      <div className={card}>
-        <label className={cn(label, "flex items-center gap-1.5")}>
-          <KeyRound className="h-3.5 w-3.5 text-gold-300" />
-          {fr ? "Choisissez un PIN" : "Choose a PIN"}
-        </label>
-        <input
-          className={cn(input, "mt-1.5")}
-          type="password"
-          inputMode="numeric"
-          maxLength={6}
-          value={f.pin}
-          onChange={(e) => set("pin", e.target.value.replace(/\D/g, ""))}
-          placeholder="••••"
-        />
-        <p className="mt-1 text-[11px] text-mist-500">
-          {fr
-            ? "4 à 6 chiffres, pour consulter vos gains. C'est un PIN Urban Night Lift, pas votre PIN MoMo."
-            : "4–6 digits, to check your earnings. This is an Urban Night Lift PIN — not your MoMo PIN."}
-        </p>
-      </div>
-
       {/* Honeypot: invisible to people, irresistible to bots. */}
       <input
         tabIndex={-1}
@@ -283,7 +233,7 @@ export function AmbassadorJoinForm({
 
       <button
         type="submit"
-        disabled={busy || !accepted || f.fullName.length < 3 || f.code.length < 4 || f.pin.length < 4}
+        disabled={busy || !accepted || f.code.length < 4}
         className="rounded-2xl bg-gold-400 py-3.5 font-display text-base font-bold text-ink-950 disabled:opacity-50"
       >
         {busy ? (fr ? "Envoi…" : "Sending…") : fr ? "Envoyer ma demande" : "Send my application"}
