@@ -140,10 +140,18 @@ export function OrderConfirmation({
     legalNotice: getLegalNotice(fr ? "fr" : "en"),
   };
 
-  // The receipt is only meaningful once the customer has said they received
-  // the goods, so it appears at exactly that moment and not before.
+  // Two receipts, one document. The first is issued when the money is
+  // confirmed and a rider goes out — it carries the delivery code the customer
+  // reads at the door. The second closes the transaction once they confirm
+  // they received the goods. A customer who has paid deserves something in
+  // writing before the rider arrives, not only afterwards.
+  const dispatched = order.riderName != null && order.otpCode != null;
+  const receiptStage: "DISPATCH" | "DELIVERED" = order.customerConfirmedAt ? "DELIVERED" : "DISPATCH";
   const receiptData: ReceiptPdfData = {
     orderCode: order.orderCode,
+    stage: receiptStage,
+    receiptNumber: `${order.orderCode.replace(/^UNL-/, "UNL-R-")}-${receiptStage === "DELIVERED" ? "F" : "D"}`,
+    otpCode: receiptStage === "DISPATCH" ? order.otpCode : null,
     locale: fr ? "fr" : "en",
     issuedAt: new Date(),
     customerName: order.customerName,
@@ -219,12 +227,17 @@ export function OrderConfirmation({
       {/* Pay for delivery (merchant code) */}
       {showPayment && <PaymentCard info={payment} />}
 
-      {/* Proof of payment and delivery, issued only once the goods are
-          confirmed received. */}
-      {verified && order.customerConfirmedAt && (
+      {/* From dispatch onwards there is something worth putting in writing:
+          first the payment receipt carrying the delivery code, then the final
+          receipt once the customer confirms they received the goods. */}
+      {verified && (order.customerConfirmedAt || dispatched) && (
         <DownloadReceiptButton
           data={receiptData}
-          label={fr ? "Télécharger le reçu" : "Download your receipt"}
+          label={
+            receiptStage === "DELIVERED"
+              ? fr ? "Télécharger le reçu final" : "Download your final receipt"
+              : fr ? "Télécharger le reçu de paiement" : "Download your payment receipt"
+          }
         />
       )}
 

@@ -27,7 +27,6 @@ function isPlaceholderName(name: string): boolean {
 }
 
 const orderCodeId = customAlphabet("ABCDEFGHJKMNPQRSTUVWXYZ23456789", 6);
-const otpId = customAlphabet("0123456789", 4);
 
 /** POST /api/orders — guest order creation (no auth). */
 export async function POST(req: NextRequest) {
@@ -111,7 +110,6 @@ export async function POST(req: NextRequest) {
     effectiveDeliveryZone?.safetyLevel === "NO_GO";
 
   const orderCode = `UNL-${orderCodeId()}`;
-  const otpCode = otpId();
 
   const order = await prisma.$transaction(async (tx) => {
     // Reuse a repeat guest customer matched by normalized WhatsApp number.
@@ -188,7 +186,9 @@ export async function POST(req: NextRequest) {
         // Pre-launch rehearsals must never contaminate revenue or counts. The
         // owner switches this off on launch night.
         isTest: settings.testMode,
-        otpCode,
+        // No delivery code yet. It is generated when a rider is actually
+        // dispatched, so it is not sitting on a page for the hours before
+        // there is anything for it to protect.
       },
     });
 

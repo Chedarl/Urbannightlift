@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
-import { hasOrderAccess } from "@/lib/orders/orderAccess";
+import {
+  ORDER_ACCESS_COOKIE,
+  grantOrderAccessValue,
+  hasOrderAccess,
+  orderAccessCookieOptions,
+} from "@/lib/orders/orderAccess";
+import { isPayOnDelivery } from "@/lib/orders/dispatchRules";
 import { recordAudit } from "@/lib/audit";
 
 /**
@@ -27,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       id: true,
       orderCode: true,
       orderStatus: true,
+      paymentMethod: true,
       quoteSentAt: true,
       quoteAcceptedAt: true,
       quotedFeeXaf: true,
@@ -45,7 +52,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ error: "This order has not been priced yet" }, { status: 409 });
   }
   if (order.quoteAcceptedAt) {
-    return NextResponse.json({ ok: true, alreadyAccepted: true });
+    return NextResponse.json({
+      ok: true,
+      alreadyAccepted: true,
+      nextStep: isPayOnDelivery(order.paymentMethod) ? "WAIT" : "PAY",
+    });
   }
 
   const now = new Date();
@@ -97,5 +108,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     reason: reason || null,
   });
 
-  return NextResponse.json({ ok: true, accepted: accept });
+  // Accepting is the moment the customer proves they own this order, so it is
+  // also the moment they earn the right to act on it. Without this they would
+  // agree to a price and then be stopped at the payment page by a verification
+  // they had just passed.
+  const res = NextResponse.json({
+    ok: true,
+    accepted: accept,
+    // Cash orders have nothing to pay up front — the rider collects at the
+    // door — so sending them to a payment screen would be a dead end.
+    nextStep: accept ? (isPayOnDelivery(order.paymentMethod) ? "WAIT" : "PAY") : "NONE",
+  });
+  if (accept) {
+    res.cookies.set(
+      ORDER_ACCESS_COOKIE,
+      grantOrderAccessValue(req.cookies.get(ORDER_ACCESS_COOKIE)?.value, order.orderCode),
+      orderAccessCookieOptions()
+    );
+  }
+  return res;
 }

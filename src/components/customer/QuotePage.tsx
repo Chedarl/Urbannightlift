@@ -34,6 +34,9 @@ export interface QuoteView {
   customerName: string;
   accepted: boolean;
   declined: boolean;
+  /** Cash on delivery has nothing to pay up front. */
+  payOnDelivery: boolean;
+  paymentDone: boolean;
   cancelled: boolean;
   /** True when this device already proved it owns the order. */
   verified: boolean;
@@ -63,7 +66,7 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
           ...(quote.verified ? {} : { whatsappNumber: phone }),
         }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as { error?: string; nextStep?: string };
       if (!res.ok) {
         setError(
           res.status === 403
@@ -73,6 +76,13 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
             : (data.error ??
               (fr ? "Une erreur s'est produite." : "Something went wrong."))
         );
+        return;
+      }
+      // Agreeing to a price is not the end of anything — the next thing that
+      // has to happen is payment, and a customer left on a "thank you" screen
+      // is an order that never moves. Go straight there.
+      if (accept && data.nextStep === "PAY") {
+        router.push(`/order/confirmation/${quote.orderCode}?pay=1`);
         return;
       }
       router.refresh();
@@ -116,6 +126,8 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
   }
 
   if (quote.accepted) {
+    // Money still owed: the only useful thing on this screen is the way to pay.
+    const owes = !quote.payOnDelivery && !quote.paymentDone;
     return (
       <Shell>
         <div className="rounded-2xl border border-safe/30 bg-safe/5 p-6 text-center">
@@ -123,18 +135,28 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
             <Check className="h-7 w-7" />
           </span>
           <h1 className="mt-4 font-display text-xl font-bold">
-            {fr ? "Prix accepté — merci" : "Price accepted — thank you"}
+            {fr ? "Prix accepté" : "Price accepted"}
           </h1>
           <p className="mt-2 text-sm text-mist-300">
-            {fr
-              ? `Nous assignons un livreur à la commande ${quote.orderCode}. Vous serez prévenu dès qu'il part.`
-              : `We're assigning a rider to order ${quote.orderCode}. You'll hear from us as soon as they set off.`}
+            {owes
+              ? fr
+                ? `Dernière étape : réglez ${formatXaf(quote.feeXaf)} et envoyez la preuve. Le livreur part dès que le paiement est confirmé.`
+                : `Last step: pay ${formatXaf(quote.feeXaf)} and send the proof. Your rider sets off as soon as it's confirmed.`
+              : quote.payOnDelivery
+                ? fr
+                  ? `Vous payez ${formatXaf(quote.feeXaf)} en espèces à la livraison. Nous assignons un livreur à la commande ${quote.orderCode}.`
+                  : `You'll pay ${formatXaf(quote.feeXaf)} in cash on delivery. We're assigning a rider to order ${quote.orderCode}.`
+                : fr
+                  ? `Paiement confirmé. Nous assignons un livreur à la commande ${quote.orderCode}.`
+                  : `Payment confirmed. We're assigning a rider to order ${quote.orderCode}.`}
           </p>
           <Link
-            href={`/order/confirmation/${quote.orderCode}`}
+            href={`/order/confirmation/${quote.orderCode}${owes ? "?pay=1" : ""}`}
             className="mt-5 inline-block rounded-xl bg-gradient-to-b from-gold-300 to-gold-500 px-5 py-2.5 text-sm font-semibold text-ink-950"
           >
-            {fr ? "Suivre ma commande" : "Track my order"}
+            {owes
+              ? fr ? "Payer maintenant" : "Pay now"
+              : fr ? "Suivre ma commande" : "Track my order"}
           </Link>
         </div>
       </Shell>
@@ -178,6 +200,15 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
             {fr
               ? "Prix fixe. Le coût de vos articles se règle séparément."
               : "Fixed price. The cost of your items is settled separately."}
+          </p>
+          <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900/60 px-3 py-2 text-[11px] text-mist-400">
+            {quote.payOnDelivery
+              ? fr
+                ? "Après acceptation, nous assignons un livreur. Vous payez en espèces à la livraison."
+                : "Once you accept, we assign a rider. You pay cash when it arrives."
+              : fr
+                ? "Après acceptation, vous passez au paiement. Le livreur part dès que le paiement est confirmé."
+                : "Once you accept, you go to payment. Your rider sets off as soon as the payment is confirmed."}
           </p>
         </div>
 
@@ -245,7 +276,9 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
                 <Check className="mr-1.5 inline h-5 w-5" />
                 {busy
                   ? fr ? "Envoi…" : "Sending…"
-                  : fr ? `Accepter ${formatXaf(quote.feeXaf)}` : `Accept ${formatXaf(quote.feeXaf)}`}
+                  : quote.payOnDelivery
+                    ? fr ? `Accepter ${formatXaf(quote.feeXaf)}` : `Accept ${formatXaf(quote.feeXaf)}`
+                    : fr ? `Accepter et payer ${formatXaf(quote.feeXaf)}` : `Accept and pay ${formatXaf(quote.feeXaf)}`}
               </button>
               <button
                 type="button"
