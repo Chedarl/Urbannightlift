@@ -32,6 +32,7 @@ export default async function SettingsPage() {
         riderSharePercent: settings.riderSharePercent,
         testMode: settings.testMode,
         voiceOrderingEnabled: settings.voiceOrderingEnabled,
+        googleSiteVerification: settings.googleSiteVerification ?? "",
       }}
     />
   );

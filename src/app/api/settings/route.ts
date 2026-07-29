@@ -94,6 +94,19 @@ export async function PATCH(req: NextRequest) {
     data.testMode = body.testMode;
   }
 
+  // Proving domain ownership to Google is squarely an owner's business.
+  if (typeof body.googleSiteVerification === "string") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change the Google verification token" }, { status: 403 });
+    }
+    // People paste the whole <meta> tag. Take the token out of it rather than
+    // failing and making them work out what went wrong.
+    const raw = body.googleSiteVerification.trim();
+    const fromTag = raw.match(/content=["']([^"']+)["']/)?.[1];
+    const fromPair = raw.match(/google-site-verification[=:]\s*([\w-]+)/)?.[1];
+    data.googleSiteVerification = (fromTag ?? fromPair ?? raw).trim() || null;
+  }
+
   // Voice ordering is built and tested but stays off until the owner decides
   // the market wants it. Turning it on changes what customers are offered, so
   // it is the owner's call, not a dispatcher's.
