@@ -253,7 +253,8 @@
     "stale": "last update {time} ago",
     "openInMaps": "Open in Google Maps",
     "secondsShort": "{n}s",
-    "minutesShort": "{n} min"
+    "minutesShort": "{n} min",
+    "etaMinutes": "~{n} min away"
   },
   "pay": {
     "title": "Pay for delivery",
@@ -586,7 +587,11 @@
         "insecure": "Live location needs a secure (https) connection. Open the app from https://urbannighlift.com.",
         "unsupported": "This device doesn’t support live location sharing.",
         "sendFailed": "Couldn’t send your location. Check that you’re signed in and online, then try again.",
-        "timeout": "Couldn’t get a GPS fix. Move to open sky and try again."
+        "timeout": "Couldn’t get a GPS fix. Move to open sky and try again.",
+        "screenOn": "Screen kept awake so tracking keeps running",
+        "keepScreenOn": "Keep your screen on — tracking stops when it sleeps",
+        "queued": "{n} positions saved — they’ll send when you’re back on the network",
+        "retrying": "Retrying…"
       }
     }
   },

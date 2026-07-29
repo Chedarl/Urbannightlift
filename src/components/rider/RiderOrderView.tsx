@@ -239,7 +239,16 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
         </p>
       )}
 
-      <RiderLocationShare orderId={order.id} />
+      {/* Sharing starts by itself once the rider has accepted the job. Riders
+          were forgetting the toggle, and an order with no positions looks to
+          the customer exactly like a service that has stopped working. */}
+      <RiderLocationShare
+        orderId={order.id}
+        autoStart={order.riderAcceptedAt != null}
+        finished={["DELIVERED", "CLOSED", "FAILED_DELIVERY", "CANCELLED_BY_UNL", "CANCELLED_BY_CUSTOMER"].includes(
+          order.orderStatus
+        )}
+      />
 
       {order.safetyNotes && (
         <div className="flex items-start gap-2 rounded-xl border border-caution/40 bg-caution/10 p-3 text-xs text-caution">

@@ -1,100 +1,220 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigation, Loader2 } from "lucide-react";
+import { Navigation, Loader2, Sun, AlertTriangle, CloudOff } from "lucide-react";
+
 import { useTranslation } from "@/lib/i18n";
+import { ScreenWakeLock, wakeLockSupported } from "@/lib/tracking/wakeLock";
+import { flushOutbox, queueFix, queuedCount, type QueuedFix } from "@/lib/tracking/outbox";
 import { cn } from "@/lib/utils";
 
-const RESUME_KEY = "unl_rider_sharing";
-
 /**
- * Rider toggles live-location sharing. Uses the browser's watchPosition and
- * pushes throttled updates (~every 9s) to the order so the customer's map shows
- * the rider moving. Free — no GPS/map SDK cost.
+ * The rider's live position, made to survive an actual delivery.
  *
- * Improvements over the first version:
- *  - Auto-resumes sharing when the rider reopens the same order (survives
- *    navigation) via localStorage, instead of silently stopping.
- *  - Surfaces real errors (permission blocked, insecure context, timeout, send
- *    failure) instead of a silent "!".
- *  - Shows a live "last sent / N updates" counter so the rider sees it working.
+ * The first version was a toggle over `watchPosition`, and riders reported that
+ * tracking "constantly fails". It did, for six reasons, none of them visible in
+ * the code itself:
+ *
+ *  1. The screen slept, the tab was backgrounded, and the browser stopped
+ *     delivering positions. This was the main one — a platform limit, not a bug.
+ *  2. The rider had to remember to press a button on every single order.
+ *  3. One GPS timeout killed the watch for the rest of the trip; nothing retried.
+ *  4. `enableHighAccuracy` with a short timeout turned a weak fix into an error
+ *     rather than a coarse position.
+ *  5. A failed send was discarded, so a dead-signal patch lost the trail.
+ *  6. Riders had no way to tell whether any of it was working.
+ *
+ * So: a screen wake lock for the length of the delivery, sharing that starts
+ * itself once the job is accepted, a watch that restarts on failure and falls
+ * back to coarse positioning, an outbox for fixes that could not be sent, and a
+ * plain readout of what is actually happening.
+ *
+ * What this still cannot do is read GPS with the screen off. Nothing on the web
+ * can; that needs a native app or a tracker on the bike.
  */
-export function RiderLocationShare({ orderId }: { orderId: string }) {
+
+const RESUME_KEY = "unl_rider_sharing";
+/** One fix roughly every 9s — a smooth line without draining the battery. */
+const SEND_INTERVAL_MS = 9_000;
+/** Stop insisting on precision after this many failures and take what we can get. */
+const COARSE_AFTER_ERRORS = 3;
+const RESTART_DELAY_MS = 4_000;
+
+export function RiderLocationShare({
+  orderId,
+  /** True once the rider has taken the job — sharing then starts on its own. */
+  autoStart = false,
+  /** True when the delivery is over, so the lock and the watch are dropped. */
+  finished = false,
+}: {
+  orderId: string;
+  autoStart?: boolean;
+  finished?: boolean;
+}) {
   const { t } = useTranslation();
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fatal, setFatal] = useState(false);
   const [sentCount, setSentCount] = useState(0);
   const [lastSentAt, setLastSentAt] = useState<number | null>(null);
+  const [queued, setQueued] = useState(0);
+  const [screenHeld, setScreenHeld] = useState(false);
   const [, setTick] = useState(0);
+
   const watchId = useRef<number | null>(null);
   const lastSent = useRef(0);
+  const errorStreak = useRef(0);
+  const restartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wakeLock = useRef<ScreenWakeLock | null>(null);
+  if (wakeLock.current === null && typeof window !== "undefined") {
+    wakeLock.current = new ScreenWakeLock();
+  }
+
+  const postFix = useCallback(
+    async (fix: QueuedFix): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/location`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: fix.lat, lng: fix.lng }),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
+    [orderId]
+  );
 
   const clearWatch = useCallback(() => {
-    if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current);
+    if (watchId.current != null && typeof navigator !== "undefined") {
+      navigator.geolocation.clearWatch(watchId.current);
+    }
     watchId.current = null;
+    if (restartTimer.current) {
+      clearTimeout(restartTimer.current);
+      restartTimer.current = null;
+    }
   }, []);
 
-  const start = useCallback(() => {
+  /** Begin (or restart) the watch. `coarse` drops the accuracy demand. */
+  const beginWatch = useCallback(
+    (coarse: boolean) => {
+      clearWatch();
+      watchId.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          errorStreak.current = 0;
+          setError(null);
+          const now = Date.now();
+          if (now - lastSent.current < SEND_INTERVAL_MS) return;
+          lastSent.current = now;
+
+          const fix: QueuedFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, at: now };
+          if (await postFix(fix)) {
+            setLastSentAt(now);
+            setSentCount((n) => n + 1);
+            // Back on the network: send whatever piled up while we were off it.
+            const flushed = await flushOutbox(postFix);
+            if (flushed > 0) setSentCount((n) => n + flushed);
+          } else {
+            // Hold it rather than lose it; the map will catch up.
+            queueFix(fix);
+          }
+          setQueued(queuedCount());
+        },
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            // Nothing to retry — only the rider can change this.
+            setError(t("rider.order.share.denied"));
+            setFatal(true);
+            clearWatch();
+            return;
+          }
+          errorStreak.current += 1;
+          setError(
+            err.code === err.TIMEOUT
+              ? t("rider.order.share.timeout")
+              : t("rider.order.share.sendFailed")
+          );
+          // A timeout between buildings is normal. Restart, and stop demanding
+          // high accuracy once it is clearly not available here.
+          restartTimer.current = setTimeout(
+            () => beginWatch(coarse || errorStreak.current >= COARSE_AFTER_ERRORS),
+            RESTART_DELAY_MS
+          );
+        },
+        coarse
+          ? { enableHighAccuracy: false, maximumAge: 30_000, timeout: 60_000 }
+          : { enableHighAccuracy: true, maximumAge: 10_000, timeout: 45_000 }
+      );
+    },
+    [clearWatch, postFix, t]
+  );
+
+  const start = useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setError(t("rider.order.share.unsupported"));
+      setFatal(true);
       return;
     }
     if (typeof window !== "undefined" && !window.isSecureContext) {
       setError(t("rider.order.share.insecure"));
+      setFatal(true);
       return;
     }
     setError(null);
-    watchId.current = navigator.geolocation.watchPosition(
-      async (pos) => {
-        const now = Date.now();
-        if (now - lastSent.current < 9000) return;
-        lastSent.current = now;
-        try {
-          const res = await fetch(`/api/orders/${orderId}/location`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          });
-          if (!res.ok) {
-            setError(t("rider.order.share.sendFailed"));
-            return;
-          }
-          setError(null);
-          setLastSentAt(now);
-          setSentCount((n) => n + 1);
-        } catch {
-          setError(t("rider.order.share.sendFailed"));
-        }
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) setError(t("rider.order.share.denied"));
-        else if (err.code === err.TIMEOUT) setError(t("rider.order.share.timeout"));
-        else setError(t("rider.order.share.sendFailed"));
-      },
-      { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 }
-    );
+    setFatal(false);
+    errorStreak.current = 0;
+    beginWatch(false);
     setSharing(true);
-    try { localStorage.setItem(RESUME_KEY, orderId); } catch {}
-  }, [orderId, t]);
+    try {
+      localStorage.setItem(RESUME_KEY, orderId);
+    } catch {
+      // Private mode: sharing still works, it just will not auto-resume.
+    }
+    // The single most important line here. Without it the screen sleeps and the
+    // browser stops handing us positions.
+    setScreenHeld((await wakeLock.current?.acquire()) ?? false);
+  }, [beginWatch, orderId, t]);
 
   const stop = useCallback(() => {
     clearWatch();
     setSharing(false);
+    setScreenHeld(false);
+    void wakeLock.current?.release();
     try {
       if (localStorage.getItem(RESUME_KEY) === orderId) localStorage.removeItem(RESUME_KEY);
-    } catch {}
+    } catch {
+      // Nothing to clean up.
+    }
   }, [clearWatch, orderId]);
 
-  // Auto-resume if the rider had sharing on for THIS order before navigating away.
+  // Start by itself when the rider has the job, or resume if they were already
+  // sharing and simply navigated away. Riders should not have to remember this.
   useEffect(() => {
-    let shouldResume = false;
-    try { shouldResume = localStorage.getItem(RESUME_KEY) === orderId; } catch {}
-    if (shouldResume) start();
-    // keep the "sent N ago" label ticking
-    const tickId = setInterval(() => setTick((n) => n + 1), 5000);
-    return () => { clearWatch(); clearInterval(tickId); };
+    if (finished) {
+      stop();
+      return;
+    }
+    let resume = false;
+    try {
+      resume = localStorage.getItem(RESUME_KEY) === orderId;
+    } catch {
+      resume = false;
+    }
+    if (resume || autoStart) void start();
+
+    const tickId = setInterval(() => {
+      setTick((n) => n + 1);
+      setScreenHeld(wakeLock.current?.held ?? false);
+    }, 5_000);
+    return () => {
+      clearWatch();
+      clearInterval(tickId);
+      void wakeLock.current?.release();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, autoStart, finished]);
 
   const agoLabel = (() => {
     if (lastSentAt == null) return "";
@@ -104,11 +224,13 @@ export function RiderLocationShare({ orderId }: { orderId: string }) {
     return t("track.minutesShort").replace("{n}", String(Math.round(sec / 60)));
   })();
 
+  if (finished) return null;
+
   return (
     <div className="flex flex-col gap-1.5">
       <button
         type="button"
-        onClick={sharing ? stop : start}
+        onClick={sharing ? stop : () => void start()}
         className={cn(
           "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors",
           sharing ? "bg-safe/15 text-safe ring-1 ring-safe/40" : "bg-violet-600 text-mist-100"
@@ -118,17 +240,53 @@ export function RiderLocationShare({ orderId }: { orderId: string }) {
         {sharing ? t("rider.order.share.sharing") : t("rider.order.share.start")}
       </button>
 
-      {sharing && !error && (
-        <p className="text-center text-[11px] text-mist-500">
-          {sentCount > 0
-            ? t("rider.order.share.sentAgo").replace("{time}", agoLabel).replace("{n}", String(sentCount))
-            : t("rider.order.share.hint")}
-        </p>
+      {sharing && (
+        <>
+          {!error && (
+            <p className="text-center text-[11px] text-mist-500">
+              {sentCount > 0
+                ? t("rider.order.share.sentAgo")
+                    .replace("{time}", agoLabel)
+                    .replace("{n}", String(sentCount))
+                : t("rider.order.share.hint")}
+            </p>
+          )}
+          {screenHeld && (
+            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-mist-500">
+              <Sun className="h-3 w-3 text-gold-300" />
+              {t("rider.order.share.screenOn")}
+            </p>
+          )}
+          {!screenHeld && wakeLockSupported() && (
+            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-gold-300">
+              <AlertTriangle className="h-3 w-3" />
+              {t("rider.order.share.keepScreenOn")}
+            </p>
+          )}
+          {queued > 0 && (
+            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-gold-300">
+              <CloudOff className="h-3 w-3" />
+              {t("rider.order.share.queued").replace("{n}", String(queued))}
+            </p>
+          )}
+        </>
       )}
+
       {!sharing && !error && (
         <p className="text-center text-[11px] text-mist-500">{t("rider.order.share.hint")}</p>
       )}
-      {error && <p className="rounded-lg bg-restricted/10 px-3 py-2 text-center text-[11px] text-restricted">{error}</p>}
+
+      {error && (
+        <p
+          className={cn(
+            "rounded-lg px-3 py-2 text-center text-[11px]",
+            fatal ? "bg-restricted/10 text-restricted" : "bg-caution/10 text-caution"
+          )}
+        >
+          {error}
+          {!fatal && ` ${t("rider.order.share.retrying")}`}
+        </p>
+      )}
     </div>
   );
 }

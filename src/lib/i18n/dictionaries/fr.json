@@ -253,7 +253,8 @@
     "stale": "dernière mise à jour il y a {time}",
     "openInMaps": "Ouvrir dans Google Maps",
     "secondsShort": "{n} s",
-    "minutesShort": "{n} min"
+    "minutesShort": "{n} min",
+    "etaMinutes": "~{n} min"
   },
   "pay": {
     "title": "Payer la livraison",
@@ -586,7 +587,11 @@
         "insecure": "Le partage de position nécessite une connexion sécurisée (https). Ouvrez l’app depuis https://urbannighlift.com.",
         "unsupported": "Cet appareil ne prend pas en charge le partage de position en direct.",
         "sendFailed": "Impossible d’envoyer votre position. Vérifiez que vous êtes connecté et en ligne, puis réessayez.",
-        "timeout": "Impossible d’obtenir un signal GPS. Placez-vous à ciel ouvert et réessayez."
+        "timeout": "Impossible d’obtenir un signal GPS. Placez-vous à ciel ouvert et réessayez.",
+        "screenOn": "Écran maintenu allumé pour que le suivi continue",
+        "keepScreenOn": "Gardez l’écran allumé — le suivi s’arrête s’il s’éteint",
+        "queued": "{n} positions enregistrées — elles partiront dès le retour du réseau",
+        "retrying": "Nouvelle tentative…"
       }
     }
   },
