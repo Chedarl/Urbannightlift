@@ -766,6 +766,15 @@ model Order {
   customerProofUrl      String?
   customerConfirmNote   String?
 
+  /// ── How it went ──
+  /// Asked once, after the goods are in hand and never before — rating a
+  /// delivery you have not received yet is asking somebody to guess. One to
+  /// five stars, an optional comment, and a timestamp so it can only be given
+  /// once. This is the only measure of whether a night actually went well.
+  ratingStars           Int?
+  ratingComment         String?
+  ratedAt               DateTime?
+
   /// ── Did the customer actually hear from us? ──
   /// Push is opt-in and many customers never enable it, so dispatch needs to
   /// see whether anyone has actually told this customer their order was
@@ -1102,6 +1111,12 @@ model OperatingSettings {
   /// Voice-note ordering. Built and tested, but OFF until the owner decides
   /// the market wants it — flipped from admin Settings, no deploy needed.
   voiceOrderingEnabled         Boolean       @default(false)
+  /// Ordering requires an account. On by default: the business decided every
+  /// client signs up before they can order, so every order lives inside their
+  /// own portal — private, and building a real customer base rather than a pile
+  /// of anonymous guest rows. The owner can lift it from Settings if a launch
+  /// promotion ever needs a frictionless guest path.
+  requireAccountToOrder        Boolean       @default(true)
   /// Google Search Console ownership token, pasted in by the owner.
   ///
   /// Kept here rather than in an environment variable because a variable on

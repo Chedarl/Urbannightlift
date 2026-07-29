@@ -32,6 +32,7 @@ export default async function SettingsPage() {
         riderSharePercent: settings.riderSharePercent,
         testMode: settings.testMode,
         voiceOrderingEnabled: settings.voiceOrderingEnabled,
+        requireAccountToOrder: settings.requireAccountToOrder,
         googleSiteVerification: settings.googleSiteVerification ?? "",
         notificationEmail: settings.notificationEmail ?? "",
         emailOnEveryOrder: settings.emailOnEveryOrder,

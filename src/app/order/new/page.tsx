@@ -1,8 +1,11 @@
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { OrderForm } from "@/components/customer/OrderForm";
 import { ServiceComingSoon } from "@/components/customer/ServiceComingSoon";
+import { OrderGate } from "@/components/customer/OrderGate";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import { getCustomerId } from "@/lib/auth/customer";
+import { serverIsFrench } from "@/lib/i18n/server";
 import type { ServiceType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +25,7 @@ export default async function OrderFormPage({
 }: {
   searchParams: Promise<{ service?: string }>;
 }) {
-  const [{ service }, settings, merchants] = await Promise.all([
+  const [{ service }, settings, merchants, customerId] = await Promise.all([
     searchParams,
     getOperatingSettings(),
     // The picker shows a shortlist; the merchant autocomplete on the food and
@@ -33,7 +36,15 @@ export default async function OrderFormPage({
       take: 100,
       select: { id: true, merchantName: true, category: true, address: true, landmark: true, openingHours: true },
     }),
+    getCustomerId(),
   ]);
+
+  // Account-first: nobody fills in an order they cannot place. The gate carries
+  // them back here the moment they are signed in.
+  if (settings.requireAccountToOrder && !customerId) {
+    const next = service ? `/order/new?service=${service}` : "/order/new";
+    return <OrderGate next={next} fr={await serverIsFrench()} />;
+  }
 
   // Guard deep links and shared URLs: a paused service must not render a form
   // the customer can fill in and then have rejected on submit.
