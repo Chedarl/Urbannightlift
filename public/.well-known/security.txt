@@ -1,0 +1,13 @@
+# If you have found a security problem with Urban Night Lift, please tell us.
+# We would much rather hear it from you than from a customer.
+
+Contact: mailto:urbannighlift@gmail.com
+Contact: tel:+237680038004
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en, fr
+Canonical: https://urbannighlift.com/.well-known/security.txt
+Policy: https://urbannighlift.com/help
+
+# We never ask anyone — customer, rider or ambassador — for their MTN Mobile
+# Money PIN, their Orange Money secret code, a one-time code, or a bank
+# password. Any message that does is not from us. Please report it.

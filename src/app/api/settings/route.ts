@@ -18,17 +18,26 @@ const ALL_SERVICES: ServiceType[] = [
 /** GET /api/settings — public: drives the customer closed/paused banner. */
 export async function GET() {
   const settings = await getOperatingSettings();
-  return NextResponse.json({
-    mode: settings.mode,
-    operatingStartHour: settings.operatingStartHour,
-    operatingEndHour: settings.operatingEndHour,
-    zoneNoticeEn: settings.zoneNoticeEn,
-    zoneNoticeFr: settings.zoneNoticeFr,
-    enabledServices: resolveEnabledServices(settings),
-    testMode: settings.testMode,
-    // Public so the order forms know whether to offer the microphone at all.
-    voiceOrderingEnabled: settings.voiceOrderingEnabled,
-  });
+  return NextResponse.json(
+    {
+      mode: settings.mode,
+      operatingStartHour: settings.operatingStartHour,
+      operatingEndHour: settings.operatingEndHour,
+      zoneNoticeEn: settings.zoneNoticeEn,
+      zoneNoticeFr: settings.zoneNoticeFr,
+      enabledServices: resolveEnabledServices(settings),
+      testMode: settings.testMode,
+      // Public so the order forms know whether to offer the microphone at all.
+      voiceOrderingEnabled: settings.voiceOrderingEnabled,
+    },
+    {
+      // These are live operational switches — whether we are open, which
+      // services are orderable, whether the microphone appears. A cached copy
+      // means the owner flips something in Settings and customers keep seeing
+      // the old answer, which is indistinguishable from the toggle being broken.
+      headers: { "Cache-Control": "no-store, must-revalidate" },
+    }
+  );
 }
 
 /**

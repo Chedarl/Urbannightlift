@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import { cookies } from "next/headers";
 import { LanguageProvider, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
+import { OrganizationSchema } from "@/components/shared/OrganizationSchema";
 import "./globals.css";
 
 const inter = Inter({
@@ -58,6 +59,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
+        <OrganizationSchema />
         <ServiceWorkerRegister />
         <LanguageProvider initialLocale={locale}>{children}</LanguageProvider>
       </body>
