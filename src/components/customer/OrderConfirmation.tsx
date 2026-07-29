@@ -22,6 +22,7 @@ import { OrderAlerts } from "@/components/customer/OrderAlerts";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
 import { OrderAgain } from "@/components/customer/order/OrderAgain";
 import { RiderIdentityCard } from "@/components/customer/RiderIdentityCard";
+import { ShareDelivery } from "@/components/customer/ShareDelivery";
 import { JourneyStage } from "@/components/customer/journey/JourneyStage";
 import { JourneyProgress } from "@/components/customer/journey/JourneyProgress";
 import { Farewell } from "@/components/customer/journey/Farewell";
@@ -332,6 +333,7 @@ export function OrderConfirmation({
                 {s.key === "ON_THE_WAY" && open("ON_THE_WAY") && (
                   <>
                     <RiderIdentityCard orderCode={order.orderCode} fr={fr} />
+                    <ShareDelivery orderCode={order.orderCode} fr={fr} />
                     {verified && dispatched && (
                       <DownloadReceiptButton
                         data={receiptData}
@@ -346,6 +348,9 @@ export function OrderConfirmation({
                 {s.key === "RECEIVED" && open("RECEIVED") && (
                   <>
                     {otpBox}
+                    {/* Still offered at the door — this is the minute somebody
+                        most wants a friend watching, not the minute before. */}
+                    <ShareDelivery orderCode={order.orderCode} fr={fr} />
                     <ConfirmReceipt
                       orderCode={order.orderCode}
                       confirmedAt={order.customerConfirmedAt}

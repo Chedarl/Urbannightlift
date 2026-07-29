@@ -301,6 +301,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "orders": "Orders",
+      "serviceDesk": "Customer service",
       "customers": "Customers",
       "zones": "Zones & pricing",
       "merchants": "Merchants",

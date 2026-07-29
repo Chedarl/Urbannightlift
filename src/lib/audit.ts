@@ -34,7 +34,7 @@ export type AuditChanges = Record<string, { from: unknown; to: unknown }>;
 export interface AuditEntry {
   actor: AuditActor | null;
   action: string;
-  entityType: "order" | "payment" | "settings" | "user" | "zone" | "merchant";
+  entityType: "order" | "payment" | "settings" | "user" | "zone" | "merchant" | "customer";
   entityId: string;
   /** Something human-readable that still means something once the entity is gone. */
   entityLabel?: string | null;
