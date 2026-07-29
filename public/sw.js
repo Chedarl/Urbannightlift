@@ -12,7 +12,10 @@
  * only static build assets are cached.
  */
 
-const VERSION = "unl-v2";
+// Bumping this drops every previously cached asset on activate. It is the
+// lever that gets a device off a bad cached build, so it must change whenever
+// the worker's behaviour does.
+const VERSION = "unl-v3";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -46,11 +49,27 @@ self.addEventListener("fetch", (event) => {
 
   // Page navigations: always network-first so order status is never stale.
   // Fall back to the offline page only when the network fails outright.
+  //
+  // Safari REFUSES a redirected response served by a service worker for a
+  // navigation — it fails the load outright with "a redirected response was
+  // used for a request whose redirect mode is not follow", and the visitor gets
+  // a blank error page rather than the site. This app redirects on plenty of
+  // navigations (/account, /admin and /rider all bounce to a login), so the
+  // redirect flag has to be stripped by rebuilding the response before it is
+  // handed back. Chrome tolerates the original; Safari does not.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(OFFLINE_URL).then((cached) => cached || Response.error())
-      )
+      fetch(request)
+        .then(async (response) => {
+          if (!response.redirected) return response;
+          const body = await response.blob();
+          return new Response(body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers,
+          });
+        })
+        .catch(() => caches.match(OFFLINE_URL).then((cached) => cached || Response.error()))
     );
     return;
   }
