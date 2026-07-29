@@ -55,6 +55,7 @@ export function SettingsManager({
     riderSharePercent: number;
     testMode: boolean;
     voiceOrderingEnabled: boolean;
+    googleSiteVerification: string;
   };
 }) {
   const { t } = useTranslation();
@@ -88,6 +89,7 @@ export function SettingsManager({
         riderSharePercent: form.riderSharePercent,
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
+        googleSiteVerification: form.googleSiteVerification,
       }),
     });
 
@@ -295,6 +297,24 @@ export function SettingsManager({
               )}
             </span>
           </label>
+        </div>
+
+        {/* Search Console ownership. Here rather than an environment variable
+            because a variable only applies to the next build, so setting one
+            and pressing Verify fails for a reason nothing on screen explains. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <p className="mb-1 text-sm font-semibold text-mist-100">Google site verification</p>
+          <p className="mb-2 text-xs text-mist-400">
+            In Search Console choose <strong>HTML tag</strong> and paste it here — the whole tag is
+            fine, we take the token out. It goes live on the next page load, no redeploy. This is
+            what lets us ask Google to review a security warning.
+          </p>
+          <input
+            className={inputCls}
+            value={form.googleSiteVerification}
+            onChange={(e) => setForm({ ...form, googleSiteVerification: e.target.value })}
+            placeholder='<meta name="google-site-verification" content="..." />'
+          />
         </div>
 
         {/* The revenue share. Changing it applies to future deliveries only —

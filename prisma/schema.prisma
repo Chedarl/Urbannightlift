@@ -1050,6 +1050,13 @@ model OperatingSettings {
   /// Voice-note ordering. Built and tested, but OFF until the owner decides
   /// the market wants it — flipped from admin Settings, no deploy needed.
   voiceOrderingEnabled         Boolean       @default(false)
+  /// Google Search Console ownership token, pasted in by the owner.
+  ///
+  /// Kept here rather than in an environment variable because a variable on
+  /// Vercel only takes effect on the next build — the owner sets it, nothing
+  /// changes, and the verification fails for a reason nothing on screen
+  /// explains. From settings it is live on the next page load.
+  googleSiteVerification       String?
   zoneNoticeEn                 String?
   zoneNoticeFr                 String?
   mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
