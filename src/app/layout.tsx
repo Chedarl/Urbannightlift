@@ -39,6 +39,21 @@ export const metadata: Metadata = {
     locale: "en",
     type: "website",
   },
+  /**
+   * Google Search Console ownership.
+   *
+   * Read from an environment variable rather than hardcoded so the owner can
+   * verify the domain themselves — set GOOGLE_SITE_VERIFICATION in Vercel to
+   * the token Search Console gives you and redeploy. Nothing renders until it
+   * is set, so an unset variable is harmless.
+   *
+   * This is the "HTML tag" method, which is far easier than the DNS TXT record
+   * for a domain on Vercel's nameservers, and it is what lets us request a
+   * Safe Browsing review.
+   */
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 export const viewport: Viewport = {
