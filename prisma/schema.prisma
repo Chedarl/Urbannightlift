@@ -308,14 +308,46 @@ model Customer {
   referredByAmbassador   Ambassador? @relation(fields: [referredByAmbassadorId], references: [id])
   referredAt             DateTime?
 
+  /// Set by staff, read by staff. Drives the customer-service screen: VIP, at
+  /// risk, do not serve. Deliberately free-form strings rather than an enum —
+  /// the vocabulary of a support desk changes faster than a migration does.
+  tags      String[] @default([])
+  /// Why somebody is on the do-not-serve list. Never shown to the customer.
+  blockedAt     DateTime?
+  blockedReason String?
+
   orders    Order[]
   payments  Payment[]
   addresses CustomerAddress[]
   cases     SupportRequest[]
+  staffNotes CustomerNote[]
 
   @@index([whatsappNumber])
   @@index([referredByAmbassadorId])
   @@index([referredByCustomerId])
+}
+
+/// What staff know about a customer that the data does not say.
+///
+/// `Customer.notes` was a single overwritable string, so the second person to
+/// write in it destroyed what the first one knew. A support desk runs on the
+/// history of what was said and who said it, so this is append-only: notes are
+/// added, never edited, and always carry an author.
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  /// The staff user who wrote it. Kept as a plain id — a note must survive the
+  /// author leaving the company.
+  authorId   String?
+  authorName String
+  body       String
+  /// GENERAL | COMPLAINT | GOODWILL | WARNING — what kind of thing this is, so
+  /// the timeline can colour it without parsing prose.
+  kind       String   @default("GENERAL")
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 /// A delivery/pickup place a customer saved for reuse at checkout.

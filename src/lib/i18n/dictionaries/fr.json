@@ -301,6 +301,7 @@
     "nav": {
       "dashboard": "Tableau de bord",
       "orders": "Commandes",
+      "serviceDesk": "Service client",
       "customers": "Clients",
       "zones": "Zones & tarifs",
       "merchants": "Marchands",

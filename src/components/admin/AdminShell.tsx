@@ -14,6 +14,7 @@ import {
   Settings,
   Wallet,
   LogOut, Bike,
+  Headphones,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
@@ -26,6 +27,7 @@ import type { UserRole } from "@prisma/client";
 const NAV = [
   { href: "/admin/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", key: "orders", icon: ClipboardList },
+  { href: "/admin/live", key: "serviceDesk", icon: Headphones },
   { href: "/admin/customers", key: "customers", icon: Users2 },
   { href: "/admin/earnings", key: "earnings", icon: Wallet },
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },
