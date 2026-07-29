@@ -480,8 +480,10 @@ async function ensureStorageBuckets() {
       name: "order-voice-notes",
       public: false,
       // What phone browsers actually produce: Chrome/Android gives webm,
-      // Safari/iOS gives mp4 or m4a.
-      types: ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/x-m4a"],
+      // Safari/iOS gives mp4 or m4a. The client strips codec parameters before
+      // uploading, because storage matches the Content-Type exactly and
+      // "audio/webm;codecs=opus" is not "audio/webm".
+      types: ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/x-m4a", "audio/aac"],
       sizeMb: 5,
     },
   ];

@@ -21,6 +21,27 @@ import { cn } from "@/lib/utils";
 
 const MAX_SECONDS = 90;
 
+/**
+ * The bare MIME type, without the codec parameters the recorder appends.
+ *
+ * Chrome on Android reports `audio/webm;codecs=opus`. Sent verbatim as a
+ * Content-Type it does not match the bucket's `audio/webm` entry and storage
+ * rejects the upload — so every recording on the most common phone here failed
+ * while the recording itself looked fine.
+ */
+function baseMime(mimeType: string): string {
+  return (mimeType.split(";")[0] || "").trim().toLowerCase() || "audio/webm";
+}
+
+/** The file extension storage and a desktop player will both understand. */
+function extensionFor(mime: string): string {
+  if (mime.includes("mp4") || mime.includes("m4a")) return "m4a";
+  if (mime.includes("ogg")) return "ogg";
+  if (mime.includes("mpeg")) return "mp3";
+  if (mime.includes("wav")) return "wav";
+  return "webm";
+}
+
 export function VoiceNoteField({
   accent,
   fr,
@@ -64,10 +85,32 @@ export function VoiceNoteField({
 
   async function start() {
     setError(null);
+
+    // Two different failures that used to look identical: a browser that
+    // cannot record at all, and one that can but was refused the microphone.
+    // Telling somebody to grant permission they were never asked for is worse
+    // than saying nothing.
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setError(fr ? "Ce téléphone ne permet pas l'enregistrement ici." : "This phone can't record here.");
+      setError(
+        window.isSecureContext === false
+          ? fr
+            ? "L'enregistrement nécessite une connexion sécurisée (https)."
+            : "Recording needs a secure (https) connection."
+          : fr
+            ? "Ce navigateur ne permet pas l'enregistrement. Remplissez le formulaire."
+            : "This browser can't record. Please fill in the form instead."
+      );
       return;
     }
+    if (typeof MediaRecorder === "undefined") {
+      setError(
+        fr
+          ? "Ce navigateur ne permet pas l'enregistrement. Remplissez le formulaire."
+          : "This browser can't record. Please fill in the form instead."
+      );
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -109,8 +152,11 @@ export function VoiceNoteField({
   async function upload(blob: Blob, mime: string) {
     setUploading(true);
     try {
-      const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
-      const file = new File([blob], `note.${ext}`, { type: mime });
+      // Storage matches the Content-Type exactly, so the codec parameters have
+      // to come off before the file is built — `file.type` is what becomes the
+      // upload header.
+      const type = baseMime(mime);
+      const file = new File([blob], `note.${extensionFor(type)}`, { type });
       const path = await uploadFile(file, "order-voice-notes", "voice");
       setSavedSeconds(seconds);
       onChange({ url: path, seconds });
