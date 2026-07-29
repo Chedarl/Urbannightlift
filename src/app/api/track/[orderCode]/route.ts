@@ -28,6 +28,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
       riderLat: true,
       riderLng: true,
       riderLocationAt: true,
+      // Who is coming. Name, face and bike only — never the rider's phone
+      // number, and never anything from their ID card.
+      assignedRider: { select: { fullName: true, photoUrl: true, vehicleRef: true, idVerifiedAt: true } },
       customerConfirmedAt: true,
       customerConfirmMethod: true,
       quoteSentAt: true,
@@ -76,5 +79,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
       order.riderLat != null && order.riderLng != null
         ? { lat: order.riderLat, lng: order.riderLng, at: order.riderLocationAt }
         : null,
+    // Knowing who is about to knock is the point of the whole feature, so it
+    // appears as soon as a rider is assigned rather than waiting for GPS.
+    riderIdentity: order.assignedRider
+      ? {
+          fullName: order.assignedRider.fullName,
+          photoUrl: order.assignedRider.photoUrl,
+          vehicleRef: order.assignedRider.vehicleRef,
+          idVerified: order.assignedRider.idVerifiedAt != null,
+        }
+      : null,
   });
 }

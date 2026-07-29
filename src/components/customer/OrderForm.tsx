@@ -26,6 +26,7 @@ import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
@@ -281,6 +282,15 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
 
       <div className="flex flex-col gap-6 px-5 pt-6">
         <WelcomeBack accent={exp.accent} fr={locale === "fr"} />
+
+        <VoiceNoteField
+          accent={exp.accent}
+          fr={locale === "fr"}
+          onChange={(n) => {
+            setValue("voiceNoteUrl", n?.url ?? "");
+            setValue("voiceNoteSeconds", n?.seconds ?? null);
+          }}
+        />
 
         {/* Merchant picker (merchant layout only) */}
         {merchantLayout && merchants.length > 0 && (

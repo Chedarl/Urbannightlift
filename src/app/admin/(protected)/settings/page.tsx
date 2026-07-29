@@ -31,6 +31,7 @@ export default async function SettingsPage() {
         orangeUssdTemplate: settings.orangeUssdTemplate ?? "",
         riderSharePercent: settings.riderSharePercent,
         testMode: settings.testMode,
+        voiceOrderingEnabled: settings.voiceOrderingEnabled,
       }}
     />
   );

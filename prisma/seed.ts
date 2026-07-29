@@ -463,16 +463,33 @@ async function ensureStorageBuckets() {
   // Prescriptions and delivery photos must never be publicly readable; a
   // merchant's logo must, because it renders on the order page and a signed URL
   // would expire mid-session.
-  const buckets: { name: string; public: boolean }[] = [
-    { name: "order-screenshots", public: false },
-    { name: "delivery-proofs", public: false },
-    { name: "merchant-logos", public: true },
+  //
+  // A rider's ID card and their face photo deliberately live in DIFFERENT
+  // buckets. The face photo is customer-facing by design — it is the night
+  // safety promise that you know who is coming. The ID card is the document
+  // that makes identity theft easy and must never be publicly readable, so the
+  // boundary is a bucket rather than a convention someone can forget.
+  const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const buckets: { name: string; public: boolean; types: string[]; sizeMb: number }[] = [
+    { name: "order-screenshots", public: false, types: IMAGE_TYPES, sizeMb: 5 },
+    { name: "delivery-proofs", public: false, types: IMAGE_TYPES, sizeMb: 5 },
+    { name: "merchant-logos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
+    { name: "rider-documents", public: false, types: [...IMAGE_TYPES, "application/pdf"], sizeMb: 10 },
+    { name: "rider-photos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
+    {
+      name: "order-voice-notes",
+      public: false,
+      // What phone browsers actually produce: Chrome/Android gives webm,
+      // Safari/iOS gives mp4 or m4a.
+      types: ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/x-m4a"],
+      sizeMb: 5,
+    },
   ];
-  for (const { name: bucket, public: isPublic } of buckets) {
+  for (const { name: bucket, public: isPublic, types, sizeMb } of buckets) {
     const { error } = await admin.storage.createBucket(bucket, {
       public: isPublic,
-      fileSizeLimit: 5 * 1024 * 1024,
-      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      fileSizeLimit: sizeMb * 1024 * 1024,
+      allowedMimeTypes: types,
     });
     if (error && !`${error.message}`.toLowerCase().includes("already exists")) throw error;
     console.log(`✓ storage bucket ${bucket}`);

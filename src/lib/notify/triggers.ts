@@ -27,6 +27,32 @@ export async function notifyMerchantSignup(merchantName: string, categoryLabel: 
   ).catch(() => 0);
 }
 
+/** Riders are the constraint on how many orders a night can take. */
+export async function notifyRiderApplication(applicationId: string, fullName: string) {
+  await sendPush(
+    { roles: DISPATCH_ROLES },
+    {
+      title: "Someone wants to ride for us",
+      body: `${fullName} — waiting for their ID to be checked.`,
+      url: "/admin/riders/applications",
+      tag: `rider-application-${applicationId}`,
+    }
+  ).catch(() => 0);
+}
+
+/** An ambassador is a standing commitment to pay somebody — approve deliberately. */
+export async function notifyAmbassadorSignup(code: string, fullName: string) {
+  await sendPush(
+    { roles: DISPATCH_ROLES },
+    {
+      title: "A new ambassador applied",
+      body: `${fullName} wants the code ${code}.`,
+      url: "/admin/ambassadors",
+      tag: `ambassador-signup-${code}`,
+    }
+  ).catch(() => 0);
+}
+
 export async function notifyNewOrder(orderCode: string, orderId: string, serviceLabel: string) {
   await sendPush(
     { roles: DISPATCH_ROLES },

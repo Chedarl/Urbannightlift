@@ -38,7 +38,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isGated = pathname.startsWith("/admin") || pathname.startsWith("/rider");
+  // `/rider/join` is a public job application and must stay reachable by
+  // people who have no account — that is the entire point of it. It lives under
+  // /rider for URL tidiness, so it has to be excluded explicitly or the staff
+  // gate below bounces every applicant to a login they cannot pass.
+  const isPublicRiderPage = pathname === "/rider/join";
+
+  const isGated = !isPublicRiderPage && (pathname.startsWith("/admin") || pathname.startsWith("/rider"));
   if (!isGated) return NextResponse.next();
 
   const { response, authUserId } = await updateSession(request);

@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// `order-screenshots` takes guest payment proof from the order form, and
-// `merchant-logos` takes a logo from a merchant filling in their own page —
-// both before anyone has signed in. `delivery-proofs` is staff-only.
-const PUBLIC_BUCKETS = ["order-screenshots", "merchant-logos"];
+// Buckets a signed-out visitor may upload into, because each is reached from a
+// form that exists precisely for people who have no account yet:
+// `order-screenshots` (guest payment proof), `merchant-logos` (a merchant
+// filling in their own page), `rider-documents` and `rider-photos` (somebody
+// applying to ride for us), `order-voice-notes` (a guest recording an order).
+//
+// Open to upload is not open to read. `rider-documents` and `order-voice-notes`
+// are PRIVATE buckets — an ID card and a recording of someone's voice and
+// address are only ever read back through the ADMIN_ROLES-gated media route.
+// Only `merchant-logos` and `rider-photos` are publicly readable, and both hold
+// something meant to be seen by customers.
+const PUBLIC_BUCKETS = [
+  "order-screenshots",
+  "merchant-logos",
+  "rider-documents",
+  "rider-photos",
+  "order-voice-notes",
+];
 const STAFF_BUCKETS = ["delivery-proofs"];
 
 /**

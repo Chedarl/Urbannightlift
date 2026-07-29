@@ -23,7 +23,18 @@ export async function GET(req: NextRequest) {
   if (slash < 1) return NextResponse.json({ error: "Bad path" }, { status: 400 });
   const bucket = full.slice(0, slash);
   const key = full.slice(slash + 1);
-  if (!["order-screenshots", "delivery-proofs"].includes(bucket) || !key) {
+  // Only private buckets belong here. `rider-documents` holds identity cards
+  // and `order-voice-notes` holds a recording of a customer's voice and
+  // address — both are staff-eyes-only and must never be reachable by URL.
+  // `rider-photos` and `merchant-logos` are deliberately absent: they are
+  // public buckets whose contents are meant to be seen.
+  const PRIVATE_BUCKETS = [
+    "order-screenshots",
+    "delivery-proofs",
+    "rider-documents",
+    "order-voice-notes",
+  ];
+  if (!PRIVATE_BUCKETS.includes(bucket) || !key) {
     return NextResponse.json({ error: "Bad path" }, { status: 400 });
   }
 

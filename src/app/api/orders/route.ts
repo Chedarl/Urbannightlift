@@ -210,6 +210,10 @@ export async function POST(req: NextRequest) {
         riskFlag: Boolean(riskFlag),
         highValueFlag,
         screenshotUrl: input.screenshotUrl || null,
+        // Dropped silently when the feature is off, so a stale client that
+        // still shows the microphone cannot smuggle a note past the switch.
+        voiceNoteUrl: settings.voiceOrderingEnabled ? input.voiceNoteUrl || null : null,
+        voiceNoteSeconds: settings.voiceOrderingEnabled ? (input.voiceNoteSeconds ?? null) : null,
         // Pre-launch rehearsals must never contaminate revenue or counts. The
         // owner switches this off on launch night.
         isTest: settings.testMode,

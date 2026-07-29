@@ -54,6 +54,7 @@ export function SettingsManager({
     orangeUssdTemplate: string;
     riderSharePercent: number;
     testMode: boolean;
+    voiceOrderingEnabled: boolean;
   };
 }) {
   const { t } = useTranslation();
@@ -84,6 +85,7 @@ export function SettingsManager({
         enabledServices: form.enabledServices,
         riderSharePercent: form.riderSharePercent,
         testMode: form.testMode,
+        voiceOrderingEnabled: form.voiceOrderingEnabled,
       }),
     });
     setSaved(true);
@@ -243,6 +245,32 @@ export function SettingsManager({
               {form.testMode && (
                 <span className="mt-1 block text-xs font-semibold text-gold-200">
                   On — orders placed right now do not count as real trading.
+                </span>
+              )}
+            </span>
+          </label>
+        </div>
+
+        {/* Voice ordering. Built and tested, held back on purpose until the
+            owner sees demand for it — turning it on needs no deploy. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.voiceOrderingEnabled}
+              onChange={(e) => setForm({ ...form, voiceOrderingEnabled: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-mist-100">Voice-note ordering</span>
+              <span className="block text-xs text-mist-400">
+                Lets a customer record what they need instead of filling in the form, and puts the
+                recording on the order for dispatch to play. Off by default — switch it on when you
+                want to try it, off again if it isn&apos;t landing. Notes are private to staff.
+              </span>
+              {form.voiceOrderingEnabled && (
+                <span className="mt-1 block text-xs font-semibold text-gold-200">
+                  On — customers see the microphone on the order form.
                 </span>
               )}
             </span>

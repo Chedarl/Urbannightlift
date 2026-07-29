@@ -185,10 +185,82 @@ model User {
   /// had no way to tell before assigning.
   isOnline   Boolean    @default(false)
   lastSeenAt DateTime?
+
+  /// Shown to the customer once this rider is dispatched. Knowing who is
+  /// coming before they knock is the whole night-safety promise, so these
+  /// three are deliberately the ONLY identity fields that ever leave staff.
+  photoUrl   String?
+  /// The bike a customer can recognise from a window: "Yamaha rouge — CE 4521 AB".
+  vehicleRef String?
+
+  /// Identity documents, held to verify a rider is who they say they are.
+  ///
+  /// These NEVER reach a customer and NEVER appear in a public URL. An ID card
+  /// is the single document that makes identity theft easy, so the images live
+  /// in a private bucket reachable only through the ADMIN_ROLES-gated media
+  /// route, and the number is never rendered outside the admin screen.
+  idCardNumber   String?
+  idCardFrontUrl String?
+  idCardBackUrl  String?
+  idVerifiedAt   DateTime?
+  idVerifiedById String?
+
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
   assignedOrders Order[] @relation("RiderOrders")
+}
+
+/// Somebody asking to ride for us.
+///
+/// Deliberately NOT a `User`: a staff row carries a login, and an applicant
+/// must never hold one before a human has looked at their ID. Approving an
+/// application is what creates the account.
+model RiderApplication {
+  id             String                 @id @default(cuid())
+  fullName       String
+  phone          String
+  whatsappNumber String
+  email          String?
+  /// Where they live, so dispatch can judge which zones they can actually serve.
+  neighbourhood  String?
+  zonePreference String[]               @default([])
+
+  /// Same privacy rule as `User` above — private bucket, staff eyes only.
+  idCardNumber   String?
+  idCardFrontUrl String?
+  idCardBackUrl  String?
+  photoUrl       String?
+
+  vehicleType     String? // MOTORCYCLE | SCOOTER | BICYCLE | CAR
+  vehicleRef      String?
+  hasLicence      Boolean                @default(false)
+  ownsVehicle     Boolean                @default(true)
+  /// Which nights they can work, in their own words — this is a night-only
+  /// operation and availability is the thing that decides whether they are useful.
+  availability    String?
+  yearsExperience Int?
+  knowsCity       String?
+  notes           String?
+
+  status        RiderApplicationStatus @default(PENDING)
+  reviewedAt    DateTime?
+  reviewedById  String?
+  reviewNote    String?
+  /// Set once approved and a staff account exists, so the trail is complete.
+  createdUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([whatsappNumber])
+}
+
+enum RiderApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Customer {
@@ -259,6 +331,20 @@ model Ambassador {
   approvedAt     DateTime?
   approvedById   String?
   notes          String?
+  /// How they plan to bring people in — the only thing worth reading before
+  /// deciding whether to approve a code.
+  reach          String?
+
+  /// Their own login, so they can watch their earnings without asking us.
+  ///
+  /// An Urban Night Lift PIN and nothing else — never a MoMo or Orange PIN.
+  /// Ambassadors are not staff and must never receive a staff account, so this
+  /// mirrors the customer PIN path rather than Supabase auth.
+  pinHash        String?
+  pinAttempts    Int              @default(0)
+  pinLockedUntil DateTime?
+  lastLoginAt    DateTime?
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -537,6 +623,11 @@ model Order {
   riderPaysAtPickup       Boolean               @default(false)
   preferredDeliveryTime   String?
   specialInstructions     String?
+  /// A voice note the customer recorded instead of filling the whole form.
+  /// Private bucket only — a voice note carries a real person's voice and
+  /// their address, so it is never public and never embedded in a shared PDF.
+  voiceNoteUrl            String?
+  voiceNoteSeconds        Int?
   estimatedDeliveryFeeXaf Int?
   finalDeliveryFeeXaf     Int?
   totalAmountDueXaf       Int?
@@ -946,6 +1037,9 @@ model OperatingSettings {
   /// never contaminate revenue, counts or exports. The owner turns it off on
   /// launch night.
   testMode                     Boolean       @default(false)
+  /// Voice-note ordering. Built and tested, but OFF until the owner decides
+  /// the market wants it — flipped from admin Settings, no deploy needed.
+  voiceOrderingEnabled         Boolean       @default(false)
   zoneNoticeEn                 String?
   zoneNoticeFr                 String?
   mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
