@@ -32,6 +32,7 @@ const KIND_LABEL: Record<string, string> = {
   RIDER_SILENT: "Rider hasn't accepted",
   NO_RIDER: "Paid, no rider assigned",
   QUOTE_UNANSWERED: "Waiting on the customer to accept the price",
+  TRACKING_LOST: "Rider out, but tracking has gone quiet",
   UNREVIEWED: "Not reviewed yet",
 };
 
@@ -42,6 +43,7 @@ const KIND_TONE: Record<string, string> = {
   RIDER_SILENT: "border-caution/40 bg-caution/10 text-gold-200",
   NO_RIDER: "border-caution/40 bg-caution/10 text-gold-200",
   QUOTE_UNANSWERED: "border-ink-600 bg-ink-900 text-mist-300",
+  TRACKING_LOST: "border-caution/40 bg-caution/10 text-gold-200",
   UNREVIEWED: "border-violet-500/40 bg-violet-500/10 text-violet-200",
 };
 

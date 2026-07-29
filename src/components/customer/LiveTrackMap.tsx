@@ -4,8 +4,18 @@ import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Navigation, ExternalLink } from "lucide-react";
+import { Navigation, ExternalLink, Clock } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { distanceKm } from "@/lib/orders/pricing";
+
+/**
+ * Average night speed for a motorbike in Yaoundé. The roads are empty after
+ * midnight but the surfaces are not, so this is well below a daytime figure —
+ * an ETA that keeps passing without the rider arriving is worse than no ETA.
+ */
+const NIGHT_SPEED_KMH = 18;
+/** Finding the door, parking, the stairs. Deliveries are never door-to-door. */
+const HANDOVER_MINUTES = 4;
 
 interface Pt { lat: number; lng: number }
 
@@ -75,6 +85,20 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
     return t("track.minutesShort").replace("{n}", String(Math.round(sec / 60)));
   })();
 
+  /**
+   * Roughly how long until it arrives, from the straight-line distance. Stated
+   * as an estimate because that is what it is — there is no routing engine
+   * behind it, and pretending otherwise would be a promise we cannot keep.
+   */
+  const etaMinutes = (() => {
+    if (!rider || !delivery || isStale) return null;
+    const km = distanceKm(rider.lat, rider.lng, delivery.lat, delivery.lng);
+    if (!Number.isFinite(km)) return null;
+    // Straight-line under-reads real roads; a little padding is honest.
+    const minutes = Math.round((km / NIGHT_SPEED_KMH) * 60 * 1.3) + HANDOVER_MINUTES;
+    return Math.max(2, Math.min(90, minutes));
+  })();
+
   // Prefer the rider's live point for the maps link; fall back to delivery/pickup.
   const focus = rider ?? delivery ?? pickup;
   const mapsHref = focus ? `https://www.google.com/maps/search/?api=1&query=${focus.lat},${focus.lng}` : null;
@@ -82,7 +106,15 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
       <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <p className="text-xs font-semibold text-mist-300">{t("track.mapTitle")}</p>
+        <p className="flex items-center gap-2 text-xs font-semibold text-mist-300">
+          {t("track.mapTitle")}
+          {etaMinutes != null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-[11px] font-semibold text-safe">
+              <Clock className="h-3 w-3" />
+              {t("track.etaMinutes").replace("{n}", String(etaMinutes))}
+            </span>
+          )}
+        </p>
         {mapsHref && (
           <a
             href={mapsHref}

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { OrderStatus } from "@prisma/client";
 import { getOperatingSettings } from "@/lib/settings";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { visibilityWhere } from "@/lib/orders/filters";
@@ -9,6 +10,21 @@ export const dynamic = "force-dynamic";
 /** How long something may sit unattended before dispatch is told about it. */
 const REVIEW_SLA_MINUTES = 10;
 const ASSIGNMENT_SLA_MINUTES = 5;
+/**
+ * A rider who is out on a job but whose position has not moved in this long has
+ * lost tracking — screen asleep, permission revoked, or a phone off. The
+ * customer is watching a frozen map, so dispatch should know before they call.
+ */
+const TRACKING_STALE_MINUTES = 15;
+
+/** Statuses where a rider is physically out with the goods. */
+const OUT_ON_THE_ROAD: OrderStatus[] = [
+  "RIDER_GOING_TO_PICKUP",
+  "RIDER_ARRIVED_AT_PICKUP",
+  "ITEM_COLLECTED",
+  "RIDER_GOING_TO_DELIVERY",
+  "RIDER_ARRIVED_AT_DELIVERY",
+];
 
 const ACTIVE_STATUSES = [
   "RIDER_ASSIGNED",
@@ -31,6 +47,7 @@ export default async function AdminDashboardPage() {
   const now = Date.now();
   const reviewCutoff = new Date(now - REVIEW_SLA_MINUTES * 60_000);
   const assignmentCutoff = new Date(now - ASSIGNMENT_SLA_MINUTES * 60_000);
+  const trackingCutoff = new Date(now - TRACKING_STALE_MINUTES * 60_000);
 
   const [tonightOrders, rider, attention] = await Promise.all([
     prisma.order.findMany({
@@ -64,6 +81,12 @@ export default async function AdminDashboardPage() {
           { orderStatus: "PAYMENT_VERIFIED", assignedRiderId: null },
           // Assigned, but the rider has not accepted.
           { assignedRiderId: { not: null }, riderAcceptedAt: null, assignedAt: { lt: assignmentCutoff } },
+          // Out on the road with tracking that has gone quiet.
+          {
+            orderStatus: { in: OUT_ON_THE_ROAD },
+            riderAcceptedAt: { not: null },
+            OR: [{ riderLocationAt: null }, { riderLocationAt: { lt: trackingCutoff } }],
+          },
         ],
       },
       orderBy: { createdAt: "asc" },
@@ -81,6 +104,7 @@ export default async function AdminDashboardPage() {
         assignedRiderId: true,
         assignedAt: true,
         riderAcceptedAt: true,
+        riderLocationAt: true,
         customer: { select: { fullName: true } },
         assignedRider: { select: { fullName: true } },
       },
@@ -95,6 +119,12 @@ export default async function AdminDashboardPage() {
     else if (o.assignedRiderId && !o.riderAcceptedAt) kind = "RIDER_SILENT";
     else if (o.orderStatus === "PAYMENT_VERIFIED" && !o.assignedRiderId) kind = "NO_RIDER";
     else if (o.quoteSentAt && !o.quoteAcceptedAt && !o.quoteDeclinedAt) kind = "QUOTE_UNANSWERED";
+    else if (
+      OUT_ON_THE_ROAD.includes(o.orderStatus) &&
+      o.riderAcceptedAt &&
+      (!o.riderLocationAt || o.riderLocationAt < trackingCutoff)
+    )
+      kind = "TRACKING_LOST";
     else kind = "UNREVIEWED";
 
     const since = kind === "RIDER_SILENT" && o.assignedAt ? o.assignedAt : o.createdAt;
