@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { hasOrderAccess } from "@/lib/orders/orderAccess";
 import { QuotePage } from "@/components/customer/QuotePage";
+import { isPayOnDelivery } from "@/lib/orders/dispatchRules";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,8 @@ export default async function QuoteLinkPage({
       quoteAcceptedAt: true,
       quoteDeclinedAt: true,
       quotedFeeXaf: true,
+      paymentMethod: true,
+      paymentStatus: true,
       finalDeliveryFeeXaf: true,
       estimatedDeliveryFeeXaf: true,
       itemDescription: true,
@@ -94,6 +97,8 @@ export default async function QuoteLinkPage({
         customerName: order.customer.fullName,
         accepted: order.quoteAcceptedAt != null,
         declined: order.quoteDeclinedAt != null,
+        payOnDelivery: isPayOnDelivery(order.paymentMethod),
+        paymentDone: order.paymentStatus === "VERIFIED",
         cancelled: cancelled && order.quoteDeclinedAt == null,
         // The cookie is set when they placed the order or verified on /track.
         // Without it they are asked for their number before answering.

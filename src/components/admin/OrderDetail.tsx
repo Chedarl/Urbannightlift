@@ -18,6 +18,8 @@ import { useTranslation } from "@/lib/i18n";
 import { buildOrderMessage } from "@/lib/whatsapp/buildOrderMessage";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
+import { OrderStageBar } from "@/components/admin/OrderStageBar";
+import { dispatchBlocker, isPayOnDelivery, stageOf } from "@/lib/orders/dispatchRules";
 import { formatDetailedStatus } from "@/lib/orders/statusLabels";
 import { formatSlot } from "@/lib/orders/timeSlots";
 import { Button } from "@/components/shared/Button";
@@ -236,6 +238,23 @@ export function OrderDetail({
   const [customerNote, setCustomerNote] = useState(order.customerVisibleNotes ?? "");
 
   const locale = order.preferredLanguage === "FR" ? "fr" : "en";
+
+  // One shared reading of where this order stands, so the stage bar, the
+  // dispatch guard and the assign button cannot disagree with each other or
+  // with the endpoint that will actually refuse the assignment.
+  const gate = {
+    orderStatus: order.orderStatus,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    quoteSentAt: order.quoteSentAt,
+    quoteAcceptedAt: order.quoteAcceptedAt,
+    quoteDeclinedAt: order.quoteDeclinedAt,
+    assignedRiderId: order.assignedRiderId,
+    customerConfirmedAt: order.customerConfirmedAt,
+  };
+  const stage = stageOf(gate);
+  const dispatchStop = dispatchBlocker(gate);
+  const payOnDelivery = isPayOnDelivery(order.paymentMethod);
 
   // Short enough to read down a phone line or paste into a chat without
   // wrapping — this address is handled by people, not just clicked.
@@ -503,8 +522,10 @@ export function OrderDetail({
 
         {/* Right column: actions */}
         <div className="flex flex-col gap-5">
+          <OrderStageBar stage={stage} blocker={dispatchStop?.message ?? null} />
+
           <section className={card}>
-            <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">{t("admin.order.actions")}</h2>
+            <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Step 1 · Review this order</h2>
             <div className="flex flex-col gap-2">
               <div className="grid grid-cols-2 gap-2">
                 <Button size="sm" onClick={() => setStatus("APPROVED")} disabled={pending}>
@@ -566,109 +587,10 @@ export function OrderDetail({
             </div>
           </section>
 
-          {/* Payment verification */}
-          <section className={card}>
-            <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
-              <Wallet className="h-4 w-4" /> {t("admin.order.payment")}
-            </h2>
-            <Row label={t("orderForm.paymentMethod")} value={order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : "Cash on delivery"} />
-            <Row label={t("orderForm.paymentPhone")} value={order.paymentPhone} />
-            <Row label={t("orderForm.transactionReference")} value={order.transactionReference} />
-            {order.paymentProofUrl && (
-              <Row
-                label="Payment proof"
-                value={
-                  <a href={`/api/media?path=${encodeURIComponent(order.paymentProofUrl)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-gold-400/15 px-2.5 py-1 text-xs font-semibold text-gold-300">
-                    <ImageIcon className="h-3.5 w-3.5" /> View screenshot
-                  </a>
-                }
-              />
-            )}
-            <div className="mt-2 flex flex-col gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => call(`/api/payments/${order.id}/verify`, { status: "SUBMITTED_UNVERIFIED" })}
-              >
-                {t("admin.order.markPaymentSubmitted")}
-              </Button>
-              <textarea
-                className={inputCls}
-                placeholder={t("admin.order.verificationNote")}
-                value={verifyNote}
-                onChange={(e) => setVerifyNote(e.target.value)}
-                rows={2}
-              />
-              <p className="text-xs text-mist-500">{t("admin.order.verificationRequired")}</p>
-              <Button
-                size="sm"
-                disabled={pending || verifyNote.trim().length < 3}
-                onClick={() => call(`/api/payments/${order.id}/verify`, { status: "VERIFIED", note: verifyNote })}
-              >
-                <Check className="h-4 w-4" /> {t("admin.order.confirmPayment")}
-              </Button>
-            </div>
-          </section>
-
-          {/* Telling the customer. Push only reaches people who opted in, so
-              the reliable channel is still a person sending WhatsApp — and the
-              order records that it happened, so nobody has to assume. */}
-          <section className={card}>
-            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Tell the customer</h2>
-            {order.customerNotifiedAt ? (
-              <p className="mb-2 text-xs text-safe">
-                Last told{" "}
-                {new Date(order.customerNotifiedAt).toLocaleString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-                {order.customerNotifiedStage ? ` (${order.customerNotifiedStage.toLowerCase()})` : ""}
-              </p>
-            ) : (
-              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
-                Nobody has told this customer anything yet.
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={buildWaLink(
-                  normalizePhone(order.customerWhatsapp),
-                  order.quotedFeeXaf != null
-                    ? `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
-                    : `Urban Night Lift — order ${order.orderCode}. We've received your order and are reviewing it now.`
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "QUOTE" })}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-ink-950"
-              >
-                <MessageCircle className="h-3.5 w-3.5" /> Send price on WhatsApp
-              </a>
-              <a
-                href={buildWaLink(
-                  normalizePhone(order.customerWhatsapp),
-                  `Urban Night Lift — order ${order.orderCode}. Your rider is on the way with your order. Have your delivery code ready.\n\nTrack it here:\n${trackLink}`
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "DISPATCH" })}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-1.5 text-xs font-semibold text-mist-200"
-              >
-                <MessageCircle className="h-3.5 w-3.5" /> Send dispatch update
-              </a>
-            </div>
-            <p className="mt-2 text-[11px] text-mist-500">
-              Sending opens WhatsApp with the message written for you and marks the order as told.
-            </p>
-          </section>
-
           {/* Quote — accept the order at a price and send it to the customer.
               No rider may be assigned until they have agreed to it. */}
           <section className={card}>
-            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Accept &amp; price this order</h2>
+            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Step 2 · Price it and send the quote</h2>
             <p className="mb-3 text-xs text-mist-500">
               Saving the price does not message the customer on its own — send them the link that
               appears below. No rider can be assigned until they accept it.
@@ -742,15 +664,119 @@ export function OrderDetail({
             </div>
           </section>
 
+          {/* Telling the customer. Push only reaches people who opted in, so
+              the reliable channel is still a person sending WhatsApp — and the
+              order records that it happened, so nobody has to assume. */}
+          <section className={card}>
+            <h2 className="mb-1 font-display text-sm font-semibold text-gold-300">Messages to the customer</h2>
+            {order.customerNotifiedAt ? (
+              <p className="mb-2 text-xs text-safe">
+                Last told{" "}
+                {new Date(order.customerNotifiedAt).toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {order.customerNotifiedStage ? ` (${order.customerNotifiedStage.toLowerCase()})` : ""}
+              </p>
+            ) : (
+              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+                Nobody has told this customer anything yet.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={buildWaLink(
+                  normalizePhone(order.customerWhatsapp),
+                  order.quotedFeeXaf != null
+                    ? `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
+                    : `Urban Night Lift — order ${order.orderCode}. We've received your order and are reviewing it now.`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "QUOTE" })}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-ink-950"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> Send price on WhatsApp
+              </a>
+              <a
+                href={buildWaLink(
+                  normalizePhone(order.customerWhatsapp),
+                  `Urban Night Lift — order ${order.orderCode}. Your rider is on the way with your order. Have your delivery code ready.\n\nTrack it here:\n${trackLink}`
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => call(`/api/orders/${order.id}/notified`, { stage: "DISPATCH" })}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-3 py-1.5 text-xs font-semibold text-mist-200"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> Send dispatch update
+              </a>
+            </div>
+            <p className="mt-2 text-[11px] text-mist-500">
+              Sending opens WhatsApp with the message written for you and marks the order as told.
+            </p>
+          </section>
+
+          {/* Payment verification */}
+          <section className={card}>
+            <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
+              <Wallet className="h-4 w-4" /> Step 3 · Payment
+            </h2>
+            <p className="mb-3 text-xs text-mist-500">
+              {payOnDelivery
+                ? "Cash on delivery — the rider collects at the door, so dispatch is not held up waiting for this."
+                : "Verifying the payment is what releases the order for a rider. Check the proof before confirming."}
+            </p>
+            <Row label={t("orderForm.paymentMethod")} value={order.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : order.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : "Cash on delivery"} />
+            <Row label={t("orderForm.paymentPhone")} value={order.paymentPhone} />
+            <Row label={t("orderForm.transactionReference")} value={order.transactionReference} />
+            {order.paymentProofUrl && (
+              <Row
+                label="Payment proof"
+                value={
+                  <a href={`/api/media?path=${encodeURIComponent(order.paymentProofUrl)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-gold-400/15 px-2.5 py-1 text-xs font-semibold text-gold-300">
+                    <ImageIcon className="h-3.5 w-3.5" /> View screenshot
+                  </a>
+                }
+              />
+            )}
+            <div className="mt-2 flex flex-col gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pending}
+                onClick={() => call(`/api/payments/${order.id}/verify`, { status: "SUBMITTED_UNVERIFIED" })}
+              >
+                {t("admin.order.markPaymentSubmitted")}
+              </Button>
+              <textarea
+                className={inputCls}
+                placeholder={t("admin.order.verificationNote")}
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                rows={2}
+              />
+              <p className="text-xs text-mist-500">{t("admin.order.verificationRequired")}</p>
+              <Button
+                size="sm"
+                disabled={pending || verifyNote.trim().length < 3}
+                onClick={() => call(`/api/payments/${order.id}/verify`, { status: "VERIFIED", note: verifyNote })}
+              >
+                <Check className="h-4 w-4" /> {t("admin.order.confirmPayment")}
+              </Button>
+            </div>
+          </section>
+
           {/* Rider + fees */}
           <section className={card}>
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
-              <UserCheck className="h-4 w-4" /> {t("admin.order.assignRider")}
+              <UserCheck className="h-4 w-4" /> Step 4 · Dispatch a rider
             </h2>
-            {!order.quoteAcceptedAt && (
+            {dispatchStop && (
               <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
-                The customer hasn&apos;t accepted the price yet. Assignment is blocked until they do — otherwise we pay
-                for a trip that can be refused at the door.
+                {dispatchStop.message} A rider is only committed once the price is agreed and the money is
+                in — otherwise we pay for a trip that can be refused at the door.
               </p>
             )}
             {order.assignedRiderId && (
@@ -786,7 +812,7 @@ export function OrderDetail({
               </p>
               <Button
                 size="sm"
-                disabled={pending}
+                disabled={pending || (dispatchStop != null && riderId !== "")}
                 onClick={async () => {
                   const ok = await patch({ assignedRiderId: riderId });
                   if (ok && riderId && order.orderStatus !== "RIDER_ASSIGNED") {
@@ -796,6 +822,18 @@ export function OrderDetail({
               >
                 {t("admin.order.assignRider")}
               </Button>
+              {payOnDelivery && !dispatchStop && (
+                <p className="text-[11px] text-mist-500">
+                  Cash on delivery — there is nothing to verify before dispatch. The rider collects
+                  {order.quotedFeeXaf != null ? ` ${formatXaf(order.quotedFeeXaf)}` : ""} at the door and it
+                  settles through their cash balance.
+                </p>
+              )}
+              {order.otpCode == null && !dispatchStop && (
+                <p className="text-[11px] text-mist-500">
+                  Assigning generates the customer&apos;s delivery code and sends it to them with their receipt.
+                </p>
+              )}
 
               <label className="mt-2 block text-xs text-mist-500">{t("admin.order.updateFee")}</label>
               <div className="flex gap-2">
@@ -879,7 +917,7 @@ export function OrderDetail({
           {/* Earnings — the 60/40 split, frozen at delivery. */}
           {order.riderPayoutXaf != null && order.companyEarningXaf != null && (
             <section className={card}>
-              <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Earnings on this delivery</h2>
+              <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">Step 6 · Earnings on this delivery</h2>
               <div className="flex flex-col gap-1.5 text-sm">
                 <Row label={`Rider (${order.riderSharePercent ?? 60}%)`} value={formatXaf(order.riderPayoutXaf)} />
                 <Row label={`Urban Night Lift (${100 - (order.riderSharePercent ?? 60)}%)`} value={formatXaf(order.companyEarningXaf)} />

@@ -25,6 +25,16 @@ import { createElement as h } from "react";
 
 export interface ReceiptPdfData {
   orderCode: string;
+  /**
+   * DISPATCH is issued when the money is confirmed and a rider goes out; it
+   * carries the delivery code. DELIVERED is issued once the customer has
+   * confirmed receipt and closes the transaction.
+   */
+  stage: "DISPATCH" | "DELIVERED";
+  /** Sequential-looking document reference, for the customer's own records. */
+  receiptNumber: string;
+  /** Shown only on the dispatch receipt, and only to the order's owner. */
+  otpCode: string | null;
   locale: "en" | "fr";
   issuedAt: Date;
   customerName: string;
@@ -105,6 +115,17 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
       marginBottom: 14,
     },
     codeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+    otpBox: {
+      marginTop: 4,
+      backgroundColor: "#f6f2ff",
+      borderWidth: 1,
+      borderColor: "#c8b6ff",
+      borderRadius: 6,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    otp: { fontSize: 30, fontFamily: "Helvetica-Bold", letterSpacing: 10, color: "#4a1d78" },
+    issuer: { marginTop: 10, fontSize: 7.5, color: "#6b6480", textAlign: "center" },
     code: { fontSize: 20, fontFamily: "Helvetica-Bold", letterSpacing: 2, color: "#4a1d78" },
     sectionTitle: {
       fontSize: 11,
@@ -179,18 +200,25 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         h(Text, { style: s.sub }, dt(data.issuedAt))
       ),
 
-      h(Text, { style: s.docTitle }, fr ? "Reçu de livraison" : "Delivery receipt"),
+      h(
+        Text,
+        { style: s.docTitle },
+        data.stage === "DISPATCH"
+          ? fr ? "Reçu de paiement" : "Payment receipt"
+          : fr ? "Reçu de livraison" : "Delivery receipt"
+      ),
       h(
         Text,
         { style: data.paymentVerified ? s.paidBadge : s.dueBadge },
-        data.paymentVerified
-          ? fr
-            ? "PAYÉ ET LIVRÉ"
-            : "PAID AND DELIVERED"
-          : fr
-            ? "LIVRÉ — PAIEMENT NON ENCORE VÉRIFIÉ"
-            : "DELIVERED — PAYMENT NOT YET VERIFIED"
+        data.stage === "DISPATCH"
+          ? data.paymentVerified
+            ? fr ? "PAYÉ — LIVREUR EN ROUTE" : "PAID — RIDER DISPATCHED"
+            : fr ? "À RÉGLER À LA LIVRAISON" : "PAYABLE ON DELIVERY"
+          : data.paymentVerified
+            ? fr ? "PAYÉ ET LIVRÉ" : "PAID AND DELIVERED"
+            : fr ? "LIVRÉ — PAIEMENT NON ENCORE VÉRIFIÉ" : "DELIVERED — PAYMENT NOT YET VERIFIED"
       ),
+      h(Text, { style: s.sub }, `${fr ? "Reçu n°" : "Receipt no."} ${data.receiptNumber}`),
 
       h(
         View,
@@ -225,24 +253,57 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
       ...(data.paymentReference ? [Row(fr ? "Référence" : "Reference", data.paymentReference)] : []),
       ...(data.paymentVerifiedAt ? [Row(fr ? "Vérifié le" : "Verified on", dt(data.paymentVerifiedAt))] : []),
 
-      h(Text, { style: s.sectionTitle }, fr ? "Preuve de livraison" : "Proof of delivery"),
-      Row(fr ? "Livré le" : "Delivered on", dt(data.deliveredAt)),
-      Row(fr ? "Confirmé par" : "Confirmed by", methodLabel(data.confirmMethod, fr)),
-      Row(fr ? "Confirmé le" : "Confirmed on", dt(data.confirmedAt)),
+      ...(data.stage === "DISPATCH"
+        ? data.otpCode
+          ? [
+              h(Text, { style: s.sectionTitle }, fr ? "Votre code de livraison" : "Your delivery code"),
+              h(View, { style: s.otpBox }, h(Text, { style: s.otp }, data.otpCode)),
+              h(
+                Text,
+                { style: s.note },
+                fr
+                  ? "Donnez ce code au livreur uniquement lorsque vous avez reçu votre commande. Il confirme la remise et clôture la livraison."
+                  : "Give this code to the rider only once you have your order in hand. It confirms the handover and closes the delivery."
+              ),
+            ]
+          : []
+        : [
+            h(Text, { style: s.sectionTitle }, fr ? "Preuve de livraison" : "Proof of delivery"),
+            Row(fr ? "Livré le" : "Delivered on", dt(data.deliveredAt)),
+            Row(fr ? "Confirmé par" : "Confirmed by", methodLabel(data.confirmMethod, fr)),
+            Row(fr ? "Confirmé le" : "Confirmed on", dt(data.confirmedAt)),
+          ]),
 
       h(
         View,
         { style: s.totalBox },
-        h(Text, { style: s.totalLabel }, fr ? "Montant payé" : "Amount paid"),
+        h(
+          Text,
+          { style: s.totalLabel },
+          data.stage === "DISPATCH" && !data.paymentVerified
+            ? fr ? "Montant à payer" : "Amount due"
+            : fr ? "Montant payé" : "Amount paid"
+        ),
         h(Text, { style: s.total }, data.amountPaidXaf != null ? xaf(data.amountPaidXaf) : "—")
       ),
 
       h(
         Text,
         { style: s.note },
+        data.stage === "DISPATCH"
+          ? fr
+            ? "Ce reçu atteste du paiement des frais de livraison ci-dessus et de l'envoi d'un livreur. Le reçu final vous sera délivré après confirmation de la réception."
+            : "This receipt confirms payment of the delivery fee above and that a rider has been dispatched. A final receipt is issued once you confirm you have received your order."
+          : fr
+            ? "Ce reçu atteste que le service ci-dessus a été rendu et confirmé par le client. Toute signature ou photo de remise est conservée de manière privée avec la commande et n'est pas jointe à ce document."
+            : "This receipt certifies that the service above was provided and confirmed by the customer. Any signature or handover photo is held privately against the order and is not attached to this document."
+      ),
+      h(
+        Text,
+        { style: s.issuer },
         fr
-          ? "Ce reçu atteste que le service ci-dessus a été rendu et confirmé par le client. Toute signature ou photo de remise est conservée de manière privée avec la commande et n'est pas jointe à ce document."
-          : "This receipt certifies that the service above was provided and confirmed by the customer. Any signature or handover photo is held privately against the order and is not attached to this document."
+          ? "Émis par Urban Night Lift · urbannighlift.com · urbannighlift@gmail.com · +237 680 038 004"
+          : "Issued by Urban Night Lift · urbannighlift.com · urbannighlift@gmail.com · +237 680 038 004"
       ),
       h(Text, { style: s.legal }, data.legalNotice)
     )

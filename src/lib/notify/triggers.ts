@@ -86,6 +86,32 @@ export async function notifyRiderAnswered(
 }
 
 /** The customer's order was priced and is waiting on them to agree. */
+/**
+ * The rider is on the way, and here is the code to let them hand over.
+ *
+ * Sent at dispatch rather than at ordering because that is when the code comes
+ * into existence and when it starts to matter — a code delivered hours early is
+ * a code the customer has to go and find again.
+ */
+export async function notifyCustomerDispatched(
+  customerId: string,
+  orderCode: string,
+  riderName: string,
+  otpCode: string | null
+) {
+  await sendPush(
+    { customerIds: [customerId] },
+    {
+      title: `Your rider is on the way — ${orderCode}`,
+      body: otpCode
+        ? `${riderName} is coming. Give them the code ${otpCode} when they arrive.`
+        : `${riderName} is on the way with your order.`,
+      url: `/order/confirmation/${orderCode}`,
+      tag: `order-dispatched-${orderCode}`,
+    }
+  ).catch(() => 0);
+}
+
 export async function notifyQuoteSent(customerId: string, orderCode: string, feeXaf: number) {
   await sendPush(
     { customerIds: [customerId] },
