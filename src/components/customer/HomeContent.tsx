@@ -497,6 +497,8 @@ export function HomeContent({
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
               {/* Help centre, FAQs and Safety were three labels for one
                   destination. FAQs now lands on the FAQ itself. */}
+              <li><Link href="/privacy" className="hover:text-mist-200">{fr ? "Confidentialité" : "Privacy"}</Link></li>
+              <li><Link href="/terms" className="hover:text-mist-200">{fr ? "Conditions" : "Terms"}</Link></li>
               <li><Link href="/help" className="hover:text-mist-200">{fr ? "Centre d'aide" : "Help center"}</Link></li>
               <li><Link href="/help#faq" className="hover:text-mist-200">{fr ? "Questions fréquentes" : "FAQs"}</Link></li>
               <li><Link href="/track" className="hover:text-mist-200">{fr ? "Suivre une commande" : "Track an order"}</Link></li>

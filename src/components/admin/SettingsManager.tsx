@@ -61,6 +61,7 @@ export function SettingsManager({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState(settings);
 
   const openHoursLength = nightLength(form.operatingStartHour, form.operatingEndHour);
@@ -70,7 +71,8 @@ export function SettingsManager({
 
   async function save() {
     setSaved(false);
-    await fetch("/api/settings", {
+    setSaveError(null);
+    const res = await fetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -88,6 +90,24 @@ export function SettingsManager({
         voiceOrderingEnabled: form.voiceOrderingEnabled,
       }),
     });
+
+    // This used to say "Saved" no matter what came back. A rejected change —
+    // most often a privileged field a non-owner may not touch — looked exactly
+    // like a successful one, so a setting could be toggled, confirmed, and
+    // silently not change. Nothing is claimed now unless the server agreed.
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setSaveError(
+        data.error ??
+          (res.status === 401
+            ? "Your session has expired. Sign in again."
+            : "That didn't save. Nothing was changed.")
+      );
+      // Put the form back to what the server actually holds.
+      startTransition(() => router.refresh());
+      return;
+    }
+
     setSaved(true);
     startTransition(() => router.refresh());
   }
@@ -309,6 +329,12 @@ export function SettingsManager({
           </Button>
           {saved && <span className="text-sm text-safe">{t("admin.settings.saved")}</span>}
         </div>
+
+        {saveError && (
+          <p className="mt-3 rounded-xl border border-restricted/40 bg-restricted/10 px-3 py-2 text-sm text-restricted">
+            {saveError}
+          </p>
+        )}
       </section>
     </div>
   );
