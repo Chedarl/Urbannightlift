@@ -14,6 +14,9 @@ import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -45,7 +48,7 @@ export function GroceryForm() {
   const [missing, setMissing] = useState<string[]>([]);
   const [cat, setCat] = useState("produce");
 
-  const { register, handleSubmit, watch, setValue, control } = useForm<OrderInput>({
+  const { register, handleSubmit, watch, setValue, getValues, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
     defaultValues: {
       preferredLanguage: fr ? "FR" : "EN", serviceType: "GROCERY_PICKUP", fullName: fr ? "Client" : "Customer",
@@ -62,6 +65,11 @@ export function GroceryForm() {
   const shoppingType = (sd?.shoppingType as string) ?? "SUPERMARKET";
   const bagSize = (sd?.bagSize as string) ?? "MEDIUM";
   const payment = watch("paymentMethod");
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
+  });
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
   useEffect(() => {
@@ -131,6 +139,8 @@ export function GroceryForm() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-5">
+        <WelcomeBack accent={ACCENT} fr={fr} />
+
         {/* Store name + location */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
@@ -219,6 +229,7 @@ export function GroceryForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-green-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
+            <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
             <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
           </div>
           <div className={card}>

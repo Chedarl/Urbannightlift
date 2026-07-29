@@ -21,6 +21,7 @@ import { LiveTimeline } from "@/components/customer/LiveTimeline";
 import { ConfirmReceipt } from "@/components/customer/ConfirmReceipt";
 import { OrderAlerts } from "@/components/customer/OrderAlerts";
 import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountPrompt";
+import { OrderAgain } from "@/components/customer/order/OrderAgain";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import { cn } from "@/lib/utils";
@@ -59,6 +60,9 @@ export interface ConfirmationOrder {
   pickupLandmark: string | null;
   deliveryLocation: string;
   deliveryLandmark: string | null;
+  /** Only sent to a verified owner — where someone lives is not public. */
+  deliveryLat: number | null;
+  deliveryLng: number | null;
   paymentMethod: PaymentMethod;
   specialInstructions: string | null;
   customerVisibleNotes: string | null;
@@ -256,6 +260,33 @@ export function OrderConfirmation({
       {/* A complaint belongs on the order it is about — no code to type, no
           context to re-explain, and our reply comes back here. */}
       {verified && <OrderCaseThread orderCode={order.orderCode} fr={fr} />}
+
+      {/* Once the goods are in hand there is a next order to think about, and
+          an address worth remembering. Anything earlier would be rushing them. */}
+      {verified && order.customerConfirmedAt && (
+        <OrderAgain
+          fr={fr}
+          order={{
+            serviceType: order.serviceType,
+            itemDescription: order.itemDescription,
+            serviceDetails: order.serviceDetails,
+            quantity: order.quantity,
+            declaredValueXaf: order.declaredValueXaf,
+            pickupLocation: order.pickupLocation,
+            pickupLandmark: order.pickupLandmark,
+            deliveryLocation: order.deliveryLocation,
+            deliveryLandmark: order.deliveryLandmark,
+            deliveryLat: order.deliveryLat,
+            deliveryLng: order.deliveryLng,
+            paymentMethod: order.paymentMethod,
+            estimatedFeeXaf: order.estimatedFeeXaf,
+            isMedicine: order.isMedicine,
+            customerName: order.customerName,
+            customerWhatsapp: order.customerWhatsapp,
+            preferredLanguage: order.preferredLanguage === "FR" ? "FR" : "EN",
+          }}
+        />
+      )}
 
       {verified && offerAccount && (
         <SaveAccountPrompt fullName={order.customerName} whatsappNumber={order.customerWhatsapp} />

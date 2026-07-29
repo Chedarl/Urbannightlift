@@ -17,6 +17,9 @@ import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { ProductSuggestions } from "@/components/customer/order/fields/ProductSuggestions";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -49,7 +52,7 @@ export function FoodForm() {
   const [merchant, setMerchant] = useState<MerchantResult | null>(null);
   const [vendorName, setVendorName] = useState("");
 
-  const { register, handleSubmit, watch, setValue, control } = useForm<OrderInput>({
+  const { register, handleSubmit, watch, setValue, getValues, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
     defaultValues: {
       preferredLanguage: fr ? "FR" : "EN",
@@ -74,6 +77,11 @@ export function FoodForm() {
   const prefs = (sd?.preferences as string[] | undefined) ?? [];
   const source = (sd?.source as string) ?? "RESTAURANT";
   const payment = watch("paymentMethod");
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
+  });
 
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
@@ -221,6 +229,8 @@ export function FoodForm() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-5">
+        <WelcomeBack accent={ACCENT} fr={fr} />
+
         {/* Restaurant name + location */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
@@ -355,6 +365,7 @@ export function FoodForm() {
           <div className={card}>
             <p className={label}><MapPin className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
             <p className="mb-2 text-[11px] text-mist-500">{fr ? "Où livrer le repas ?" : "Where should we deliver the food?"}</p>
+            <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
             <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
           </div>
           <div className={card}>

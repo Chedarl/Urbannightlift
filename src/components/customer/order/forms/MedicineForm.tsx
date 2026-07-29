@@ -16,6 +16,9 @@ import { LocationField } from "@/components/customer/location/LocationField";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -43,7 +46,7 @@ export function MedicineForm() {
   const [merchant, setMerchant] = useState<MerchantResult | null>(null);
   const [pharmacyName, setPharmacyName] = useState("");
 
-  const { register, handleSubmit, watch, setValue, control } = useForm<OrderInput>({
+  const { register, handleSubmit, watch, setValue, getValues, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
     defaultValues: {
       preferredLanguage: fr ? "FR" : "EN",
@@ -67,6 +70,11 @@ export function MedicineForm() {
   const meds = (sd?.meds as Med[] | undefined) ?? [];
   const payment = watch("paymentMethod");
   const prescriptionType = (sd?.prescriptionType as string) ?? "PRESCRIPTION";
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
+  });
 
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
@@ -210,6 +218,8 @@ export function MedicineForm() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-5">
+        <WelcomeBack accent={ACCENT} fr={fr} />
+
         {/* Confidentiality banner */}
         <div className="flex items-start gap-3 rounded-2xl border border-teal-500/30 bg-teal-950/30 p-4">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-300" />
@@ -349,6 +359,7 @@ export function MedicineForm() {
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
+            <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
             <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
           </div>
         </div>

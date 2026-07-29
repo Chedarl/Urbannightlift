@@ -15,6 +15,9 @@ import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -37,7 +40,7 @@ export function ErrandForm() {
   const [uploading, setUploading] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
 
-  const { register, handleSubmit, watch, setValue } = useForm<OrderInput>({
+  const { register, handleSubmit, watch, setValue, getValues } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
     defaultValues: {
       preferredLanguage: fr ? "FR" : "EN", serviceType: "CUSTOM_ERRAND", fullName: fr ? "Client" : "Customer", pickupLocation: fr ? "Selon la demande" : "As described in request", deliveryLocation: fr ? "Selon la demande" : "As described in request",
@@ -49,6 +52,11 @@ export function ErrandForm() {
 
   const sd = watch("serviceDetails") as Record<string, unknown> | undefined;
   const payment = watch("paymentMethod");
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
+  });
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
 
@@ -127,6 +135,8 @@ export function ErrandForm() {
       </div>
 
       <div className="flex flex-col gap-4 px-4 pt-5">
+        <WelcomeBack accent={ACCENT} fr={fr} />
+
         {/* Info banner */}
         <div className="flex items-start gap-3 rounded-2xl border border-violet-500/30 bg-violet-950/30 p-4">
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-violet-300" />
@@ -155,6 +165,7 @@ export function ErrandForm() {
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><Flag className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Destination" : "Destination / drop-off"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
+            <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
             <LocationField label={fr ? "Destination" : "Destination"} accent={ACCENT} value={deliverySel} onChange={(l) => applySel("delivery", l)} />
           </div>
         </div>

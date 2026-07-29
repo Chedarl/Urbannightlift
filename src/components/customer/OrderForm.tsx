@@ -25,6 +25,9 @@ import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
+import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
 import { FoodForm } from "@/components/customer/order/forms/FoodForm";
 import { GroceryForm } from "@/components/customer/order/forms/GroceryForm";
@@ -95,7 +98,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   }, []);
 
   const {
-    register, handleSubmit, watch, setValue, control,
+    register, handleSubmit, watch, setValue, getValues, control,
     formState: { errors },
   } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -112,6 +115,11 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
       paymentMethod: "MTN_MOMO",
       acceptedTerms: undefined as unknown as true,
     },
+  });
+
+  useProfilePrefill((p) => {
+    if (isRealName(p.fullName)) setValue("fullName", p.fullName);
+    if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
 
   const isMedicine = watch("isMedicine");
@@ -272,6 +280,8 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
       </div>
 
       <div className="flex flex-col gap-6 px-5 pt-6">
+        <WelcomeBack accent={exp.accent} fr={locale === "fr"} />
+
         {/* Merchant picker (merchant layout only) */}
         {merchantLayout && merchants.length > 0 && (
           <section>
@@ -345,6 +355,12 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
             />
           )}
 
+          <SavedAddresses
+            current={deliverySel}
+            onPick={applyDelivery}
+            accent={exp.accent}
+            fr={locale === "fr"}
+          />
           <LocationField
             label={LOC_LABELS[service].delivery[locale === "fr" ? "fr" : "en"]}
             accent={exp.accent}

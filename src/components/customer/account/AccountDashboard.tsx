@@ -9,6 +9,7 @@ import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";
 import { formatXaf } from "@/lib/utils";
 import type { OrderStatus, PreferredLanguage, ServiceType } from "@prisma/client";
+import { refreshProfile } from "@/lib/account/profile";
 
 export interface AccountOrderRow {
   orderCode: string;
@@ -50,6 +51,7 @@ export function AccountDashboard({
 
   async function logout() {
     await fetch("/api/account/logout", { method: "POST" });
+    refreshProfile();
     startTransition(() => {
       router.push("/");
       router.refresh();

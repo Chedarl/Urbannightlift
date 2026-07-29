@@ -15,6 +15,7 @@ import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { Reveal } from "@/components/shared/motion";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
+import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { cn } from "@/lib/utils";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -299,6 +300,11 @@ export function HomeContent({
           </h2>
           <p className="mt-1 text-sm text-mist-400">{fr ? "Choisissez un service pour commencer" : "Choose a service to get started"}</p>
         </Reveal>
+        {/* A returning customer's shortcut past the whole grid. Renders
+            nothing at all for guests. */}
+        <div className="mt-5">
+          <WelcomeBack accent="#9645de" fr={fr} />
+        </div>
         {/* Only orderable services get a full card. The paused ones used to
             take three of the eight slots on the page's main conversion
             surface — a third of it advertising things nobody can buy. */}
