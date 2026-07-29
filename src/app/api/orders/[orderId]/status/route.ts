@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { isTransitionAllowed } from "@/lib/orders/statusMachine";
 import { splitEarnings } from "@/lib/orders/earnings";
+import { accrueCommission } from "@/lib/ambassadors/accrual";
 import { getOperatingSettings } from "@/lib/settings";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
 import { recordDeliveredPlace } from "@/lib/locations/verifiedPlaces";
@@ -103,6 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       longitude: order.riderLng,
       fixedAt: order.riderLocationAt,
     });
+    // The ambassador is paid for work that finished, not for a code being
+    // typed. Idempotent, and it never fails the delivery it is recording.
+    await accrueCommission(orderId);
   }
 
   // A failed delivery is a rider trip already paid for. Record why, so the
