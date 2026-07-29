@@ -94,6 +94,21 @@ export async function PATCH(req: NextRequest) {
     data.testMode = body.testMode;
   }
 
+  // Where operational email goes decides who receives customer names, numbers
+  // and addresses, so it is the owner's call — not a dispatcher's.
+  if (typeof body.notificationEmail === "string") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change the notification email" }, { status: 403 });
+    }
+    const addr = body.notificationEmail.trim();
+    if (addr && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+      return NextResponse.json({ error: "That doesn't look like an email address" }, { status: 400 });
+    }
+    data.notificationEmail = addr || null;
+  }
+  if (typeof body.emailOnEveryOrder === "boolean") data.emailOnEveryOrder = body.emailOnEveryOrder;
+  if (typeof body.dailySummaryEmail === "boolean") data.dailySummaryEmail = body.dailySummaryEmail;
+
   // Proving domain ownership to Google is squarely an owner's business.
   if (typeof body.googleSiteVerification === "string") {
     if (user.role !== "OWNER") {
