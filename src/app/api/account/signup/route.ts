@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { createCustomerSession, hashPin, isValidPin } from "@/lib/auth/customer";
 import { emailNewCustomer } from "@/lib/email/operations";
+import { bindReferral, ensureReferralCode } from "@/lib/referrals/accrual";
 
 /**
  * POST /api/account/signup — create (or claim) a customer account.
@@ -48,8 +49,21 @@ export async function POST(req: NextRequest) {
       });
 
   await createCustomerSession(customer.id);
+
+  // Everybody gets a code the moment they have an account — a referral scheme
+  // nobody can find is a referral scheme nobody uses. Never let this break
+  // signing up.
+  const referralCode = await ensureReferralCode(customer.id).catch(() => null);
+
+  // If somebody sent them, record who — once, permanently.
+  let friendDiscountXaf = 0;
+  if (typeof body.referralCode === "string" && body.referralCode.trim()) {
+    const bound = await bindReferral(customer.id, body.referralCode).catch(() => null);
+    friendDiscountXaf = bound?.friendDiscountXaf ?? 0;
+  }
+
   await emailNewCustomer(customer.id).catch(() => {});
 
   const claimedOrders = existing ? await prisma.order.count({ where: { customerId: customer.id } }) : 0;
-  return NextResponse.json({ ok: true, claimedOrders }, { status: 201 });
+  return NextResponse.json({ ok: true, claimedOrders, referralCode, friendDiscountXaf }, { status: 201 });
 }

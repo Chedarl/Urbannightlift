@@ -4,6 +4,7 @@ import { getCurrentAmbassador } from "@/lib/auth/ambassador";
 import { ambassadorBalance } from "@/lib/ambassadors/accrual";
 import { AmbassadorDashboard } from "@/components/ambassador/AmbassadorDashboard";
 import { DEFAULT_TERMS } from "@/lib/ambassadors/rules";
+import { requireAmbassadorProgramme } from "@/lib/ambassadors/programme";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your ambassador earnings — Urban Night Lift" };
@@ -17,6 +18,7 @@ export const metadata = { title: "Your ambassador earnings — Urban Night Lift"
  * disagrees with what lands on their phone.
  */
 export default async function AmbassadorDashboardPage() {
+  await requireAmbassadorProgramme();
   const ambassador = await getCurrentAmbassador();
   if (!ambassador) redirect("/ambassador/login");
 

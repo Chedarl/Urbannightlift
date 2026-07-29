@@ -288,6 +288,20 @@ model Customer {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  /// Their own referral code, handed out on every account.
+  ///
+  /// Deliberately separate from the ambassador programme. A referral is a
+  /// customer telling a friend: one-to-one, no obligations, no relationship
+  /// with us. A brand ambassador represents us in public under a brief. The two
+  /// were tangled together and are now different things entirely.
+  referralCode        String?  @unique
+  /// Who referred THIS customer, set once on their first order with a code and
+  /// never moved — a referral belongs to whoever actually made it.
+  referredByCustomerId String?
+  referredByCodeAt     DateTime?
+  /// Unspent reward, in XAF, applied to their next order automatically.
+  referralCreditXaf    Int      @default(0)
+
   /// Set on their first order with a code, and never moved afterwards — a
   /// customer belongs to whoever actually brought them.
   referredByAmbassadorId String?
@@ -301,6 +315,7 @@ model Customer {
 
   @@index([whatsappNumber])
   @@index([referredByAmbassadorId])
+  @@index([referredByCustomerId])
 }
 
 /// A delivery/pickup place a customer saved for reuse at checkout.
@@ -1074,6 +1089,20 @@ model OperatingSettings {
   /// One email after the night closes: what came in, what was earned, what is
   /// still waiting. This is the one worth keeping forever.
   dailySummaryEmail            Boolean       @default(true)
+
+  /// Customer referrals. The person whose code was used earns this share of
+  /// the delivery fee as credit against their next order.
+  referralRewardPercent        Int           @default(5)
+  /// What the friend using the code gets off their first order. Zero by
+  /// default: the owner asked for the reward to go to the code's owner. A
+  /// scheme that gives the friend nothing gives them no reason to type the
+  /// code, so this is here to be raised without a deploy when that shows.
+  referralFriendDiscountXaf    Int           @default(0)
+  referralsEnabled             Boolean       @default(true)
+
+  /// The brand ambassador programme, off until it is rebuilt as marketing
+  /// rather than a second referral scheme wearing its name.
+  ambassadorProgrammeEnabled   Boolean       @default(false)
   zoneNoticeEn                 String?
   zoneNoticeFr                 String?
   mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
@@ -1110,4 +1139,29 @@ model NotificationLog {
   @@index([event, createdAt])
   @@index([entityType, entityId])
   @@index([status])
+}
+
+
+/// Every referral reward earned and every one spent.
+///
+/// Append-only, like the ambassador ledger and the audit log. A customer's
+/// credit balance is the sum of these rows rather than a number that can drift
+/// away from the events behind it — which matters the first time somebody asks
+/// why their discount was smaller than they expected.
+model ReferralLedger {
+  id         String   @id @default(cuid())
+  /// Whose balance this moves.
+  customerId String
+  /// The order that caused it: the friend's delivery when earning, the
+  /// customer's own order when spending.
+  orderId    String?
+  amountXaf  Int
+  type       String // EARNED | SPENT | ADJUSTMENT
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+  /// One reward per order per type — the guard against paying twice if a
+  /// delivery is marked complete more than once.
+  @@unique([orderId, type])
 }

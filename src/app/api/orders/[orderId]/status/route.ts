@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { isTransitionAllowed } from "@/lib/orders/statusMachine";
 import { splitEarnings } from "@/lib/orders/earnings";
 import { accrueCommission } from "@/lib/ambassadors/accrual";
+import { awardReferral } from "@/lib/referrals/accrual";
 import { getOperatingSettings } from "@/lib/settings";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
 import { recordDeliveredPlace } from "@/lib/locations/verifiedPlaces";
@@ -113,6 +114,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     // The ambassador is paid for work that finished, not for a code being
     // typed. Idempotent, and it never fails the delivery it is recording.
     await accrueCommission(orderId);
+    // Whoever referred this customer earns their share of the same delivery.
+    // Idempotent, so marking an order delivered twice cannot pay twice, and a
+    // failure here must never undo a completed delivery.
+    await awardReferral(orderId).catch(() => 0);
   }
 
   // A failed delivery is a rider trip already paid for. Record why, so the
