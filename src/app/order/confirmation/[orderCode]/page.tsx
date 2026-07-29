@@ -77,6 +77,7 @@ export default async function ConfirmationPage({
             customerWhatsapp: verified
               ? order.customer.whatsappNumber
               : maskPhone(order.customer.whatsappNumber),
+            totalOrders: order.customer.totalOrders,
             preferredLanguage: order.customer.preferredLanguage,
             serviceType: order.serviceType,
             itemDescription: verified ? order.itemDescription : "",
