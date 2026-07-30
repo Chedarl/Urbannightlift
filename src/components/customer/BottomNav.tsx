@@ -6,18 +6,33 @@ import { Home, ShoppingBag, MapPin, LifeBuoy, UserCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-export function BottomNav() {
+export function BottomNav({ signedIn = false }: { signedIn?: boolean }) {
   const { t } = useTranslation();
   const pathname = usePathname();
 
+  // One home. For a signed-in customer, "Home" is the portal (`/account`), not
+  // the public marketing page — so the app has a single home and Home never
+  // ejects them to the brochure. "Account" then points at the profile/settings
+  // hub, so Home and Account are distinct destinations rather than two tabs to
+  // the same place. Guests keep the marketing page as Home and are sent to
+  // sign-in from the Account tab.
+  const homeHref = signedIn ? "/account" : "/";
+  const homeActive = signedIn ? pathname === "/account" : pathname === "/";
+  const accountHref = signedIn ? "/account/profile" : "/account/login";
+  // The portal dashboard is `/account` (Home); everything under `/account/…`
+  // is account management (profile, orders, addresses, settings, referrals).
+  const accountActive = signedIn
+    ? pathname.startsWith("/account/")
+    : pathname.startsWith("/account/login") || pathname.startsWith("/account/signup");
+
   const items = [
-    { href: "/", icon: Home, label: t("nav.home"), active: pathname === "/" },
+    { href: homeHref, icon: Home, label: t("nav.home"), active: homeActive },
     { href: "/order", icon: ShoppingBag, label: t("nav.order"), active: pathname.startsWith("/order") },
     { href: "/track", icon: MapPin, label: t("nav.track"), active: pathname === "/track" },
     // Help now stays in-app rather than handing off to WhatsApp — the same
     // move as removing the WhatsApp hand-off from the order screen.
     { href: "/help", icon: LifeBuoy, label: t("nav.help"), active: pathname.startsWith("/help") },
-    { href: "/account", icon: UserCircle, label: t("nav.account"), active: pathname.startsWith("/account") },
+    { href: accountHref, icon: UserCircle, label: t("nav.account"), active: accountActive },
   ];
 
   return (

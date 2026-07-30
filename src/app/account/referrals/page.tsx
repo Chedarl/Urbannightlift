@@ -33,7 +33,7 @@ export default async function ReferralsPage() {
           friendsBrought={balance.friendsBrought}
         />
       </main>
-      <BottomNav />
+      <BottomNav signedIn />
     </>
   );
 }

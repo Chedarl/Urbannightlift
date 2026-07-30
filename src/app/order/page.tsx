@@ -21,7 +21,7 @@ export default async function ServiceSelectionPage() {
       <main>
         <ServiceSelection enabledServices={resolveEnabledServices(settings)} />
       </main>
-      <BottomNav />
+      <BottomNav signedIn={Boolean(customerId)} />
     </>
   );
 }

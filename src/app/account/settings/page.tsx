@@ -14,7 +14,7 @@ export default async function AccountSettingsPage() {
       <main>
         <SettingsScreen />
       </main>
-      <BottomNav />
+      <BottomNav signedIn />
     </>
   );
 }
