@@ -27,7 +27,13 @@ export async function POST(req: NextRequest) {
   const endpoint = typeof body.endpoint === "string" ? body.endpoint : "";
   const p256dh = typeof body.p256dh === "string" ? body.p256dh : "";
   const auth = typeof body.auth === "string" ? body.auth : "";
-  if (!endpoint || !p256dh || !auth) {
+  // The store-installed apps register an FCM/APNs device token instead of a
+  // browser Push subscription: a Capacitor WebView has no Push API, so there are
+  // no encryption keys to send. Same table, same ownership checks below.
+  const platform = body.platform === "fcm" || body.platform === "apns" ? body.platform : "web";
+  const isNative = platform !== "web";
+
+  if (!endpoint || (!isNative && (!p256dh || !auth))) {
     return NextResponse.json({ error: "Invalid subscription" }, { status: 400 });
   }
 
@@ -60,8 +66,9 @@ export async function POST(req: NextRequest) {
 
   const userAgent = req.headers.get("user-agent")?.slice(0, 300) ?? null;
   const data = {
-    p256dh,
-    auth,
+    platform,
+    p256dh: isNative ? null : p256dh,
+    auth: isNative ? null : auth,
     userAgent,
     // A device is one or the other, never both — re-registering after a role
     // change must not leave a stale owner attached.

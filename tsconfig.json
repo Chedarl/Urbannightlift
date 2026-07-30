@@ -23,5 +23,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "//exclude": "mobile/ holds the Android and iOS apps. They are separate npm workspaces with their own dependencies and their own tsconfig, and the website must stay buildable without the mobile toolchain installed.",
+  "exclude": ["node_modules", "mobile"]
 }

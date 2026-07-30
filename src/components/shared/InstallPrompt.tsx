@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, Share, MoreVertical, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { isStandalone } from "@/lib/native/bridge";
 import { cn } from "@/lib/utils";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -42,10 +43,10 @@ export function InstallPrompt({
   useEffect(() => {
     setMounted(true);
 
-    const standalone =
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (standalone) setInstalled(true);
+    // Covers the installed PWA and the native shell alike. Telling somebody who
+    // downloaded the app from the Play Store to add the app to their home screen
+    // is the kind of small wrongness that makes a product feel unattended.
+    if (isStandalone()) setInstalled(true);
 
     const ua = window.navigator.userAgent;
     if (/iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && "ontouchend" in document)) {
