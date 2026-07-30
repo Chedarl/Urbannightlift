@@ -7,6 +7,7 @@ import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { EnableNotifications } from "@/components/shared/EnableNotifications";
+import { PageGuide } from "@/components/shared/PageGuide";
 import { RiderNav } from "@/components/rider/RiderNav";
 import { ReportProblem } from "@/components/rider/ReportProblem";
 import { signOutAction } from "@/lib/auth/actions";
@@ -23,6 +24,7 @@ export function RiderShell({ userName, children }: { userName: string; children:
           <span className="truncate text-sm font-medium text-mist-300">{userName}</span>
           <div className="flex items-center gap-2">
             <LanguageSwitch />
+            <PageGuide />
             {/* Was a WhatsApp link into a phone nobody had to be watching. */}
             <ReportProblem />
             <form action={signOutAction}>

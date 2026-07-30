@@ -20,6 +20,7 @@ import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
 import { Megaphone } from "lucide-react";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
+import { PageGuide } from "@/components/shared/PageGuide";
 import { signOutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@prisma/client";
@@ -65,6 +66,9 @@ export function AdminShell({
               {userName} · {t(`admin.users.roles.${role}`)}
             </span>
             <LanguageSwitch />
+            {/* There was no help of any kind here — thirteen destinations and a
+                new dispatcher expected to infer all of them on their first night. */}
+            <PageGuide />
             <form action={signOutAction}>
               <button
                 type="submit"
