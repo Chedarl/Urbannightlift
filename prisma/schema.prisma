@@ -1010,9 +1010,18 @@ model DeliveryFailure {
 /// on iOS it requires the app to have been added to the Home Screen first.
 model PushSubscription {
   id         String   @id @default(cuid())
+  /// The browser's Push endpoint URL, or — for the native apps — the FCM/APNs
+  /// device token. Unique either way, which is what stops one device
+  /// registering twice and being notified twice.
   endpoint   String   @unique
-  p256dh     String
-  auth       String
+  /// "web" | "fcm" | "apns". A WebView has no Push API, so a store-installed
+  /// app has to go through the OS instead, and the two transports need
+  /// different send paths.
+  platform   String   @default("web")
+  /// Web Push encryption keys. Null on native tokens, which are not encrypted
+  /// by us — the platform handles that.
+  p256dh     String?
+  auth       String?
   /// Exactly one of these is set: staff/rider subscriptions carry userId,
   /// customer subscriptions carry customerId.
   userId     String?

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Urban Night Lift</title>
+    <!--
+      The offline screen.
+
+      Because the shell points at the live site, no network means no app. This is
+      the only page bundled into the binary, and it exists so that a customer in
+      a dead-signal patch at 1 AM sees an explanation and a working Retry button
+      rather than a white rectangle that looks like the business has collapsed.
+
+      Deliberately self-contained: no fonts, no scripts, no images to fetch. It
+      has to render when nothing can be loaded.
+    -->
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+        background: #0a0710;
+        color: #e8e6ef;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      .wrap { max-width: 22rem; }
+      .mark {
+        width: 3.5rem; height: 3.5rem; margin: 0 auto 1.5rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7b2cbf, #d4af37);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1.25rem; color: #0a0710;
+      }
+      h1 { font-size: 1.375rem; margin: 0 0 .75rem; line-height: 1.25; }
+      p { margin: 0 0 .5rem; font-size: .9375rem; line-height: 1.6; color: #8e8aa0; }
+      .fr { color: #6f6b80; font-size: .875rem; }
+      button {
+        margin-top: 1.75rem; width: 100%;
+        padding: .875rem 1.25rem;
+        border: 0; border-radius: 1rem;
+        background: #d4af37; color: #0a0710;
+        font-size: 1rem; font-weight: 600;
+        cursor: pointer;
+      }
+      button:active { transform: scale(.98); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="mark">UNL</div>
+      <h1>You&rsquo;re offline</h1>
+      <p>Urban Night Lift needs a connection to show your orders. Check your data or Wi&#8209;Fi and try again.</p>
+      <p class="fr">Urban Night Lift a besoin d&rsquo;une connexion pour afficher vos commandes. V&eacute;rifiez vos donn&eacute;es ou votre Wi&#8209;Fi, puis r&eacute;essayez.</p>
+      <button type="button" onclick="location.replace('https://urbannighlift.com')">
+        Try again &middot; R&eacute;essayer
+      </button>
+    </div>
+  </body>
+</html>

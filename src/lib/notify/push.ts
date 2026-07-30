@@ -2,6 +2,7 @@ import "server-only";
 
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { fcmConfigured, sendFcm } from "@/lib/notify/fcm";
 
 /**
  * Web Push — the only free way to reach people when the app is closed.
@@ -55,12 +56,26 @@ interface Target {
 }
 
 /**
- * Sends to every device registered for the target. Subscriptions the browser
- * has abandoned (404/410) are pruned as we find them, which is the only
- * supported way to keep the table from filling with dead endpoints.
+ * Sends to every device registered for the target, over whichever transport
+ * that device needs.
+ *
+ * Browsers get Web Push; the store-installed apps get FCM, because a Capacitor
+ * WebView has no Push API. One function rather than two, so a caller saying
+ * "tell this rider their job is ready" never has to know or care what they
+ * installed.
+ *
+ * Devices that have gone away — 404/410 from Web Push, UNREGISTERED from FCM —
+ * are pruned as we find them, which is the only supported way to stop the table
+ * filling with dead endpoints. Transient failures are never pruned: deleting a
+ * live device because a provider had a bad minute would silently end somebody's
+ * alerts for good.
  */
 export async function sendPush(target: Target, message: PushMessage): Promise<number> {
-  if (!ensureConfigured()) return 0;
+  // Web Push may be unconfigured while FCM is, or the other way round, so this
+  // can no longer bail on VAPID alone.
+  const webReady = ensureConfigured();
+  const nativeReady = fcmConfigured();
+  if (!webReady && !nativeReady) return 0;
 
   const or: Record<string, unknown>[] = [];
   if (target.userIds?.length) or.push({ userId: { in: target.userIds } });
@@ -83,6 +98,17 @@ export async function sendPush(target: Target, message: PushMessage): Promise<nu
 
   await Promise.all(
     subs.map(async (sub) => {
+      // A native token: the endpoint column holds the FCM/APNs token and there
+      // are no encryption keys, because the platform handles that end.
+      if (sub.platform !== "web") {
+        if (!nativeReady) return;
+        const result = await sendFcm(sub.endpoint, message);
+        if (result.ok) sent += 1;
+        else if (result.gone) dead.push(sub.id);
+        return;
+      }
+
+      if (!webReady || !sub.p256dh || !sub.auth) return;
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
