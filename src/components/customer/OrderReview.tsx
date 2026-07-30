@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
 import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
 import { priceCopy } from "@/lib/orders/priceCopy";
+import { isShoppingService } from "@/lib/orders/goodsMoney";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
@@ -85,7 +86,7 @@ export function OrderReview() {
   // A firm price is the zone tariff and is final. The server re-decides this
   // authoritatively when the order is created, so this only chooses wording.
   const firm = draft.priceFirm === true && draft.estimatedFeeXaf != null;
-  const copy = priceCopy(firm, fr);
+  const copy = priceCopy(firm, fr, isShoppingService(draft.serviceType));
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
   const pdfData: OrderPdfData = {
@@ -151,7 +152,11 @@ export function OrderReview() {
           <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-safe" />
           <div>
             <p className="text-sm font-semibold text-mist-100">
-              {fr ? "Prix confirmé" : "Price confirmed"}
+              {/* On a shopping order only the delivery is confirmed, so the
+                  heading must not claim the whole price is settled. */}
+              {isShoppingService(draft.serviceType)
+                ? fr ? "Livraison confirmée" : "Delivery confirmed"
+                : fr ? "Prix confirmé" : "Price confirmed"}
               {draft.estimatedFeeXaf != null ? ` · ${formatXaf(draft.estimatedFeeXaf)}` : ""}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-mist-300">{copy.note}</p>

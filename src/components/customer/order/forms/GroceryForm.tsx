@@ -325,7 +325,7 @@ export function GroceryForm() {
         {/* The price rides on the button, and says whether it is final. */}
         {estimatedFee != null && (
           <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr).label}</span>
+            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, true).label}</span>
             <span className="font-display text-base font-bold text-mist-100">{estimatedFee.toLocaleString("fr-FR")} XAF</span>
           </div>
         )}

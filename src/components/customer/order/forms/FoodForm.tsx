@@ -425,7 +425,7 @@ export function FoodForm() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         {estimatedFee != null && (
           <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr).label}</span>
+            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, true).label}</span>
             <span className="font-display text-base font-bold text-mist-100">{estimatedFee.toLocaleString("fr-FR")} XAF</span>
           </div>
         )}
