@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Home as HomeIcon, Briefcase, MapPin, Trash2, Plus, Loader2 } from "lucide-react";
+import { Home as HomeIcon, Briefcase, MapPin, Trash2, Plus, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "@/lib/i18n";
 import { refreshProfile, type SavedAddress } from "@/lib/account/profile";
 import type { SelectedLocation } from "@/lib/locations/types";
+import { PageHeader } from "@/components/customer/portal/kit";
 
 const LocationField = dynamic(
   () => import("@/components/customer/location/LocationField").then((m) => m.LocationField),
@@ -86,13 +86,8 @@ export function AddressManager() {
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-28 pt-5">
-      <div className="flex items-center gap-3">
-        <Link href="/account" className="rounded-lg border border-ink-700 p-1.5 text-mist-400 hover:text-mist-200">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <h1 className="font-display text-xl font-bold text-mist-100">{fr ? "Vos adresses" : "Your places"}</h1>
-      </div>
+    <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pb-28 pt-6">
+      <PageHeader title={fr ? "Vos adresses" : "Your places"} back="/account/profile" />
 
       {addresses == null ? (
         <p className="text-sm text-mist-500">{t("common.loading")}</p>
