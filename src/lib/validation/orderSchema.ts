@@ -25,6 +25,7 @@ export const orderSchema = z.object({
     "URGENT_ITEM",
     "CUSTOM_ERRAND",
     "MERCHANT_DELIVERY",
+    "CONCIERGE_NIGHT",
   ]),
   merchantId: z.string().optional().or(z.literal("")),
   pickupLocation: z.string().trim().min(3).max(300),

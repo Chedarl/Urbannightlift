@@ -32,6 +32,10 @@ enum PreferredLanguage {
 }
 
 enum ServiceType {
+  /// Night logistics for businesses: stock between branches, an emergency
+  /// resupply, a part collected before dawn. Always human-quoted — the zone
+  /// tariff prices a delivery, not a two-hour multi-stop job.
+  CONCIERGE_NIGHT
   FOOD_PICKUP
   MEDICINE_PICKUP
   GROCERY_PICKUP
@@ -189,6 +193,15 @@ model User {
   /// Shown to the customer once this rider is dispatched. Knowing who is
   /// coming before they knock is the whole night-safety promise, so these
   /// three are deliberately the ONLY identity fields that ever leave staff.
+  /// The most company cash this rider may hold at once, for buying a customer's
+  /// shopping. 0 means no float, and that is the default: handing a rider
+  /// company money is a decision with a name on it.
+  floatLimitXaf   Int      @default(0)
+  floatSuspended  Boolean  @default(false)
+  floatGrantedAt  DateTime?
+  floatGrantedByUserId String?
+  riderFloatLedger RiderFloatLedger[]
+
   photoUrl   String?
   /// The bike a customer can recognise from a window: "Yamaha rouge — CE 4521 AB".
   vehicleRef String?
@@ -624,6 +637,26 @@ model MerchantFloatLedger {
   /// One charge per order — a retried request can never double-charge a float.
   @@unique([orderId, type])
   @@index([merchantId, createdAt])
+}
+
+/// Company cash advanced to a rider, append-only.
+///
+/// Mirrors MerchantFloatLedger. The balance answers one question: how much of
+/// our money is this rider holding right now? A purchase does not reduce it —
+/// it turns cash into a receivable the delivery collects — so only cash handed
+/// back does.
+model RiderFloatLedger {
+  id        String   @id @default(cuid())
+  riderId   String
+  rider     User     @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  /// Positive = we handed them cash. Negative = they handed it back.
+  amountXaf Int
+  type      String // TOPUP | RETURN | ADJUSTMENT
+  note      String?
+  recordedById String?
+  createdAt DateTime @default(now())
+
+  @@index([riderId, createdAt])
 }
 
 /// What a merchant sells, with a price. Deliberately small — five accurate

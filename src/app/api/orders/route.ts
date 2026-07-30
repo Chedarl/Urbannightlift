@@ -5,6 +5,7 @@ import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { orderMoney } from "@/lib/orders/goodsMoney";
+import { canChargeToFloat } from "@/lib/merchants/float";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
@@ -173,6 +174,31 @@ export async function POST(req: NextRequest) {
   const payableNowXaf =
     money.shopping && input.paymentMethod !== "CASH" ? money.deliveryFeeXaf : money.totalXaf;
 
+  /**
+   * A merchant with a granted float carries the delivery fee themselves and
+   * settles weekly, so their customer is not asked to pay it per order. That is
+   * the whole point of the float — it is the thing that makes a small business
+   * able to use us at night.
+   *
+   * The decision goes through `canChargeToFloat` rather than comparing numbers
+   * here, so checkout, the admin screen and the accounting cannot disagree about
+   * whether a merchant was good for it. A refusal is not an error: the order
+   * proceeds on the normal payment path and the reason is left for dispatch.
+   */
+  let merchantFloatChargeXaf = 0;
+  if (merchant && money.deliveryFeeXaf > 0) {
+    const ledger = await prisma.merchantFloatLedger.findMany({
+      where: { merchantId: merchant.id },
+      select: { amountXaf: true, type: true },
+    });
+    const decision = canChargeToFloat(
+      { limitXaf: merchant.floatLimitXaf, suspended: merchant.floatSuspended },
+      ledger.map((r) => ({ amountXaf: r.amountXaf, type: r.type as "CHARGE" | "SETTLEMENT" | "ADJUSTMENT" })),
+      money.deliveryFeeXaf
+    );
+    if (decision.ok) merchantFloatChargeXaf = money.deliveryFeeXaf;
+  }
+
   const orderCode = `UNL-${orderCodeId()}`;
 
   const order = await prisma.$transaction(async (tx) => {
@@ -336,6 +362,20 @@ export async function POST(req: NextRequest) {
         verificationMethod: "MANUAL",
       },
     });
+
+    // The merchant carries this fee on their float and settles it weekly. The
+    // unique (orderId, type) index means a retried request cannot double-charge.
+    if (merchantFloatChargeXaf > 0 && merchant) {
+      await tx.merchantFloatLedger.create({
+        data: {
+          merchantId: merchant.id,
+          orderId: created.id,
+          amountXaf: merchantFloatChargeXaf,
+          type: "CHARGE",
+          note: `Delivery fee for ${created.orderCode}`,
+        },
+      });
+    }
 
     return created;
   });

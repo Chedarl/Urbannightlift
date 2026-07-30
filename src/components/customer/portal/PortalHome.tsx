@@ -65,6 +65,7 @@ const SERVICE_UI: Record<ServiceType, { icon: React.ElementType }> = {
   SMALL_PARCEL: { icon: Package },
   URGENT_ITEM: { icon: Zap },
   CUSTOM_ERRAND: { icon: ClipboardList },
+  CONCIERGE_NIGHT: { icon: ClipboardList },
   MERCHANT_DELIVERY: { icon: Store },
 };
 

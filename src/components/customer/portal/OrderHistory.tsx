@@ -35,6 +35,7 @@ const ICON: Record<ServiceType, React.ElementType> = {
   SMALL_PARCEL: Package,
   URGENT_ITEM: Zap,
   CUSTOM_ERRAND: ClipboardList,
+  CONCIERGE_NIGHT: ClipboardList,
   MERCHANT_DELIVERY: Store,
 };
 
