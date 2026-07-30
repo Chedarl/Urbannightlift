@@ -599,6 +599,18 @@ model Merchant {
   /// Who granted or last changed the limit. Lending decisions need a name on them.
   floatGrantedByUserId  String?
 
+  /// The merchant's own login, so a shop can change its prices and close its
+  /// kitchen without phoning the owner. Set = they have claimed the account;
+  /// null = the record exists but nobody from the business has signed in yet.
+  ///
+  /// Same shape as `Customer`: WhatsApp number + a short PIN, no SMS, with an
+  /// attempt lockout because a business phone number is public. This is an
+  /// Urban Night Lift PIN and nothing else — never a MoMo or Orange PIN.
+  pinHash          String?
+  pinAttempts      Int              @default(0)
+  pinLockedUntil   DateTime?
+  lastLoginAt      DateTime?
+
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

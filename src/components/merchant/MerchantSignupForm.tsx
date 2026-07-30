@@ -160,6 +160,16 @@ export function MerchantSignupForm() {
             ? "Nous vous appelons sur WhatsApp pour confirmer, puis votre commerce apparaît aux clients qui commandent la nuit."
             : "We'll message you on WhatsApp to confirm, then your business appears to customers ordering at night."}
         </p>
+        {/* Told now, while they are still on the page, rather than in a message
+            they may not read: the account is theirs to run once we've called. */}
+        <p className="mt-4 rounded-2xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-sm leading-relaxed text-mist-300">
+          {fr
+            ? "Après notre appel, créez votre code sur la page commerçant : vous gérez vous-même vos prix, vos horaires et le moment où vous fermez."
+            : "After that call, set your PIN on the merchant page: you run your own prices, hours, and when you close."}
+          <Link href="/merchant/login" className="mt-2 block font-semibold text-violet-300 underline">
+            {fr ? "Espace commerçant" : "Merchant sign in"}
+          </Link>
+        </p>
         <Link href="/" className="mt-6 inline-block text-sm font-semibold text-gold-300">
           {fr ? "Retour à l'accueil" : "Back to the home page"}
         </Link>
