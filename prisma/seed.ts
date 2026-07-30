@@ -340,6 +340,27 @@ async function seedPopularDishes() {
   console.log(`✓ ${dishes.length} indicative dish prices`);
 }
 
+/**
+ * The answers the desk gives most often, ready on day one so macros are useful
+ * before anyone has written any. Kept short and human — a starting set the
+ * owner edits, not a script to read out.
+ */
+async function seedCannedReplies() {
+  const replies = [
+    { title: "Rider on the way", body: "Hi — your rider is on the way now. You can follow them live on your order page. Thank you for your patience!", category: "ORDER_ISSUE" },
+    { title: "Checking with the rider", body: "Thanks for letting us know — we're checking with your rider right now and will update you in a few minutes.", category: "ORDER_ISSUE" },
+    { title: "Confirm the address", body: "To get this to you quickly, could you confirm the delivery address and a landmark near it? Thank you!", category: "DELIVERY_AREA" },
+    { title: "Payment received", body: "We've confirmed your payment — thank you. Your order is moving to a rider now.", category: "PAYMENT" },
+    { title: "Credit applied", body: "We're sorry about the trouble. We've added credit to your account, applied automatically to your next order.", category: "ORDER_ISSUE" },
+    { title: "Thanks for your patience", body: "Thank you for your patience tonight — it's sorted now. Please let us know if there's anything else.", category: "OTHER" },
+  ];
+  for (const r of replies) {
+    const existing = await prisma.cannedReply.findFirst({ where: { title: r.title } });
+    if (!existing) await prisma.cannedReply.create({ data: r });
+  }
+  console.log(`✓ ${replies.length} canned replies`);
+}
+
 function locSearchKey(primary: string, aliases: string[]): string {
   const norm = (s: string) =>
     s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/['`’.]/g, "").replace(/[^a-z0-9]+/g, "");
@@ -505,6 +526,7 @@ async function main() {
   await seedUsers();
   await seedMerchants();
   await seedPopularDishes();
+  await seedCannedReplies();
   await ensureStorageBuckets();
   await verifyAdminLogin();
   console.log("\nSeed complete.");

@@ -1,49 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import { Radio, Users2 } from "lucide-react";
+import { Radio, Users2, Inbox } from "lucide-react";
 import { LiveConsole } from "@/components/admin/LiveConsole";
 import { CustomerCrm } from "@/components/admin/CustomerCrm";
+import { CaseInbox } from "@/components/admin/CaseInbox";
 import { cn } from "@/lib/utils";
 
 /**
- * The support desk, in the two states it is ever in.
+ * The relationship desk — one place for support and customer experience.
  *
- * "Now" is what is moving: every live order worst-first, the fleet on a map,
- * and both phone numbers on every row. "Customers" is who it is happening to:
- * search anyone, then their whole history — orders, complaints, notes and money
- * — in a single thread, with everything a call can end in on the same panel.
+ * "Inbox" is what someone must answer: every case, worst-first, with the whole
+ * conversation and the means to close it. "Happening now" is what is moving:
+ * every live order and the fleet on a map. "Customers" is who it is happening
+ * to: search anyone, then their whole history in one thread.
  *
- * They are tabs rather than two pages because a support call moves between them
- * constantly: somebody rings about the order you are already watching.
+ * Tabs rather than pages because a support call crosses all three at once —
+ * somebody messages about the order you are already watching.
  */
+type Tab = "INBOX" | "NOW" | "PEOPLE";
+
 export function ServiceDesk({ canBlock }: { canBlock: boolean }) {
-  const [tab, setTab] = useState<"NOW" | "PEOPLE">("NOW");
+  const [tab, setTab] = useState<Tab>("INBOX");
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="font-display text-xl font-bold">Customer service</h1>
         <p className="mt-1 text-sm text-mist-400">
-          Notice something and call about it before the customer calls us.
+          Answer what is waiting, watch what is moving, and know who it is happening to.
         </p>
       </div>
 
       <div className="flex gap-1 rounded-xl border border-ink-800 bg-ink-950 p-1">
-        <Tab active={tab === "NOW"} onClick={() => setTab("NOW")} icon={<Radio className="h-4 w-4" />}>
+        <TabButton active={tab === "INBOX"} onClick={() => setTab("INBOX")} icon={<Inbox className="h-4 w-4" />}>
+          Inbox
+        </TabButton>
+        <TabButton active={tab === "NOW"} onClick={() => setTab("NOW")} icon={<Radio className="h-4 w-4" />}>
           Happening now
-        </Tab>
-        <Tab active={tab === "PEOPLE"} onClick={() => setTab("PEOPLE")} icon={<Users2 className="h-4 w-4" />}>
+        </TabButton>
+        <TabButton active={tab === "PEOPLE"} onClick={() => setTab("PEOPLE")} icon={<Users2 className="h-4 w-4" />}>
           Customers
-        </Tab>
+        </TabButton>
       </div>
 
-      {tab === "NOW" ? <LiveConsole /> : <CustomerCrm canBlock={canBlock} />}
+      {tab === "INBOX" ? <CaseInbox /> : tab === "NOW" ? <LiveConsole /> : <CustomerCrm canBlock={canBlock} />}
     </div>
   );
 }
 
-function Tab({
+function TabButton({
   active,
   onClick,
   icon,
