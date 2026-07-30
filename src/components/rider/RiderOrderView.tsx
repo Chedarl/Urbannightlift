@@ -6,6 +6,7 @@ import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check } from "lucide
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { formatSlot } from "@/lib/orders/timeSlots";
+import { RecordPurchase } from "@/components/rider/RecordPurchase";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { RiderLocationShare } from "@/components/rider/RiderLocationShare";
 import { Button } from "@/components/shared/Button";
@@ -42,6 +43,12 @@ export interface RiderOrderData {
   /** What the rider earns on this delivery, once it is known. */
   riderPayoutXaf: number | null;
   estimatedPayoutXaf: number | null;
+  /** We buy on the customer's behalf on this service. */
+  isShopping: boolean;
+  /** The most the customer agreed we may spend. */
+  goodsCapXaf: number | null;
+  /** What the shop charged, once recorded. */
+  goodsActualXaf: number | null;
 }
 
 /**
@@ -89,6 +96,7 @@ const inputCls =
 
 export function RiderOrderView({ order }: { order: RiderOrderData }) {
   const { t, locale } = useTranslation();
+  const fr = locale === "fr";
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -326,6 +334,20 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
             <Button size="lg" disabled={pending} onClick={() => setStatus(step.next)}>
               {t(`rider.order.actions.${step.labelKey}`)}
             </Button>
+          )}
+
+          {/* What the shop charged, on a service where we buy for the customer.
+              Recorded at the counter with the receipt attached, so the amount
+              is evidenced before anyone is asked to pay it. */}
+          {order.isShopping && (
+            <RecordPurchase
+              orderId={order.id}
+              orderCode={order.orderCode}
+              capXaf={order.goodsCapXaf}
+              recordedXaf={order.goodsActualXaf}
+              fr={fr}
+              onRecorded={() => router.refresh()}
+            />
           )}
 
           {/* Pickup proof (optional but available once collected) */}

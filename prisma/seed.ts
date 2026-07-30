@@ -495,6 +495,8 @@ async function ensureStorageBuckets() {
   const buckets: { name: string; public: boolean; types: string[]; sizeMb: number }[] = [
     { name: "order-screenshots", public: false, types: IMAGE_TYPES, sizeMb: 5 },
     { name: "delivery-proofs", public: false, types: IMAGE_TYPES, sizeMb: 5 },
+    // The shop receipt behind a shopping order. Private evidence.
+    { name: "goods-receipts", public: false, types: IMAGE_TYPES, sizeMb: 5 },
     { name: "merchant-logos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
     { name: "rider-documents", public: false, types: [...IMAGE_TYPES, "application/pdf"], sizeMb: 10 },
     { name: "rider-photos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
