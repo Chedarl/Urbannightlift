@@ -728,6 +728,29 @@ model Order {
   estimatedDeliveryFeeXaf Int?
   finalDeliveryFeeXaf     Int?
   totalAmountDueXaf       Int?
+
+  /// Shopping orders (food, pharmacy, grocery) carry a second amount: what we
+  /// buy on the customer's behalf. It is not ours and we take no margin on it —
+  /// the customer pays what the shop charged. See src/lib/orders/goodsMoney.ts.
+  ///
+  /// The ceiling the customer agreed to at checkout. Required on shopping
+  /// services, so the over-cap guard is always armed.
+  goodsCapXaf           Int?
+  /// What the receipt actually said. Null until the rider records it — before
+  /// that the total is a ceiling and must be shown as one, never as a price.
+  goodsActualXaf        Int?
+  /// Photo of the shop's receipt. Private evidence: it proves we charged what we
+  /// were charged, and it is never embedded in a shareable PDF.
+  goodsReceiptUrl       String?
+  goodsRecordedAt       DateTime?
+  goodsRecordedById     String?
+  /// Set when the customer agreed to a spend above their cap. Without this an
+  /// over-cap amount is not collectable.
+  overCapApprovedXaf    Int?
+  overCapApprovedAt     DateTime?
+  /// What the rider laid out, from the company float. Comes off what they owe at
+  /// settlement, so shopping never leaves a rider out of pocket.
+  goodsAdvancedXaf      Int?
   paymentMethod           PaymentMethod
   paymentStatus           PaymentStatus         @default(PENDING)
   orderStatus             OrderStatus           @default(NEW_REQUEST)
