@@ -28,7 +28,7 @@ import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTi
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
-import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
+import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { MedicineForm } from "@/components/customer/order/forms/MedicineForm";
 import { FoodForm } from "@/components/customer/order/forms/FoodForm";
 import { GroceryForm } from "@/components/customer/order/forms/GroceryForm";
@@ -90,6 +90,8 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
   const [zones, setZones] = useState<{ id: string; zoneName: string; tier: ZoneTier; feeXaf: number; medicineFeeXaf: number }[]>([]);
   const [pickupSel, setPickupSel] = useState<SelectedLocation | null>(null);
   const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
+  // "Deliver here" from a portal saved-place tap (?deliverTo=…).
+  useDeliverToAddress((l) => applySelection("delivery", l));
   const [sameLocError, setSameLocError] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
   const [blockedNotice, setBlockedNotice] = useState(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { nearestZone, type ZoneTier } from "@/lib/orders/pricing";
 import { tierToStatus, type SelectedLocation } from "@/lib/locations/types";
 import type { OrderDraft } from "@/lib/orders/draft";
@@ -127,6 +128,41 @@ interface ZoneLike {
   feeXaf: number;
   centroidLat: number | null;
   centroidLng: number | null;
+}
+
+/**
+ * "Deliver here" from a saved place, carried in on `?deliverTo=<addressId>`.
+ *
+ * This is what makes a saved place a shortcut rather than just a label: tapping
+ * "Home" in the portal drops you into an order form with the delivery address
+ * already set, so it is genuinely different from the plain "Order" tab — which
+ * is the whole reason the two are no longer the same button. The zone/tier/fee
+ * are re-resolved live (via `savedAddressToLocation`), never replayed. Fires
+ * once, and only when the param is present, so a normal order is untouched.
+ */
+export function useDeliverToAddress(apply: (loc: SelectedLocation) => void): void {
+  const params = useSearchParams();
+  const deliverTo = params.get("deliverTo");
+  const { profile } = useCustomerProfile();
+  const [zones, setZones] = useState<ZoneLike[] | null>(null);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!deliverTo || done) return;
+    fetch("/api/zones")
+      .then((r) => r.json())
+      .then((d) => setZones(d.zones ?? []))
+      .catch(() => setZones([]));
+  }, [deliverTo, done]);
+
+  useEffect(() => {
+    if (!deliverTo || done || !profile || zones == null) return;
+    const addr = profile.addresses.find((a) => a.id === deliverTo);
+    if (addr) apply(savedAddressToLocation(addr, zones));
+    setDone(true);
+    // `apply` is a fresh closure each render; the `done` guard runs this once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliverTo, done, profile, zones]);
 }
 
 /**
