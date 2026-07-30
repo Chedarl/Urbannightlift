@@ -23,8 +23,21 @@ export interface PriceCopy {
   cta: string;
 }
 
-export function priceCopy(firm: boolean, fr: boolean): PriceCopy {
+export function priceCopy(firm: boolean, fr: boolean, shopping = false): PriceCopy {
   if (firm) {
+    // On a shopping order the FEE is fixed but the shopping is not — nobody
+    // knows the bill until the rider is at the counter. Saying "this is your
+    // price, it won't change" there would be a promise we cannot keep, so the
+    // copy is explicit that this covers the delivery only.
+    if (shopping) {
+      return {
+        label: fr ? "Frais de livraison (fixes)" : "Delivery fee (fixed)",
+        note: fr
+          ? "Ce montant est fixé et ne changera pas. Le coût des articles s'y ajoute — vous payez exactement le reçu, sans marge, dans la limite que vous fixez."
+          : "This part is fixed and won't change. The cost of the items is added on top — you pay exactly what the receipt says, with no markup, up to the cap you set.",
+        cta: fr ? "Commander" : "Place order",
+      };
+    }
     return {
       label: fr ? "Frais de livraison" : "Delivery fee",
       note: fr
