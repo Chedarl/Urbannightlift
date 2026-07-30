@@ -387,6 +387,93 @@ export const GUIDES: Record<string, Guide> = {
     },
   },
 
+  // --------------------------------------------------------------- merchant
+
+  "/merchant": {
+    title: { en: "Tonight", fr: "Ce soir" },
+    purpose: {
+      en: "What we are bringing you tonight, and the switch that says you are closed.",
+      fr: "Ce que nous vous apportons ce soir, et l'interrupteur qui dit que vous êtes fermé.",
+    },
+    steps: [
+      {
+        en: "Tap Open / Closed the moment your kitchen stops. Customers stop seeing you immediately.",
+        fr: "Touchez Ouvert / Fermé dès que la cuisine s'arrête. Les clients cessent de vous voir immédiatement.",
+      },
+      {
+        en: "Orders appear here as they come in. Our rider collects them — you do not deliver anything.",
+        fr: "Les commandes apparaissent au fur et à mesure. Notre livreur vient les chercher — vous ne livrez rien.",
+      },
+    ],
+    watchOut: {
+      en: "We never give you a customer's name or number, and we never give them yours. The rider is the whole hand-off.",
+      fr: "Nous ne vous donnons jamais le nom ni le numéro d'un client, et nous ne leur donnons pas les vôtres. Le livreur fait tout le lien.",
+    },
+  },
+
+  "/merchant/products": {
+    title: { en: "Your items", fr: "Vos articles" },
+    purpose: {
+      en: "What customers see when they pick you, and the price they pay.",
+      fr: "Ce que les clients voient quand ils vous choisissent, et le prix qu'ils paient.",
+    },
+    steps: [
+      {
+        en: "Start with your five most-asked-for items. A short accurate list beats a long stale one.",
+        fr: "Commencez par vos cinq articles les plus demandés. Une liste courte et juste vaut mieux qu'une longue et périmée.",
+      },
+      {
+        en: "Mark something sold out for the night rather than closing the whole shop.",
+        fr: "Marquez un article épuisé pour la soirée plutôt que de fermer toute la boutique.",
+      },
+    ],
+    watchOut: {
+      en: "Leave a price blank if you are not sure. Customers set how much they will spend from what they read here, so a wrong price is worse than none.",
+      fr: "Laissez le prix vide en cas de doute. Les clients fixent leur budget d'après ce qu'ils lisent ici : un prix faux est pire qu'un prix absent.",
+    },
+  },
+
+  "/merchant/insights": {
+    title: { en: "Your numbers", fr: "Vos chiffres" },
+    purpose: {
+      en: "What actually sells through us, which nights are dead, and whether you are growing.",
+      fr: "Ce qui se vend réellement chez nous, quels soirs sont morts, et si vous progressez.",
+    },
+    steps: [
+      { en: "Use the quiet nights — that is where the room to grow is.", fr: "Servez-vous des soirs calmes — c'est là qu'il y a de la place." },
+      {
+        en: "Below eight orders we say nothing rather than give you a number built on noise.",
+        fr: "En dessous de huit commandes, nous ne disons rien plutôt que de vous donner un chiffre bâti sur du bruit.",
+      },
+    ],
+    watchOut: {
+      en: "This only counts orders placed through Urban Night Lift. It is not your whole trade, so do not change a menu on it alone.",
+      fr: "Cela ne compte que les commandes passées par Urban Night Lift. Ce n'est pas tout votre commerce : ne changez pas un menu sur cette seule base.",
+    },
+  },
+
+  "/merchant/profile": {
+    title: { en: "Your shop", fr: "Votre boutique" },
+    purpose: {
+      en: "Where you are, when you are open, and how we reach you.",
+      fr: "Où vous êtes, quand vous êtes ouvert, et comment vous joindre.",
+    },
+    steps: [
+      {
+        en: "A good landmark beats an exact address — it is what a rider reads at 1 AM.",
+        fr: "Un bon point de repère vaut mieux qu'une adresse exacte — c'est ce que lit un livreur à 1 h du matin.",
+      },
+      {
+        en: "\"Open at night\" is the only availability that matters to us. We deliver 6 PM to 4 AM.",
+        fr: "« Ouvert la nuit » est la seule disponibilité qui compte pour nous. Nous livrons de 18 h à 4 h.",
+      },
+    ],
+    watchOut: {
+      en: "Your shop's name and account number can't be changed here — a person confirmed them when we called you. Ring dispatch to change either.",
+      fr: "Le nom de la boutique et le numéro du compte ne se changent pas ici — une personne les a confirmés lors de notre appel. Appelez le dispatch pour les modifier.",
+    },
+  },
+
   "/rider/profile": {
     title: { en: "Your profile", fr: "Votre profil" },
     purpose: {

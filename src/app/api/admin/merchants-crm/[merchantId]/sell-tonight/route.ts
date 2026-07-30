@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES, getSessionUser } from "@/lib/auth/session";
-import { sellTonight, type MerchantOrderFact } from "@/lib/merchants/sellTonight";
+import { sellTonight } from "@/lib/merchants/sellTonight";
+import { merchantOrderFacts } from "@/lib/merchants/orderFacts";
 import { buildWaLink } from "@/lib/whatsapp/links";
 
 export const dynamic = "force-dynamic";
@@ -33,21 +34,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ merchantId:
   });
   if (!merchant) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const orders = await prisma.order.findMany({
-    where: { merchantId },
-    select: { createdAt: true, orderStatus: true, isTest: true, serviceDetails: true },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
-
-  const facts: MerchantOrderFact[] = orders.map((o) => ({
-    createdAt: o.createdAt,
-    completed: o.orderStatus === "DELIVERED" || o.orderStatus === "CLOSED",
-    isTest: o.isTest,
-    items: itemsOf(o.serviceDetails),
-  }));
-
-  const report = sellTonight(facts, new Date());
+  // Shared with the merchant's own insights screen, so the desk and the shop can
+  // never read different numbers off the same orders.
+  const report = sellTonight(await merchantOrderFacts(merchantId), new Date());
 
   // The message we would send them, ready to tap. French by default: it is the
   // working language of most Yaoundé businesses, and `Merchant` carries no
@@ -67,30 +56,4 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ merchantId:
     message,
     waLink: number && message ? buildWaLink(number, message) : null,
   });
-}
-
-/**
- * Pull `{ name, qty }` pairs out of whatever shape the service wrote.
- *
- * Unknown shapes yield nothing rather than a guess: a mis-parsed line would
- * become wrong advice to a real business, which is worse than a quieter report.
- */
-function itemsOf(details: unknown): { name: string; qty: number }[] {
-  if (!details || typeof details !== "object") return [];
-  const d = details as Record<string, unknown>;
-  const lists = ["foodItems", "groceryItems", "meds", "items", "products"];
-  const out: { name: string; qty: number }[] = [];
-  for (const key of lists) {
-    const list = d[key];
-    if (!Array.isArray(list)) continue;
-    for (const row of list) {
-      if (!row || typeof row !== "object") continue;
-      const r = row as Record<string, unknown>;
-      const name = typeof r.name === "string" ? r.name.trim() : "";
-      if (!name) continue;
-      const qty = Number(r.qty);
-      out.push({ name, qty: Number.isFinite(qty) && qty > 0 ? qty : 1 });
-    }
-  }
-  return out;
 }

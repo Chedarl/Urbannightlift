@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { CUSTOMER_COOKIE, verifyCustomerToken } from "@/lib/auth/customerToken";
+import { MERCHANT_COOKIE, verifyMerchantToken } from "@/lib/auth/merchantToken";
 
 const CANONICAL_HOST = "urbannighlift.com";
 
@@ -32,6 +33,24 @@ export async function middleware(request: NextRequest) {
     if (!customerId) {
       const url = request.nextUrl.clone();
       url.pathname = "/account/login";
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // Merchants have their own cookie, gated the same way. `/merchant/join` is the
+  // public signup a business fills in before we have ever heard of them, and
+  // `/merchant/login` is where they claim the account afterwards — both must
+  // stay reachable by someone with no session at all.
+  if (pathname === "/merchant" || pathname.startsWith("/merchant/")) {
+    const isPublic = pathname === "/merchant/join" || pathname === "/merchant/login";
+    if (isPublic) return NextResponse.next();
+    const token = request.cookies.get(MERCHANT_COOKIE)?.value;
+    const merchantId = token ? await verifyMerchantToken(token) : null;
+    if (!merchantId) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/merchant/login";
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
     }

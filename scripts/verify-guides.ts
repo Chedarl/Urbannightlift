@@ -22,6 +22,8 @@ console.log("\nExact routes");
 check("the board", titleAt("/admin/dashboard"), "Tonight's board");
 check("settings", titleAt("/admin/settings"), "Settings");
 check("rider tonight", titleAt("/rider/dashboard"), "Tonight");
+check("merchant tonight", titleAt("/merchant"), "Tonight");
+check("merchant items", titleAt("/merchant/products"), "Your items");
 
 console.log("\nDynamic routes resolve to their own guide, not the list's");
 check("one order", titleAt("/admin/orders/cmabc123"), "One order");
@@ -59,6 +61,7 @@ const STAFF_ROUTES = [
   "/admin/ambassadors", "/admin/riders/applications", "/admin/complaints",
   "/admin/support", "/admin/users", "/admin/settings",
   "/rider/dashboard", "/rider/earnings", "/rider/orders/[orderId]", "/rider/profile",
+  "/merchant", "/merchant/products", "/merchant/insights", "/merchant/profile",
 ];
 for (const r of STAFF_ROUTES) check(r, Boolean(GUIDES[r]), true);
 

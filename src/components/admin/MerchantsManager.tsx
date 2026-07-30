@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Plus, Check, X, Phone, MapPin, Search, Moon, Clock, ExternalLink, Link2, Send, CalendarCheck,
+  Plus, Check, X, Phone, MapPin, Search, Moon, Clock, ExternalLink, Link2, Send, CalendarCheck, KeyRound,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/shared/Button";
@@ -57,6 +57,8 @@ export interface MerchantItem {
   active: boolean;
   phoneVerifiedAt: string | null;
   lastConfirmedAt: string | null;
+  /** They have set a PIN and can run their own prices and hours. */
+  hasLogin: boolean;
   products: ProductRow[];
 }
 
@@ -335,6 +337,27 @@ export function MerchantsManager({
                     >
                       <CalendarCheck className="h-4 w-4" /> Still trading
                     </Button>
+                  )}
+                  {/* A verified merchant who has not claimed their login is a
+                      shop still phoning us to change a price. One tap sends them
+                      the link and the number they sign in with. */}
+                  {m.verified && !m.hasLogin && callable && (
+                    <a
+                      href={buildWaLink(
+                        normalizePhone(callable),
+                        `Bonsoir ${m.merchantName} — vous pouvez maintenant gérer vos prix, vos horaires et le moment où vous fermez vous-même. Connectez-vous ici avec ce numéro et choisissez un code : ${typeof window !== "undefined" ? window.location.origin : ""}/merchant/login`
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-500/10 px-3 py-1.5 text-sm font-medium text-violet-200 hover:bg-violet-500/20"
+                    >
+                      <KeyRound className="h-4 w-4" /> Send login
+                    </a>
+                  )}
+                  {m.verified && m.hasLogin && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-safe/40 bg-safe/10 px-3 py-1.5 text-sm text-safe">
+                      <KeyRound className="h-4 w-4" /> Runs their own page
+                    </span>
                   )}
                   <Button size="sm" variant="outline" onClick={() => patch(m.id, { nightOpen: !m.nightOpen })} disabled={pending}>
                     <Moon className="h-4 w-4" /> {m.nightOpen ? "Night: yes" : "Night: no"}
