@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { HomeContent } from "@/components/customer/HomeContent";
 import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
 import { getCustomerId } from "@/lib/auth/customer";
@@ -22,6 +23,12 @@ export async function generateMetadata() {
 
 export default async function HomePage() {
   const [settings, customerId] = await Promise.all([getOperatingSettings(), getCustomerId()]);
+  // One home. A signed-in customer opening the site root lands in their portal,
+  // never on the marketing page — the same way Uber and Yango open straight
+  // into the app. This is what stops the logo and every "/" link from ejecting
+  // a logged-in customer out of the app onto a brochure. The marketing page
+  // stays exactly as it is for logged-out visitors and search engines.
+  if (customerId) redirect("/account");
   return (
     <main>
       <HomeContent
@@ -29,7 +36,7 @@ export default async function HomePage() {
         startHour={settings.operatingStartHour}
         endHour={settings.operatingEndHour}
         enabledServices={resolveEnabledServices(settings)}
-        signedIn={Boolean(customerId)}
+        signedIn={false}
       />
     </main>
   );

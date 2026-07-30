@@ -47,7 +47,7 @@ export default async function OrdersPage() {
           }))}
         />
       </main>
-      <BottomNav />
+      <BottomNav signedIn />
     </>
   );
 }

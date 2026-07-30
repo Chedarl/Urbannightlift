@@ -14,7 +14,7 @@ export default async function AddressesPage() {
       <main>
         <AddressManager />
       </main>
-      <BottomNav />
+      <BottomNav signedIn />
     </>
   );
 }

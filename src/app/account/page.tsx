@@ -83,7 +83,7 @@ export default async function AccountPage() {
           }}
         />
       </main>
-      <BottomNav />
+      <BottomNav signedIn />
     </>
   );
 }
