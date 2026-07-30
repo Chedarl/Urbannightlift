@@ -47,10 +47,11 @@ async function seedSettings() {
       zoneNoticeFr: "Disponible dans certains quartiers de Yaoundé.",
       mtnMerchantCode: "653077160",
       mtnUssdTemplate: "*126*4*857539*{amount}#",
-      // Urgent, Custom errand and Verified merchant start on hold — the owner
-      // enables them from admin Settings as demand justifies it. Not in `update`
-      // so a reseed never overrides what the owner has switched on.
-      enabledServices: ["MEDICINE_PICKUP", "FOOD_PICKUP", "GROCERY_PICKUP", "SMALL_PARCEL"],
+      // Launch runs on food, pharmacy and small parcels. Grocery, urgent,
+      // custom errand and verified merchant start on hold — the owner enables
+      // them from admin Settings as the fleet and demand justify it. Not in
+      // `update`, so a reseed never overrides what the owner has switched on.
+      enabledServices: ["FOOD_PICKUP", "MEDICINE_PICKUP", "SMALL_PARCEL"],
       // The business runs on a revenue share: 60% of each delivery fee to the
       // rider, 40% to Urban Night Lift. Not in `update`, so a reseed never
       // overrides a rate the owner has changed.

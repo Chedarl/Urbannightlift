@@ -19,6 +19,10 @@ on:
         description: "Remove the merchants imported from OpenStreetMap (they were mostly defunct). Keeps any attached to an order."
         type: boolean
         default: false
+      apply_launch_config:
+        description: "Set the live services to Food + Pharmacy + Small parcel and switch voice ordering on. Leaves operating mode and test mode alone."
+        type: boolean
+        default: false
 
 jobs:
   db-setup:
@@ -48,3 +52,9 @@ jobs:
       - name: Purge merchants imported from OpenStreetMap
         if: ${{ inputs.purge_imported_merchants }}
         run: npm run purge:imported-merchants
+      # The seed keeps enabledServices out of its update block so a reseed can
+      # never undo what the owner switched on in admin Settings. This is the
+      # explicit way to move the live configuration. Idempotent.
+      - name: Apply launch configuration (3 services + voice ordering)
+        if: ${{ inputs.apply_launch_config }}
+        run: npm run apply:launch-config
