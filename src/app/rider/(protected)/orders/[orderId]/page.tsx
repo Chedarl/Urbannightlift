@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/session";
 import { getOperatingSettings } from "@/lib/settings";
 import { splitEarnings } from "@/lib/orders/earnings";
+import { isShoppingService } from "@/lib/orders/goodsMoney";
 import { RiderOrderView } from "@/components/rider/RiderOrderView";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,10 @@ export default async function RiderOrderPage({
         riderAcceptedAt: order.riderAcceptedAt?.toISOString() ?? null,
         riderPayoutXaf: order.riderPayoutXaf,
         estimatedPayoutXaf,
+        // Shopping services need the rider to record what the shop charged.
+        isShopping: isShoppingService(order.serviceType),
+        goodsCapXaf: order.goodsCapXaf,
+        goodsActualXaf: order.goodsActualXaf,
       }}
     />
   );
