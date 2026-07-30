@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check } from "lucide-react";
+import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check, Navigation } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { formatSlot } from "@/lib/orders/timeSlots";
@@ -24,6 +24,11 @@ export interface RiderOrderData {
   customerWhatsapp: string;
   pickupLocation: string;
   pickupLandmark: string | null;
+  /** Pins, when the order has them — turn-by-turn beats an address string. */
+  pickupLat: number | null;
+  pickupLng: number | null;
+  deliveryLat: number | null;
+  deliveryLng: number | null;
   deliveryLocation: string;
   deliveryLandmark: string | null;
   itemDescription: string;
@@ -292,10 +297,22 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
         <p className="text-xs text-mist-500">{t("rider.order.pickup")}</p>
         <p className="font-medium">{order.pickupLocation}</p>
         {order.pickupLandmark && <p className="text-xs text-mist-500">{order.pickupLandmark}</p>}
+        <NavigateLink
+          label={t("rider.order.pickup")}
+          lat={order.pickupLat}
+          lng={order.pickupLng}
+          text={order.pickupLocation}
+        />
         <hr className="my-3 border-ink-700" />
         <p className="text-xs text-mist-500">{t("rider.order.delivery")}</p>
         <p className="font-medium">{order.deliveryLocation}</p>
         {order.deliveryLandmark && <p className="text-xs text-mist-500">{order.deliveryLandmark}</p>}
+        <NavigateLink
+          label={t("rider.order.delivery")}
+          lat={order.deliveryLat}
+          lng={order.deliveryLng}
+          text={order.deliveryLocation}
+        />
       </section>
 
       <section className={card}>
@@ -477,5 +494,39 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * Straight into turn-by-turn directions.
+ *
+ * The rider's real job is finding the place, and until now the app handed them
+ * a line of text and wished them luck. A pin goes to exact coordinates; a
+ * free-text address goes to a Google Maps search, which is still better than
+ * reading "behind the Total station" off a screen while riding.
+ */
+function NavigateLink({
+  label,
+  lat,
+  lng,
+  text,
+}: {
+  label: string;
+  lat: number | null;
+  lng: number | null;
+  text: string;
+}) {
+  const destination =
+    lat != null && lng != null ? `${lat},${lng}` : `${text}, Yaoundé, Cameroun`;
+  return (
+    <a
+      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-500/50 bg-violet-500/10 px-2.5 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-500/20"
+    >
+      <Navigation className="h-3.5 w-3.5" />
+      Navigate to {label.toLowerCase()}
+    </a>
   );
 }

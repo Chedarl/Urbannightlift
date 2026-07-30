@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useTranslation } from "@/lib/i18n";
 import { refreshProfile, type SavedAddress } from "@/lib/account/profile";
 import type { SelectedLocation } from "@/lib/locations/types";
-import { PageHeader } from "@/components/customer/portal/kit";
+import { PageHeader } from "@/components/shared/portalKit";
 
 const LocationField = dynamic(
   () => import("@/components/customer/location/LocationField").then((m) => m.LocationField),

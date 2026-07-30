@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/audit";
-import { riderBalanceForOrder } from "@/lib/orders/earnings";
+import { riderSettlementFromOrder } from "@/lib/orders/goodsMoney";
 
 /**
  * POST /api/riders/[riderId]/settle — close out the cash a rider is holding.
@@ -45,10 +45,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ rid
     select: {
       id: true,
       orderCode: true,
+      serviceType: true,
       paymentMethod: true,
       riderPayoutXaf: true,
       companyEarningXaf: true,
       cashCollectedXaf: true,
+      // Shopping money. Without these the expected figure is the fee alone, and
+      // a rider who advanced 5,000 for someone's dinner is asked to hand over
+      // cash they already spent on the company's behalf.
+      goodsCapXaf: true,
+      goodsActualXaf: true,
+      overCapApprovedXaf: true,
+      goodsAdvancedXaf: true,
     },
   });
 
@@ -56,17 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ rid
     return NextResponse.json({ ok: true, settled: 0, expectedXaf: 0 });
   }
 
-  const expectedXaf = outstanding.reduce(
-    (sum, o) =>
-      sum +
-      riderBalanceForOrder({
-        paymentMethod: o.paymentMethod,
-        riderPayoutXaf: o.riderPayoutXaf,
-        companyEarningXaf: o.companyEarningXaf,
-        cashCollectedXaf: o.cashCollectedXaf,
-      }),
-    0
-  );
+  const expectedXaf = outstanding.reduce((sum, o) => sum + riderSettlementFromOrder(o), 0);
 
   const now = new Date();
   await prisma.order.updateMany({

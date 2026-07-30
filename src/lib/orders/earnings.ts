@@ -39,26 +39,14 @@ export function splitEarnings(feeXaf: number, riderSharePercent: number): Earnin
 }
 
 /**
- * What the rider owes the company, or is owed by it, on a single delivery.
+ * What a rider owes or is owed on a delivery lives in
+ * `riderSettlementFromOrder` (`src/lib/orders/goodsMoney.ts`), not here.
  *
- * On cash on delivery the rider collects the whole fee at the door, so they
- * are holding the company's 40% — a positive number here means the rider owes
- * us that much at settlement. On a MoMo or Orange payment the money reached us
- * directly, so we owe the rider their 60%.
+ * This module used to carry a `riderBalanceForOrder` that knew only about the
+ * fee. On a shopping order that is wrong in the rider's disfavour: someone who
+ * advanced 5,000 XAF for a customer's food and collected 6,500 at the door was
+ * recorded as having collected 1,500 and *owing us* 600, with the 5,000 they
+ * laid out appearing nowhere. It has been removed rather than deprecated —
+ * leaving two functions that answer the same money question differently is how
+ * the wrong one gets called again.
  */
-export function riderBalanceForOrder(args: {
-  paymentMethod: string;
-  riderPayoutXaf: number | null;
-  companyEarningXaf: number | null;
-  cashCollectedXaf: number | null;
-}): number {
-  const { paymentMethod, riderPayoutXaf, companyEarningXaf, cashCollectedXaf } = args;
-  if (riderPayoutXaf == null || companyEarningXaf == null) return 0;
-  if (paymentMethod === "CASH") {
-    // They hold what they actually collected; anything short of the full fee is
-    // already visible as a shortfall rather than being netted away silently.
-    const collected = cashCollectedXaf ?? riderPayoutXaf + companyEarningXaf;
-    return collected - riderPayoutXaf;
-  }
-  return -riderPayoutXaf;
-}

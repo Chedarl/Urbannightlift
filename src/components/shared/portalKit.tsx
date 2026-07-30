@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
  * These primitives put that language into our dark night identity, so every
  * account screen is built from the same parts and reads as one app that flows
  * straight out of the (unchanged, dark) homepage.
+ *
+ * It lives under `shared/` rather than `customer/portal/` because the rider —
+ * and now the merchant — deserve the same product. The customer portal had a
+ * considered visual system and the rider app had none; "make the rider portal as
+ * good as the client's" is, concretely, building it out of these same parts.
  */
 
 /** The screen title, with a back arrow — Yango's "My addresses" / help headers. */
@@ -23,7 +28,7 @@ export function PageHeader({
 }: {
   title: string;
   subtitle?: string;
-  /** Where the arrow goes; omit-safe default is the portal home. */
+  /** Where the arrow goes; the default suits the customer portal. */
   back?: string;
 }) {
   return (

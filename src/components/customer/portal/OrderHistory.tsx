@@ -19,7 +19,7 @@ import { useTranslation } from "@/lib/i18n";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";
 import { formatXaf, cn } from "@/lib/utils";
-import { PageHeader } from "@/components/customer/portal/kit";
+import { PageHeader } from "@/components/shared/portalKit";
 import type { OrderStatus, PaymentMethod, PreferredLanguage, ServiceType } from "@prisma/client";
 
 /**

@@ -24,7 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
-import { InitialAvatar } from "@/components/customer/portal/kit";
+import { InitialAvatar } from "@/components/shared/portalKit";
 import { useTranslation } from "@/lib/i18n";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";

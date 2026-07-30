@@ -4,7 +4,12 @@
  *
  * Run: npx tsx scripts/verify-goods-money.ts
  */
-import { orderMoney, riderSettlementForOrder, isShoppingService } from "../src/lib/orders/goodsMoney";
+import {
+  orderMoney,
+  riderSettlementForOrder,
+  riderSettlementFromOrder,
+  isShoppingService,
+} from "../src/lib/orders/goodsMoney";
 
 let failures = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -78,6 +83,43 @@ check("a negative receipt is floored at zero",
   orderMoney({ serviceType: "FOOD_PICKUP", deliveryFeeXaf: 1500, goodsCapXaf: 6000, goodsActualXaf: -500, overCapApprovedXaf: null }).goodsXaf, 0);
 check("no cap set means any spend needs approval",
   orderMoney({ serviceType: "FOOD_PICKUP", deliveryFeeXaf: 1500, goodsCapXaf: null, goodsActualXaf: 3000, overCapApprovedXaf: null }).needsCustomerApproval, true);
+
+console.log("\nStraight from a delivered order's columns — the two real call sites");
+// The earnings report and the settlement endpoint both call this. Until now
+// they each computed the fee alone, which is the live bug being fixed.
+const foodCash = {
+  serviceType: "FOOD_PICKUP",
+  paymentMethod: "CASH",
+  riderPayoutXaf: 900,
+  companyEarningXaf: 600,
+  cashCollectedXaf: 6500,
+  goodsCapXaf: 6000,
+  goodsActualXaf: 5000,
+  overCapApprovedXaf: null,
+  goodsAdvancedXaf: 5000,
+};
+check("cash food order: the rider owes the company's share, not a debt for the food",
+  riderSettlementFromOrder(foodCash), 600);
+check("the old fee-only answer would have been wrong by exactly what they advanced",
+  riderSettlementFromOrder(foodCash) - riderSettlementForOrder({
+    paymentMethod: "CASH", riderPayoutXaf: 900, cashCollectedXaf: 6500, goodsAdvancedXaf: 0, totalDueXaf: 1500,
+  }), -5000);
+check("mobile money food order: the company owes them their share plus the outlay",
+  riderSettlementFromOrder({ ...foodCash, paymentMethod: "MTN_MOMO", cashCollectedXaf: null }), -5900);
+check("a parcel is untouched by any of this",
+  riderSettlementFromOrder({
+    serviceType: "SMALL_PARCEL", paymentMethod: "CASH", riderPayoutXaf: 900, companyEarningXaf: 600,
+    cashCollectedXaf: 1500, goodsCapXaf: null, goodsActualXaf: null, overCapApprovedXaf: null, goodsAdvancedXaf: null,
+  }), 600);
+check("no frozen split yet means nothing to settle",
+  riderSettlementFromOrder({ ...foodCash, riderPayoutXaf: null }), 0);
+check("an unrecorded receipt falls back to the cap, never to nothing",
+  riderSettlementFromOrder({ ...foodCash, goodsActualXaf: null, cashCollectedXaf: null, goodsAdvancedXaf: null }), 6600);
+// The fee is read back from the frozen split rather than today's tariff, so on
+// a full cash collection the answer is always exactly the company's share —
+// whatever the shopping came to.
+check("the frozen split decides it, and the goods wash out entirely",
+  riderSettlementFromOrder({ ...foodCash, riderPayoutXaf: 1200, companyEarningXaf: 800, cashCollectedXaf: null }), 800);
 
 console.log(`\n${failures === 0 ? "All goods-money rules hold — no rider pays for a customer's shopping." : `${failures} check(s) FAILED.`}\n`);
 process.exit(failures === 0 ? 0 : 1);

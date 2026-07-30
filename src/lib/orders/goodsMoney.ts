@@ -166,3 +166,49 @@ export function riderSettlementForOrder(args: {
   // Paid to us directly: we owe them their share, plus whatever they advanced.
   return -(payout + advanced);
 }
+
+/**
+ * The same answer, computed straight from a delivered order's stored columns.
+ *
+ * Both places that ask this question — the earnings report and the cash
+ * settlement endpoint — used to do the arithmetic themselves against the fee
+ * alone. Two copies of a money rule is one copy too many, so they now share
+ * this. It exists as the bridge between an `Order` row and the pure functions
+ * above, and stays pure itself so the verify script can prove it.
+ *
+ * The fee comes from `riderPayoutXaf + companyEarningXaf` rather than the
+ * estimate or the quote, because that pair is the split **frozen at delivery**.
+ * Re-deriving it from today's tariff would silently rewrite last month's
+ * accounts, which is the one thing a rider must be able to trust we never do.
+ */
+export function riderSettlementFromOrder(order: {
+  serviceType: string;
+  paymentMethod: string;
+  riderPayoutXaf: number | null;
+  companyEarningXaf: number | null;
+  cashCollectedXaf: number | null;
+  goodsCapXaf: number | null;
+  goodsActualXaf: number | null;
+  overCapApprovedXaf: number | null;
+  goodsAdvancedXaf: number | null;
+}): number {
+  // No frozen split yet means the delivery is not finished; there is nothing to
+  // settle, and guessing would put a number on an order that has not earned one.
+  if (order.riderPayoutXaf == null || order.companyEarningXaf == null) return 0;
+
+  const money = orderMoney({
+    serviceType: order.serviceType,
+    deliveryFeeXaf: order.riderPayoutXaf + order.companyEarningXaf,
+    goodsCapXaf: order.goodsCapXaf,
+    goodsActualXaf: order.goodsActualXaf,
+    overCapApprovedXaf: order.overCapApprovedXaf,
+  });
+
+  return riderSettlementForOrder({
+    paymentMethod: order.paymentMethod,
+    riderPayoutXaf: order.riderPayoutXaf,
+    cashCollectedXaf: order.cashCollectedXaf,
+    goodsAdvancedXaf: order.goodsAdvancedXaf,
+    totalDueXaf: money.totalXaf,
+  });
+}

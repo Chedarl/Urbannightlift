@@ -112,14 +112,27 @@ export function riderReturnEntry(entries: RiderFloatEntry[], returnedXaf: number
  *
  * A cap the rider cannot cover is a job they should not be sent on, and finding
  * that out at the counter is the worst possible moment.
+ *
+ * `alreadyAdvancedXaf` is what they have laid out on other orders tonight and
+ * not yet settled. It has to come off, because the ledger balance deliberately
+ * does *not* move on a purchase — a purchase converts our cash into a receivable
+ * rather than paying down what they hold. Without this the same 20,000 float
+ * would authorise two 15,000 purchases, and the rider would be standing at the
+ * second counter with an empty pocket.
  */
 export function canCoverPurchase(
   account: RiderFloatAccount,
   entries: RiderFloatEntry[],
-  neededXaf: number
+  neededXaf: number,
+  alreadyAdvancedXaf = 0
 ): boolean {
   if (neededXaf <= 0) return true;
-  return riderFloatBalance(entries) >= neededXaf;
+  return spendableXaf(entries, alreadyAdvancedXaf) >= neededXaf;
+}
+
+/** Cash actually left in their hand: what we advanced, less what they've spent. */
+export function spendableXaf(entries: RiderFloatEntry[], alreadyAdvancedXaf = 0): number {
+  return riderFloatBalance(entries) - Math.max(0, alreadyAdvancedXaf);
 }
 
 export const RIDER_FLOAT_REFUSAL_MESSAGE: Record<RiderFloatRefusal, string> = {
