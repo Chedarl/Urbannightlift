@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "UNL Rider",
+    "slug": "unl-rider",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "unlrider",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0710",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0710"
+    },
+    "assetBundlePatterns": ["**/*"],
+
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.urbannightlift.rider",
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "NSLocationWhenInUseUsageDescription": "So the customer can see you coming and dispatch knows where you are.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "So your delivery keeps updating on the customer's map while your phone is in your pocket. Sharing stops by itself when the delivery is done.",
+        "NSCameraUsageDescription": "To photograph a shop receipt and proof of delivery.",
+        "NSPhotoLibraryAddUsageDescription": "To keep a copy of a delivery photo."
+      }
+    },
+
+    "android": {
+      "package": "com.urbannightlift.rider",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0710"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "CAMERA",
+        "WAKE_LOCK"
+      ]
+    },
+
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "locationAlwaysAndWhenInUsePermission": "So your delivery keeps updating on the customer's map while your phone is in your pocket."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#d4af37"
+        }
+      ]
+    ],
+
+    "extra": {
+      "apiBase": "https://urbannighlift.com"
+    }
+  }
+}
