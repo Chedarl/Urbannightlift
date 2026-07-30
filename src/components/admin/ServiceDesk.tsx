@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Radio, Users2, Inbox } from "lucide-react";
+import { Radio, Users2, Inbox, Store, BarChart3 } from "lucide-react";
 import { LiveConsole } from "@/components/admin/LiveConsole";
 import { CustomerCrm } from "@/components/admin/CustomerCrm";
 import { CaseInbox } from "@/components/admin/CaseInbox";
+import { MerchantRelations } from "@/components/admin/MerchantRelations";
+import { CrmInsights } from "@/components/admin/CrmInsights";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,7 +20,7 @@ import { cn } from "@/lib/utils";
  * Tabs rather than pages because a support call crosses all three at once —
  * somebody messages about the order you are already watching.
  */
-type Tab = "INBOX" | "NOW" | "PEOPLE";
+type Tab = "INBOX" | "NOW" | "PEOPLE" | "MERCHANTS" | "INSIGHTS";
 
 export function ServiceDesk({ canBlock }: { canBlock: boolean }) {
   const [tab, setTab] = useState<Tab>("INBOX");
@@ -32,19 +34,35 @@ export function ServiceDesk({ canBlock }: { canBlock: boolean }) {
         </p>
       </div>
 
-      <div className="flex gap-1 rounded-xl border border-ink-800 bg-ink-950 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-ink-800 bg-ink-950 p-1">
         <TabButton active={tab === "INBOX"} onClick={() => setTab("INBOX")} icon={<Inbox className="h-4 w-4" />}>
           Inbox
         </TabButton>
         <TabButton active={tab === "NOW"} onClick={() => setTab("NOW")} icon={<Radio className="h-4 w-4" />}>
-          Happening now
+          Now
         </TabButton>
         <TabButton active={tab === "PEOPLE"} onClick={() => setTab("PEOPLE")} icon={<Users2 className="h-4 w-4" />}>
           Customers
         </TabButton>
+        <TabButton active={tab === "MERCHANTS"} onClick={() => setTab("MERCHANTS")} icon={<Store className="h-4 w-4" />}>
+          Merchants
+        </TabButton>
+        <TabButton active={tab === "INSIGHTS"} onClick={() => setTab("INSIGHTS")} icon={<BarChart3 className="h-4 w-4" />}>
+          Insights
+        </TabButton>
       </div>
 
-      {tab === "INBOX" ? <CaseInbox /> : tab === "NOW" ? <LiveConsole /> : <CustomerCrm canBlock={canBlock} />}
+      {tab === "INBOX" ? (
+        <CaseInbox />
+      ) : tab === "NOW" ? (
+        <LiveConsole />
+      ) : tab === "PEOPLE" ? (
+        <CustomerCrm canBlock={canBlock} />
+      ) : tab === "MERCHANTS" ? (
+        <MerchantRelations />
+      ) : (
+        <CrmInsights />
+      )}
     </div>
   );
 }
