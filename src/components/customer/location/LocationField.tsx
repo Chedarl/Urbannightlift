@@ -25,6 +25,14 @@ interface BrowseGroup { arrondissement: string; locations: LocationResult[] }
 
 type Tab = "search" | "browse" | "gps" | "map";
 
+/**
+ * A Places session token. Any opaque unique string works; Google only uses it to
+ * group the keystrokes of one search with the single lookup that ends it.
+ */
+function newSessionToken(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `s${Date.now()}${Math.random().toString(36).slice(2)}`;
+}
+
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16&accept-language=fr`, {
@@ -66,11 +74,18 @@ export function LocationField({
   /** Which side this field collects. The prompt should never offer both. */
   mode?: "pickup" | "delivery";
 }) {
-  const { t, locale } = useTranslation();
+  const { locale } = useTranslation();
   const fr = locale === "fr";
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("search");
   const [zones, setZones] = useState<ZoneData[]>([]);
+
+  /**
+   * One token for a whole typing session, replaced when a session is closed by
+   * picking something. Google bills a session at the moment it closes, so every
+   * keystroke sharing a token costs nothing.
+   */
+  const sessionRef = useRef(newSessionToken());
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LocationResult[]>([]);
@@ -96,14 +111,19 @@ export function LocationField({
     setSearching(true);
     const id = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/locations/search?q=${encodeURIComponent(query)}`);
+        const res = await fetch(
+          `/api/locations/search?q=${encodeURIComponent(query)}&lang=${fr ? "fr" : "en"}&session=${encodeURIComponent(sessionRef.current)}`
+        );
         const d = await res.json();
         setResults(d.results ?? []);
       } catch { setResults([]); }
       setSearching(false);
     }, 250);
     return () => clearTimeout(id);
-  }, [query, tab]);
+    // `fr` is in here because Google returns suggestions in the asked-for
+    // language — switching locale mid-search should re-ask, not keep English
+    // results under a French label.
+  }, [query, tab, fr]);
 
   const loadBrowse = useCallback(() => {
     if (groups.length) return;
@@ -124,15 +144,43 @@ export function LocationField({
     setPinName(name);
   }, [zones, resolveStatus]);
 
-  const pickResult = useCallback((r: LocationResult) => {
+  const pickResult = useCallback(async (r: LocationResult) => {
+    let lat = r.latitude;
+    let lng = r.longitude;
+
+    // A Google suggestion arrives without coordinates — that is what makes all
+    // the typing before it free. Picking one closes the session, and this is the
+    // single call Google actually bills for, so it happens here and nowhere else.
+    if (lat == null || lng == null) {
+      if (!r.placeId) return;
+      setSearching(true);
+      try {
+        const res = await fetch(
+          `/api/locations/place?id=${encodeURIComponent(r.placeId)}&session=${encodeURIComponent(sessionRef.current)}`
+        );
+        const d = await res.json();
+        if (!res.ok || !d?.found) return;
+        lat = d.latitude;
+        lng = d.longitude;
+        // A token is good for exactly one completed session. Reusing it would
+        // put every later search on a session Google has already closed.
+        sessionRef.current = newSessionToken();
+      } catch {
+        return;
+      } finally {
+        setSearching(false);
+      }
+    }
+    if (lat == null || lng == null) return;
+
     const d: Draft = {
       primaryName: r.primaryName, neighbourhood: r.neighbourhood, arrondissement: r.arrondissement,
-      lat: r.latitude, lng: r.longitude, baseStatus: r.serviceStatus, source: r.source,
+      lat, lng, baseStatus: r.serviceStatus, source: r.source,
     };
     setDraft(d);
     setLandmark(r.landmark ?? "");
     setPinName(r.primaryName);
-    recalc(r.latitude, r.longitude, d);
+    recalc(lat, lng, d);
   }, [recalc]);
 
   const detectMyLocation = useCallback(() => {

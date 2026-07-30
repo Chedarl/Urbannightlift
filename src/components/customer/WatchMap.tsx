@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
+import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -62,10 +63,7 @@ export function WatchMap({
         style={{ height: 300, width: "100%", background: "#0a0710" }}
         scrollWheelZoom={false}
       >
-        <TileLayer
-          attribution="&copy; OpenStreetMap &copy; CARTO"
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
+        <BaseTiles />
         <Frame points={points} />
         {destination && <Marker position={[destination.lat, destination.lng]} icon={destinationIcon} />}
         {rider && <Marker position={[rider.lat, rider.lng]} icon={riderIcon(stale)} />}

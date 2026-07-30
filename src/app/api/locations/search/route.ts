@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { scoreMatch } from "@/lib/locations/normalize";
 import { isPlusCode, decodePlusCode } from "@/lib/locations/plusCode";
+import { placeAutocomplete, hasGooglePlaces } from "@/lib/maps/google";
 
 export interface LocationResult {
   id: string;
@@ -9,11 +10,18 @@ export interface LocationResult {
   neighbourhood: string;
   arrondissement: string;
   landmark: string | null;
-  latitude: number;
-  longitude: number;
+  /**
+   * Null only on a Google suggestion, which carries no coordinates until
+   * somebody picks it — that is what makes the typing free. The client resolves
+   * it through `/api/locations/place` on selection.
+   */
+  latitude: number | null;
+  longitude: number | null;
   plusCode: string | null;
   serviceStatus: string;
-  source: "local" | "osm" | "pluscode";
+  source: "local" | "osm" | "google" | "pluscode";
+  /** Set on Google suggestions only. */
+  placeId?: string | null;
 }
 
 const PRIORITY_STATUSES = new Set(["PRIORITY"]);
@@ -27,6 +35,12 @@ const PRIORITY_STATUSES = new Set(["PRIORITY"]);
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json({ results: [] });
+
+  const fr = req.nextUrl.searchParams.get("lang") === "fr";
+  // One token per typing session, minted by the client. Google bills the whole
+  // session as the single Place Details call that closes it, so every keystroke
+  // inside one token is free.
+  const sessionToken = req.nextUrl.searchParams.get("session") ?? "";
 
   const results: LocationResult[] = [];
 
@@ -80,8 +94,38 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // 3) OpenStreetMap fallback (bounded to Yaoundé) when local results are thin
-  if (scored.length < 5) {
+  // 3) Google, when the catalogue is thin.
+  //
+  // Deliberately below the local results and never above them: a place we have
+  // seeded or actually delivered to beats anything a third party knows about
+  // this city, and the ranking has to say so. Google is here for the streets and
+  // businesses OpenStreetMap has never heard of, which in Yaoundé is most of
+  // them.
+  const googleUsed = scored.length < 5 && hasGooglePlaces() && sessionToken.length > 0;
+  if (googleUsed) {
+    const predictions = await placeAutocomplete(q, sessionToken, fr);
+    for (const p of predictions.slice(0, 5)) {
+      results.push({
+        id: `google:${p.placeId}`,
+        primaryName: p.primary,
+        neighbourhood: p.secondary || "Yaoundé",
+        arrondissement: "YAOUNDE_PERIPHERY",
+        landmark: null,
+        // No coordinates yet — see the note on LocationResult.
+        latitude: null,
+        longitude: null,
+        plusCode: null,
+        serviceStatus: "REVIEW_REQUIRED",
+        source: "google",
+        placeId: p.placeId,
+      });
+    }
+  }
+
+  // 4) OpenStreetMap, which now only runs when Google is unavailable — no key,
+  //    no session, or a failed call. Keeping it means turning the Google key off
+  //    degrades search rather than breaking it.
+  if (scored.length < 5 && results.filter((r) => r.source === "google").length === 0) {
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 3500);
@@ -95,7 +139,11 @@ export async function GET(req: NextRequest) {
       clearTimeout(timer);
       if (res.ok) {
         const data = (await res.json()) as { display_name: string; lat: string; lon: string; place_id: number }[];
-        const seen = new Set(results.map((r) => `${r.latitude.toFixed(3)},${r.longitude.toFixed(3)}`));
+        const seen = new Set(
+          results
+            .filter((r) => r.latitude != null && r.longitude != null)
+            .map((r) => `${r.latitude!.toFixed(3)},${r.longitude!.toFixed(3)}`)
+        );
         for (const d of data) {
           const lat = Number(d.lat);
           const lng = Number(d.lon);

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { scoreMatch, normalizeTokens } from "@/lib/locations/normalize";
 import { nearestZone } from "@/lib/orders/pricing";
 import { findVerifiedPlace } from "@/lib/locations/verifiedPlaces";
+import { geocodeText } from "@/lib/maps/google";
 
 /**
  * Best-effort geocoding for orders whose location was typed as free text.
@@ -15,14 +16,20 @@ import { findVerifiedPlace } from "@/lib/locations/verifiedPlaces";
  *
  *   1. places we have actually delivered to before (see verifiedPlaces), then
  *   2. the seeded Yaoundé ServiceLocation catalogue (exact / alias / fuzzy), then
- *   3. OpenStreetMap Nominatim, bounded to Yaoundé.
+ *   3. Google Geocoding, bounded to Yaoundé, then
+ *   4. OpenStreetMap Nominatim, if there is no Google key configured.
  *
- * No API key, no third-party AI, and no customer data leaves the server beyond
- * the place name itself. Every attempt is logged so we can measure how much of
- * the problem this actually solves before considering anything paid.
+ * The order is the point and has not changed: our own delivered places and our
+ * own catalogue beat any third party, because they encode where a rider has
+ * actually found a door in this city. Google was added at step 3 for the streets
+ * OSM has never mapped, which in Yaoundé is most of them — but it can only ever
+ * answer questions the first two could not.
+ *
+ * No customer data leaves the server beyond the place name itself. Every attempt
+ * is logged, so the value of the paid step is measurable rather than assumed.
  */
 
-export type GeoSource = "DELIVERED" | "CATALOGUE" | "OSM";
+export type GeoSource = "DELIVERED" | "CATALOGUE" | "GOOGLE" | "OSM";
 
 export interface ResolvedAddress {
   latitude: number;
@@ -102,6 +109,26 @@ async function matchCatalogue(text: string): Promise<ResolvedAddress | null> {
   };
 }
 
+/**
+ * Google, bounded to Yaoundé. The only paid step, and the last resort before
+ * OSM: by the time we get here the customer typed something our own records do
+ * not recognise, which is exactly the case Google is worth money for.
+ */
+async function matchGoogle(text: string): Promise<ResolvedAddress | null> {
+  const hit = await geocodeText(text, true).catch(() => null);
+  if (!hit) return null;
+  return {
+    latitude: hit.latitude,
+    longitude: hit.longitude,
+    source: "GOOGLE",
+    // Better than a bounded OSM guess, below anything we have confirmed
+    // ourselves — a dispatcher should still be able to question it.
+    confidence: 0.75,
+    matchedName: hit.displayName,
+    zoneId: null,
+  };
+}
+
 /** OpenStreetMap, bounded to Yaoundé. Free; failures are non-fatal by design. */
 async function matchNominatim(text: string): Promise<ResolvedAddress | null> {
   const query = meaningfulTokens(text).join(" ") || text;
@@ -174,6 +201,9 @@ export async function resolveAddress(
     : null;
 
   if (!resolved) resolved = await matchCatalogue(trimmed);
+  if (!resolved) resolved = await matchGoogle(trimmed);
+  // Only when there is no Google key. Keeping it means turning Google off
+  // degrades geocoding rather than breaking order creation.
   if (!resolved) resolved = await matchNominatim(trimmed);
 
   if (resolved && !resolved.zoneId) {

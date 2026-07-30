@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Crosshair, MapPin } from "lucide-react";
@@ -166,10 +167,7 @@ export function LocationPicker({
 
       <div className="relative overflow-hidden rounded-2xl border border-ink-700" style={{ height: 260 }}>
         <MapContainer center={YAOUNDE} zoom={12} className="h-full w-full" scrollWheelZoom={false}>
-          <TileLayer
-            attribution='&copy; OpenStreetMap &copy; CARTO'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
+          <BaseTiles />
           <ClickHandler onClick={place} />
           <Recenter point={fly} />
           {pickup && (

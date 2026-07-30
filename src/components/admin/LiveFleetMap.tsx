@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, Marker, Tooltip, useMap } from "react-leaflet";
+import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { TrackingState } from "@/lib/orders/liveWatch";
@@ -74,10 +75,7 @@ export function LiveFleetMap({ riders }: { riders: FleetPin[] }) {
         style={{ height: 300, width: "100%", background: "#0a0710" }}
         scrollWheelZoom={false}
       >
-        <TileLayer
-          attribution="&copy; OpenStreetMap &copy; CARTO"
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
+        <BaseTiles />
         <Frame pins={riders} />
         {riders.map((r) => (
           <Marker key={r.orderId} position={[r.lat, r.lng]} icon={pinIcon(COLOUR[r.tracking], r.focused)}>
