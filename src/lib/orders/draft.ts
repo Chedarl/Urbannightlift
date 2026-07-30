@@ -13,6 +13,13 @@ export interface OrderDraft extends OrderInput {
   pickupZoneName?: string;
   deliveryZoneName?: string;
   merchantName?: string;
+  /**
+   * Whether the fee is the zone tariff and therefore final, so the review
+   * screen can say so instead of calling every price an estimate. Copy only —
+   * the server re-decides authoritatively in `decideAutoPrice`, so a tampered
+   * draft changes what the customer is *told*, never what they are charged.
+   */
+  priceFirm?: boolean;
 }
 
 export function saveDraft(draft: OrderDraft) {

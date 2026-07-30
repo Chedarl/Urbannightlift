@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, BadgeCheck } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
 import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
+import { priceCopy } from "@/lib/orders/priceCopy";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
@@ -81,6 +82,10 @@ export function OrderReview() {
   }
 
   const fr = draft.preferredLanguage === "FR";
+  // A firm price is the zone tariff and is final. The server re-decides this
+  // authoritatively when the order is created, so this only chooses wording.
+  const firm = draft.priceFirm === true && draft.estimatedFeeXaf != null;
+  const copy = priceCopy(firm, fr);
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
   const pdfData: OrderPdfData = {
@@ -137,14 +142,30 @@ export function OrderReview() {
         <p className="mt-1 text-sm text-mist-500">{t("review.subtitle")}</p>
       </div>
 
-      {/* Pending confirmation banner */}
-      <div className="flex items-start gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 p-4">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
-        <div>
-          <p className="text-sm font-semibold text-gold-200">{t("review.pendingBadge")}</p>
-          <p className="mt-1 text-xs leading-relaxed text-gold-200/80">{t("review.pendingBanner")}</p>
+      {/* What happens when they tap through. A firm zone-tariff price is final
+          and goes straight to payment, so saying "pending confirmation" would
+          be teaching them to distrust a number that cannot move. A price that
+          genuinely needs a person says so, with how long it takes. */}
+      {firm ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-safe/40 bg-safe/[0.08] p-4">
+          <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-safe" />
+          <div>
+            <p className="text-sm font-semibold text-mist-100">
+              {fr ? "Prix confirmé" : "Price confirmed"}
+              {draft.estimatedFeeXaf != null ? ` · ${formatXaf(draft.estimatedFeeXaf)}` : ""}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-mist-300">{copy.note}</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
+          <div>
+            <p className="text-sm font-semibold text-gold-200">{t("review.pendingBadge")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-gold-200/80">{copy.note}</p>
+          </div>
+        </div>
+      )}
 
       <div className="divide-y divide-ink-700 rounded-2xl border border-ink-700 bg-ink-900 px-4 py-2">
         <Row label={t("review.customer")} value={`${draft.fullName} • ${draft.whatsappNumber}`} />
@@ -175,7 +196,7 @@ export function OrderReview() {
         ))}
         <Row label={t("review.declaredValue")} value={formatXaf(draft.declaredValueXaf)} />
         <Row
-          label={t("review.estimatedFee")}
+          label={copy.label}
           value={draft.estimatedFeeXaf != null ? formatXaf(draft.estimatedFeeXaf) : "—"}
         />
         <Row

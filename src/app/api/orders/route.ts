@@ -3,6 +3,7 @@ import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
+import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
   });
 
   const highValueFlag = input.declaredValueXaf > INSURED_VALUE_CAP_XAF;
+  // Decided below, once the safety flags it depends on are known.
   // Use the effective zones so a zone recovered from a typed address is still
   // safety-checked rather than silently skipping the flag.
   const riskFlag =
@@ -122,6 +124,26 @@ export async function POST(req: NextRequest) {
     effectivePickupZone?.safetyLevel === "NO_GO" ||
     effectiveDeliveryZone?.safetyLevel === "RESTRICTED" ||
     effectiveDeliveryZone?.safetyLevel === "NO_GO";
+
+  /**
+   * When the zone resolves to a firm tier the fee is already exact, so the
+   * system issues the quote itself and records the customer's agreement — they
+   * saw this precise figure on the review screen and placed the order against
+   * it. That takes the order straight to payment instead of parking it in a
+   * queue to be told a number it had already calculated.
+   *
+   * Everything downstream is untouched: payment still has to be verified, cash
+   * still settles at the door, and `dispatchBlocker` still holds the rider
+   * until the money side is done.
+   */
+  const priceDecision = decideAutoPrice({
+    pickupZone: effectivePickupZone,
+    deliveryZone: effectiveDeliveryZone,
+    estimatedFeeXaf: estimatedFee,
+    highValueFlag,
+    riskFlag: Boolean(riskFlag),
+  });
+  const autoPricedAt = priceDecision.firm ? new Date() : null;
 
   const orderCode = `UNL-${orderCodeId()}`;
 
@@ -222,7 +244,16 @@ export async function POST(req: NextRequest) {
         estimatedDeliveryFeeXaf: estimatedFee,
         paymentMethod: input.paymentMethod,
         paymentStatus: "PENDING",
-        orderStatus: "AWAITING_DISPATCHER_REVIEW",
+        // A firm price is quoted and agreed at checkout, so the order opens on
+        // payment rather than in the review queue.
+        orderStatus: autoPricedAt ? "AWAITING_PAYMENT" : "AWAITING_DISPATCHER_REVIEW",
+        ...(autoPricedAt
+          ? {
+              quotedFeeXaf: priceDecision.feeXaf,
+              quoteSentAt: autoPricedAt,
+              quoteAcceptedAt: autoPricedAt,
+            }
+          : {}),
         riskFlag: Boolean(riskFlag),
         highValueFlag,
         screenshotUrl: input.screenshotUrl || null,
@@ -242,13 +273,24 @@ export async function POST(req: NextRequest) {
     await tx.orderStatusHistory.createMany({
       data: [
         { orderId: created.id, fromStatus: null, toStatus: "NEW_REQUEST", changedByRole: "CUSTOMER" },
-        {
-          orderId: created.id,
-          fromStatus: "NEW_REQUEST",
-          toStatus: "AWAITING_DISPATCHER_REVIEW",
-          changedByRole: "SYSTEM",
-          note: "Auto-queued for dispatcher review",
-        },
+        autoPricedAt
+          ? {
+              orderId: created.id,
+              fromStatus: "NEW_REQUEST" as const,
+              toStatus: "AWAITING_PAYMENT" as const,
+              changedByRole: "SYSTEM" as const,
+              // The trail has to say who set the price and on what basis, so a
+              // dispatcher reading it later knows this was the zone tariff and
+              // not somebody's guess.
+              note: `Auto-priced ${priceDecision.feeXaf} XAF from the zone tariff; agreed by the customer at checkout`,
+            }
+          : {
+              orderId: created.id,
+              fromStatus: "NEW_REQUEST" as const,
+              toStatus: "AWAITING_DISPATCHER_REVIEW" as const,
+              changedByRole: "SYSTEM" as const,
+              note: `Auto-queued for dispatcher review (${priceDecision.reason})`,
+            },
       ],
     });
 

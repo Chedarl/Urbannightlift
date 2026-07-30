@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
+import { decideAutoPrice } from "@/lib/orders/autoPrice";
+import { priceCopy } from "@/lib/orders/priceCopy";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
@@ -17,6 +19,7 @@ import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { MoreDetails } from "@/components/customer/order/fields/MoreDetails";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
@@ -167,7 +170,7 @@ export function FoodForm() {
       pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null,
       deliveryLng: deliverySel?.longitude ?? null,
-      estimatedFeeXaf: estimatedFee,
+      estimatedFeeXaf: estimatedFee, priceFirm,
       pickupZoneName: pickupSel?.zoneName ?? undefined,
       deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
@@ -188,6 +191,21 @@ export function FoodForm() {
 
   const PhonePrefix = () => (
     <span className="flex shrink-0 items-center gap-1 rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">🇨🇲 +237</span>
+  );
+  /**
+   * Whether that fee is the final zone tariff, using the same rule the server
+   * applies on submit. Wording only — the server re-decides authoritatively.
+   */
+  const priceFirm = useMemo(
+    () =>
+      decideAutoPrice({
+        pickupZone: effZone(pickupSel),
+        deliveryZone: effZone(deliverySel),
+        estimatedFeeXaf: estimatedFee,
+        highValueFlag: false,
+        riskFlag: false,
+      }).firm,
+    [pickupSel, deliverySel, estimatedFee]
   );
 
   return (
@@ -213,14 +231,6 @@ export function FoodForm() {
       <div className="flex flex-col gap-4 px-4 pt-5">
         <WelcomeBack accent={ACCENT} fr={fr} />
 
-        <VoiceNoteField
-          accent={ACCENT}
-          fr={fr}
-          onChange={(n) => {
-            setValue("voiceNoteUrl", n?.url ?? "");
-            setValue("voiceNoteSeconds", n?.seconds ?? null);
-          }}
-        />
 
         {/* Restaurant name + location */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -297,6 +307,18 @@ export function FoodForm() {
           {missing.includes(fr ? "Articles de la commande" : "Items in your order") && <p data-error="true" className="mt-2 text-xs text-restricted">{fr ? "Ajoutez au moins un article." : "Add at least one item."}</p>}
         </div>
 
+                {/* Everything optional, folded away. Fields stay mounted inside the
+            disclosure, so nothing typed is lost and validation still sees it. */}
+        <MoreDetails accent={ACCENT} fr={fr}>
+        <VoiceNoteField
+          accent={ACCENT}
+          fr={fr}
+          onChange={(n) => {
+            setValue("voiceNoteUrl", n?.url ?? "");
+            setValue("voiceNoteSeconds", n?.seconds ?? null);
+          }}
+        />
+
         {/* Food preferences */}
         <div className={card}>
           <p className={label}><Flame className="h-3.5 w-3.5 text-amber-300" /> {fr ? "Préférences" : "Food preferences"} <span className="text-mist-500">{fr ? "Dites-nous comment vous l'aimez" : "Tell us how you like it"}</span></p>
@@ -339,6 +361,7 @@ export function FoodForm() {
             />
           </div>
         </div>
+        </MoreDetails>
 
         {/* Delivery address + recipient phone */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -402,7 +425,7 @@ export function FoodForm() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-amber-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         {estimatedFee != null && (
           <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{fr ? "Frais de livraison estimés" : "Estimated delivery fee"}</span>
+            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr).label}</span>
             <span className="font-display text-base font-bold text-mist-100">{estimatedFee.toLocaleString("fr-FR")} XAF</span>
           </div>
         )}
