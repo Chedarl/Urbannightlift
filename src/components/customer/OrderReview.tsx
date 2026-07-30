@@ -7,8 +7,9 @@ import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
 import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
 import { priceCopy } from "@/lib/orders/priceCopy";
-import { isShoppingService } from "@/lib/orders/goodsMoney";
+import { isShoppingService, orderMoney } from "@/lib/orders/goodsMoney";
 import { Stepper } from "@/components/customer/order/Stepper";
+import { MoneyBreakdown } from "@/components/customer/order/MoneyBreakdown";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
@@ -46,6 +47,29 @@ function structuredRows(draft: OrderDraft, fr: boolean): [string, string][] {
   if (sd.accessNotes) rows.push([fr ? "Accès" : "Access notes", String(sd.accessNotes)]);
   if (sd.counterRef) rows.push([fr ? "Réf." : "Ref", String(sd.counterRef)]);
   return rows;
+}
+
+/**
+ * The things the customer asked us to buy, however their service recorded them.
+ * Used only for the money block's itemised lines — an unrecognised shape yields
+ * nothing rather than a guess.
+ */
+function goodsItems(draft: OrderDraft): { name: string; qty?: number }[] {
+  const sd = (draft.serviceDetails ?? {}) as Record<string, unknown>;
+  const out: { name: string; qty?: number }[] = [];
+  for (const key of ["foodItems", "items", "groceryItems", "meds"]) {
+    const list = sd[key];
+    if (!Array.isArray(list)) continue;
+    for (const row of list) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const name = typeof r.name === "string" ? r.name.trim() : "";
+      if (!name) continue;
+      const qty = Number(r.qty);
+      out.push({ name, qty: Number.isFinite(qty) && qty > 0 ? qty : undefined });
+    }
+  }
+  return out;
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -86,7 +110,18 @@ export function OrderReview() {
   // A firm price is the zone tariff and is final. The server re-decides this
   // authoritatively when the order is created, so this only chooses wording.
   const firm = draft.priceFirm === true && draft.estimatedFeeXaf != null;
-  const copy = priceCopy(firm, fr, isShoppingService(draft.serviceType));
+  const shopping = isShoppingService(draft.serviceType);
+  const copy = priceCopy(firm, fr, shopping);
+  // The money, split the way the customer needs to see it: what they asked us
+  // to buy, our fee, and the sum — never one blended number.
+  const money = orderMoney({
+    serviceType: draft.serviceType,
+    deliveryFeeXaf: draft.estimatedFeeXaf,
+    goodsCapXaf: draft.goodsCapXaf ?? null,
+    goodsActualXaf: null,
+    overCapApprovedXaf: null,
+  });
+  const goodsAtDoor = shopping && draft.paymentMethod !== "CASH";
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
   const pdfData: OrderPdfData = {
@@ -200,10 +235,14 @@ export function OrderReview() {
           <Row key={label} label={label} value={value} />
         ))}
         <Row label={t("review.declaredValue")} value={formatXaf(draft.declaredValueXaf)} />
-        <Row
-          label={copy.label}
-          value={draft.estimatedFeeXaf != null ? formatXaf(draft.estimatedFeeXaf) : "—"}
-        />
+        {/* On a shopping order the money needs its own itemised block below, so
+            the fee is not repeated here as if it were the whole price. */}
+        {!shopping && (
+          <Row
+            label={copy.label}
+            value={draft.estimatedFeeXaf != null ? formatXaf(draft.estimatedFeeXaf) : "—"}
+          />
+        )}
         <Row
           label={t("review.paymentMethod")}
           value={draft.paymentMethod === "MTN_MOMO" ? t("orderForm.mtnMomo") : draft.paymentMethod === "ORANGE_MONEY" ? t("orderForm.orangeMoney") : t("orderForm.cashOnDelivery")}
@@ -213,6 +252,17 @@ export function OrderReview() {
           value={<CheckCircle2 className="ml-auto h-5 w-5 text-safe" />}
         />
       </div>
+
+      {/* The arithmetic, shown rather than asserted. Goods, fee, total — never
+          blended into one number, because a blended number is exactly what
+          somebody skimming would show you. */}
+      <MoneyBreakdown
+        money={money}
+        items={goodsItems(draft)}
+        capXaf={draft.goodsCapXaf ?? null}
+        goodsAtDoor={goodsAtDoor}
+        fr={fr}
+      />
 
       <DownloadPdfButton data={pdfData} label={t("review.downloadPdf")} className="w-full" />
 

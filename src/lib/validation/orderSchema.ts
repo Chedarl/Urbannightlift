@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { SHOPPING_SERVICES } from "@/lib/orders/goodsMoney";
+
+/** Widened for comparison against the schema's own service enum. */
+const SHOPPING_SERVICE_TYPES: readonly string[] = SHOPPING_SERVICES;
 
 /**
  * Shared client/server validation for the guest order form.
@@ -67,7 +71,26 @@ export const orderSchema = z.object({
   /// a wrong or expired code must quietly buy nothing rather than block an order.
   referralCode: z.string().trim().max(20).optional().or(z.literal("")),
 
+  /// The most the customer is willing to have spent on their behalf.
+  ///
+  /// Required on the shopping services (enforced below), because it is the
+  /// promise the whole no-surprises design rests on: without a ceiling there is
+  /// nothing to measure an over-spend against, and the customer could be handed
+  /// a bill they never agreed to. Optional in the shape so parcel and errand —
+  /// where we buy nothing — are untouched.
+  goodsCapXaf: z.coerce.number().int().min(0).max(2_000_000).optional().nullable(),
+
   acceptedTerms: z.literal(true),
+}).superRefine((v, ctx) => {
+  // A shopping order without a cap is not a valid order. Kept here rather than
+  // in the forms so a hand-crafted request cannot skip it either.
+  if (SHOPPING_SERVICE_TYPES.includes(v.serviceType) && !(v.goodsCapXaf && v.goodsCapXaf > 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["goodsCapXaf"],
+      message: "Set the most we should spend on your behalf.",
+    });
+  }
 });
 
 export type OrderInput = z.infer<typeof orderSchema>;

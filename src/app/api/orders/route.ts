@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
+import { orderMoney } from "@/lib/orders/goodsMoney";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
@@ -145,6 +146,33 @@ export async function POST(req: NextRequest) {
   });
   const autoPricedAt = priceDecision.firm ? new Date() : null;
 
+  /**
+   * What the customer actually owes, which is not the same as our fee.
+   *
+   * On a shopping order the goods are a second amount we do not earn on. Before
+   * the rider has bought anything the only honest figure is the cap, so this is
+   * a ceiling — `orderMoney` says as much and every screen reads it from there.
+   */
+  const money = orderMoney({
+    serviceType: input.serviceType,
+    deliveryFeeXaf: estimatedFee,
+    goodsCapXaf: input.goodsCapXaf ?? null,
+    goodsActualXaf: null,
+    overCapApprovedXaf: null,
+  });
+
+  /**
+   * The up-front payable, which differs by method on a shopping order.
+   *
+   * Cash settles once at the door, so the payable is the whole thing. Mobile
+   * money is paid *now*, before anyone knows the shop's price — so we take the
+   * delivery fee only and the goods are handed over in cash on arrival. Taking
+   * the cap up front would mean holding money that is not ours and owing a
+   * refund, which is exactly what an honest service must never look like.
+   */
+  const payableNowXaf =
+    money.shopping && input.paymentMethod !== "CASH" ? money.deliveryFeeXaf : money.totalXaf;
+
   const orderCode = `UNL-${orderCodeId()}`;
 
   const order = await prisma.$transaction(async (tx) => {
@@ -242,6 +270,8 @@ export async function POST(req: NextRequest) {
         preferredDeliveryTime: normalizePreferredTime(input.preferredDeliveryTime),
         specialInstructions: input.specialInstructions || null,
         estimatedDeliveryFeeXaf: estimatedFee,
+        // The ceiling the customer agreed to. Required on shopping services.
+        goodsCapXaf: input.goodsCapXaf ?? null,
         paymentMethod: input.paymentMethod,
         paymentStatus: "PENDING",
         // A firm price is quoted and agreed at checkout, so the order opens on
@@ -299,7 +329,7 @@ export async function POST(req: NextRequest) {
         orderId: created.id,
         customerId: customer.id,
         paymentMethod: input.paymentMethod,
-        amountXaf: estimatedFee ?? 0,
+        amountXaf: payableNowXaf,
         paymentPhone: input.paymentPhone || null,
         transactionReference: input.transactionReference || null,
         status: "PENDING",

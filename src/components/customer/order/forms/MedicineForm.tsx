@@ -20,6 +20,7 @@ import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox"
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { MoreDetails } from "@/components/customer/order/fields/MoreDetails";
+import { SpendingCapField } from "@/components/customer/order/fields/SpendingCapField";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
@@ -204,6 +205,7 @@ export function MedicineForm() {
 
   function onInvalid(errs: Record<string, unknown>) {
     const labels: Record<string, string> = {
+      goodsCapXaf: fr ? "Plafond de dépense" : "Spending cap",
       acceptedTerms: fr ? "Accepter les conditions" : "Accept the terms",
       fullName: fr ? "Nom du patient" : "Patient full name",
       whatsappNumber: fr ? "Téléphone du patient" : "Patient phone number",
@@ -359,6 +361,17 @@ export function MedicineForm() {
 
                 {/* Everything optional, folded away. Fields stay mounted inside the
             disclosure, so nothing typed is lost and validation still sees it. */}
+        {/* The most we may spend for them. Required, and in the main column:
+            it is a money term, not a preference. */}
+        <SpendingCapField
+          accent={ACCENT}
+          fr={fr}
+          value={watch("goodsCapXaf")}
+          onChange={(v) => setValue("goodsCapXaf", v, { shouldValidate: true })}
+          error={missing.includes(fr ? "Plafond de dépense" : "Spending cap")}
+          suggestion={fr ? "ex. 10 000" : "e.g. 10,000"}
+        />
+
         <MoreDetails accent={ACCENT} fr={fr}>
         <VoiceNoteField
           accent={ACCENT}
