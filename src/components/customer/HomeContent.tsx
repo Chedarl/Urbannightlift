@@ -12,6 +12,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getClosedNotice } from "@/lib/i18n/legal";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
+import { Logo } from "@/components/shared/Logo";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
@@ -178,8 +179,7 @@ export function HomeContent({
       <header className="sticky top-0 z-40 border-b border-ink-700/50 bg-ink-950/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link href="/" aria-label="Urban Night Lift home" className="flex items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Urban Night Lift" className="h-8 w-auto" />
+            <Logo height={32} />
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
             {navLinks.map((l) => (
@@ -279,12 +279,12 @@ export function HomeContent({
                 className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-ink-700 bg-ink-900/60 p-4 transition-all hover:-translate-y-0.5 hover:border-ink-500"
                 style={{ minHeight: "7rem" }}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/12 text-violet-300">
                   <s.icon className="h-6 w-6" />
                 </span>
                 <span className="mt-3 flex items-center justify-between gap-1">
                   <span className="font-display text-sm font-semibold leading-tight text-mist-100">{tr(fr, s.title)}</span>
-                  <ArrowRight className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" style={{ color: s.accent }} />
+                  <ArrowRight className="h-4 w-4 shrink-0 text-violet-300 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                 </span>
               </Link>
             ))}
@@ -304,7 +304,7 @@ export function HomeContent({
                     onClick={() => setPending(s)}
                     className="flex shrink-0 items-center gap-2 rounded-xl border border-dashed border-ink-600 bg-ink-900/30 px-3 py-2 text-left hover:border-ink-500"
                   >
-                    <s.icon className="h-4 w-4 shrink-0 opacity-60" style={{ color: s.accent }} />
+                    <s.icon className="h-4 w-4 shrink-0 text-violet-300/70" />
                     <span className="text-xs font-medium text-mist-300">{tr(fr, s.title)}</span>
                     <BellRing className="h-3 w-3 text-mist-500" />
                   </button>
@@ -465,8 +465,7 @@ export function HomeContent({
       <footer className="border-t border-ink-800 bg-ink-950">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-4">
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Urban Night Lift" className="h-8 w-auto" />
+            <Logo height={32} />
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-mist-400">{fr ? "Votre partenaire de livraison de nuit. Nous bougeons quand vous en avez besoin." : "Your trusted night delivery partner. We move when you need us most."}</p>
           </div>
           <div>
