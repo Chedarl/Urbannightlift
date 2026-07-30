@@ -8,7 +8,7 @@ export const metadata = {
   description: "The terms you agree to when you order a night delivery from Urban Night Lift.",
 };
 
-const SUPPORT_EMAIL = "urbannighlift@gmail.com";
+const SUPPORT_EMAIL = "urbannightlift@gmail.com";
 const PHONE = "+237 680 038 004";
 
 /**

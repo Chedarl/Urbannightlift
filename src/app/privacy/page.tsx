@@ -8,7 +8,7 @@ export const metadata = {
     "What Urban Night Lift collects, why, who sees it, and what we will never ask you for.",
 };
 
-const SUPPORT_EMAIL = "urbannighlift@gmail.com";
+const SUPPORT_EMAIL = "urbannightlift@gmail.com";
 const PHONE = "+237 680 038 004";
 
 /**

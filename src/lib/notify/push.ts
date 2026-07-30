@@ -36,7 +36,7 @@ function ensureConfigured(): boolean {
     return false;
   }
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:urbannighlift@gmail.com",
+    process.env.VAPID_SUBJECT || "mailto:urbannightlift@gmail.com",
     publicKey,
     privateKey
   );

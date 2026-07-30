@@ -1,5 +1,5 @@
 # Urban Night Lift — night delivery in Yaoundé, Cameroon.
-# Contact: urbannighlift@gmail.com
+# Contact: urbannightlift@gmail.com
 
 User-agent: *
 Allow: /
