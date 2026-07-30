@@ -18,7 +18,7 @@ import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTi
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
-import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
+import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
@@ -36,6 +36,9 @@ export function ErrandForm() {
 
   const [pickupSel, setPickupSel] = useState<SelectedLocation | null>(null);
   const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
+  // "Deliver here" from a portal saved-place tap (?deliverTo=…) — a real
+  // shortcut, distinct from the plain Order tab.
+  useDeliverToAddress((l) => applySel("delivery", l));
   const [zones, setZones] = useState<{ id: string; zoneName: string; tier: ZoneTier; feeXaf: number }[]>([]);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);

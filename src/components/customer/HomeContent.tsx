@@ -405,60 +405,48 @@ export function HomeContent({
             );
           })}
         </div>
-        <Link href="/help" className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-ink-600 px-4 py-2 text-xs text-mist-300 hover:text-mist-100">
-          <MapPin className="h-3.5 w-3.5" /> {fr ? "Voir toutes les zones desservies" : "View all areas we serve"}
-        </Link>
       </section>
 
-      {/* ───── Create an account ───── */}
-      <section className="mx-auto max-w-6xl px-4 pb-12">
-        <div className="overflow-hidden rounded-3xl border border-gold-400/40 bg-gradient-to-r from-gold-400/10 via-ink-900 to-ink-900 p-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="font-display text-xl font-bold">
-                {signedIn
-                  ? fr ? "Votre compte Urban Night Lift" : "Your Urban Night Lift account"
-                  : fr ? "Créez votre compte" : "Create your account"}
-              </h3>
-              <p className="mt-1 max-w-md text-sm text-mist-300">
-                {signedIn
-                  ? fr
-                    ? "Retrouvez vos commandes, vos adresses et recommandez en un tap."
-                    : "See your orders, your saved addresses, and reorder in one tap."
-                  : fr
+      {/* ───── Create an account ─────
+          Shown to guests only. A signed-in visitor already reaches their
+          account from the header and the footer — a third identical button
+          here would be exactly the kind of duplication we are removing. */}
+      {!signedIn && (
+        <section className="mx-auto max-w-6xl px-4 pb-12">
+          <div className="overflow-hidden rounded-3xl border border-gold-400/40 bg-gradient-to-r from-gold-400/10 via-ink-900 to-ink-900 p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="font-display text-xl font-bold">
+                  {fr ? "Créez votre compte" : "Create your account"}
+                </h3>
+                <p className="mt-1 max-w-md text-sm text-mist-300">
+                  {fr
                     ? "Commandez plus vite et gardez tout votre historique. Si vous avez déjà commandé avec votre numéro WhatsApp, vos commandes apparaîtront automatiquement."
                     : "Order faster and keep your full history. Already ordered with your WhatsApp number? Those orders appear automatically."}
-              </p>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist-400">
-                <li className="inline-flex items-center gap-1.5"><History className="h-3.5 w-3.5 text-gold-400" />{fr ? "Historique des commandes" : "Order history"}</li>
-                <li className="inline-flex items-center gap-1.5"><Repeat className="h-3.5 w-3.5 text-gold-400" />{fr ? "Recommander en un tap" : "One-tap reorder"}</li>
-                <li className="inline-flex items-center gap-1.5"><Bookmark className="h-3.5 w-3.5 text-gold-400" />{fr ? "Adresses enregistrées" : "Saved addresses"}</li>
-              </ul>
-            </div>
-            <div className="flex shrink-0 flex-wrap gap-3">
-              {signedIn ? (
-                <Link href="/account" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
-                  <UserCircle className="h-4 w-4" /> {fr ? "Mon compte" : "My account"}
+                </p>
+                <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist-400">
+                  <li className="inline-flex items-center gap-1.5"><History className="h-3.5 w-3.5 text-gold-400" />{fr ? "Historique des commandes" : "Order history"}</li>
+                  <li className="inline-flex items-center gap-1.5"><Repeat className="h-3.5 w-3.5 text-gold-400" />{fr ? "Recommander en un tap" : "One-tap reorder"}</li>
+                  <li className="inline-flex items-center gap-1.5"><Bookmark className="h-3.5 w-3.5 text-gold-400" />{fr ? "Adresses enregistrées" : "Saved addresses"}</li>
+                </ul>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-3">
+                <Link href="/account/signup" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
+                  <UserPlus className="h-4 w-4" /> {fr ? "Créer un compte" : "Sign up"}
                 </Link>
-              ) : (
-                <>
-                  <Link href="/account/signup" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
-                    <UserPlus className="h-4 w-4" /> {fr ? "Créer un compte" : "Sign up"}
-                  </Link>
-                  <Link href="/account/login" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-gold-400/60">
-                    {fr ? "Se connecter" : "Log in"}
-                  </Link>
-                </>
-              )}
+                <Link href="/account/login" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-gold-400/60">
+                  {fr ? "Se connecter" : "Log in"}
+                </Link>
+              </div>
             </div>
+            <p className="mt-4 text-[11px] text-mist-500">
+              {fr
+                ? "Pas besoin de compte pour commander. Connexion par numéro WhatsApp et code — nous ne demandons jamais votre code MoMo ou Orange Money."
+                : "No account needed to order. Sign in with your WhatsApp number and a PIN — we never ask for your MoMo or Orange Money PIN."}
+            </p>
           </div>
-          <p className="mt-4 text-[11px] text-mist-500">
-            {fr
-              ? "Pas besoin de compte pour commander. Connexion par numéro WhatsApp et code — nous ne demandons jamais votre code MoMo ou Orange Money."
-              : "No account needed to order. Sign in with your WhatsApp number and a PIN — we never ask for your MoMo or Orange Money PIN."}
-          </p>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ───── Install ─────
           Kept as a slim strip rather than a second full-width gradient card:
@@ -497,13 +485,13 @@ export function HomeContent({
           <div>
             <p className="mb-3 text-sm font-semibold text-mist-100">{fr ? "Assistance" : "Support"}</p>
             <ul className="flex flex-col gap-2 text-xs text-mist-400">
-              {/* Help centre, FAQs and Safety were three labels for one
-                  destination. FAQs now lands on the FAQ itself. */}
+              {/* One link per destination. "Help center" already opens on the
+                  FAQ, so a separate "FAQs" was the same page twice; "Track an
+                  order" is always reachable from the header/floating Track
+                  button, so it isn't repeated here either. */}
+              <li><Link href="/help" className="hover:text-mist-200">{fr ? "Centre d'aide" : "Help center"}</Link></li>
               <li><Link href="/privacy" className="hover:text-mist-200">{fr ? "Confidentialité" : "Privacy"}</Link></li>
               <li><Link href="/terms" className="hover:text-mist-200">{fr ? "Conditions" : "Terms"}</Link></li>
-              <li><Link href="/help" className="hover:text-mist-200">{fr ? "Centre d'aide" : "Help center"}</Link></li>
-              <li><Link href="/help#faq" className="hover:text-mist-200">{fr ? "Questions fréquentes" : "FAQs"}</Link></li>
-              <li><Link href="/track" className="hover:text-mist-200">{fr ? "Suivre une commande" : "Track an order"}</Link></li>
               <li><Link href="/admin/login" className="hover:text-mist-200">{fr ? "Connexion staff" : "Staff login"}</Link></li>
             </ul>
           </div>

@@ -18,7 +18,6 @@ import {
   Gift,
   ShieldCheck,
   LifeBuoy,
-  Plus,
   Moon,
   Home as HomeIcon,
   Briefcase,
@@ -273,9 +272,13 @@ export function PortalHome({ data }: { data: PortalData }) {
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {data.addresses.slice(0, 6).map((a) => (
+              // Deliver here: tapping a place carries it into the order flow as
+              // the delivery address, so a saved place is a one-tap shortcut —
+              // not the same thing as the "Order" tab. Adding/editing places
+              // lives behind the single "Manage" link above.
               <Link
                 key={a.id}
-                href="/order"
+                href={`/order?deliverTo=${encodeURIComponent(a.id)}`}
                 className="flex shrink-0 items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-xs text-mist-300 hover:border-violet-500/50"
               >
                 <PlaceIcon label={a.label} />
@@ -285,12 +288,6 @@ export function PortalHome({ data }: { data: PortalData }) {
                 </span>
               </Link>
             ))}
-            <Link
-              href="/account/addresses"
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-dashed border-ink-600 px-3 py-2 text-xs text-mist-400 hover:text-mist-200"
-            >
-              <Plus className="h-3.5 w-3.5" /> {fr ? "Ajouter" : "Add"}
-            </Link>
           </div>
         </section>
       )}
@@ -394,12 +391,15 @@ export function PortalHome({ data }: { data: PortalData }) {
           <ShieldCheck className="h-4 w-4 shrink-0 text-safe" />
           {fr ? "Livraison suivie, en toute sécurité." : "Every delivery tracked, safely."}
         </div>
+        {/* Straight to contacting support — the Help tab in the bottom nav
+            already covers the help centre and FAQ, so this is a distinct
+            destination, not a second door to the same page. */}
         <Link
-          href="/help"
+          href="/help#contact"
           className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 text-[11px] text-mist-400 hover:text-mist-200"
         >
           <LifeBuoy className="h-4 w-4 shrink-0 text-violet-300" />
-          {fr ? "Besoin d'aide ?" : "Need help?"}
+          {fr ? "Contacter le support" : "Contact support"}
         </Link>
       </section>
     </div>

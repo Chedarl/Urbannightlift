@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   UtensilsCrossed,
   Pill,
@@ -34,6 +35,10 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
   // A paused service opens the interest sheet instead of the order form.
   const [pending, setPending] = useState<ServiceType | null>(null);
   const isLive = (type: ServiceType) => enabledServices.includes(type);
+  // Carried in when the customer tapped a saved place in the portal: whichever
+  // service they pick then opens with that delivery address already set.
+  const deliverTo = useSearchParams().get("deliverTo");
+  const suffix = deliverTo ? `&deliverTo=${encodeURIComponent(deliverTo)}` : "";
   return (
     <div className="mx-auto max-w-lg px-4 pb-28 pt-6">
       <h1 className="animate-fade-up font-display text-2xl font-bold">{t("services.title")}</h1>
@@ -43,7 +48,7 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
           isLive(type) ? (
             <Link
               key={type}
-              href={`/order/new?service=${type}`}
+              href={`/order/new?service=${type}${suffix}`}
               className="group flex items-center gap-4 rounded-2xl border border-ink-700/60 bg-ink-900/40 p-4 transition-all hover:-translate-y-0.5 hover:border-violet-500/60"
             >
               <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${grad}`}>
