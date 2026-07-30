@@ -27,6 +27,9 @@ export interface AttentionRow {
 const REFRESH_MS = 20_000;
 
 const KIND_LABEL: Record<string, string> = {
+  OVER_CAP_DECLINED: "Customer refused the overspend — money is already out",
+  OVER_CAP_WAITING: "Shop charged over the cap — waiting on the customer",
+  GOODS_NOT_RECORDED: "Shopping done, no receipt recorded",
   CUSTOMER_NOT_TOLD: "Priced, but nobody has told the customer",
   PAYMENT_UNVERIFIED: "Payment sent — verify it",
   RIDER_SILENT: "Rider hasn't accepted",
@@ -36,8 +39,18 @@ const KIND_LABEL: Record<string, string> = {
   UNREVIEWED: "Not reviewed yet",
 };
 
-/** How loudly to shout. Money already taken outranks everything else. */
+/**
+ * How loudly to shout. Money already taken outranks everything else.
+ *
+ * A declined overspend is the only red in this panel, deliberately: it is the
+ * one row where cash has already left the company and the customer has said no,
+ * so nothing resolves it except a dispatcher deciding to absorb it, re-price it,
+ * or arrange a return.
+ */
 const KIND_TONE: Record<string, string> = {
+  OVER_CAP_DECLINED: "border-restricted/50 bg-restricted/10 text-restricted",
+  OVER_CAP_WAITING: "border-gold-400/50 bg-gold-400/10 text-gold-200",
+  GOODS_NOT_RECORDED: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   CUSTOMER_NOT_TOLD: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   PAYMENT_UNVERIFIED: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   RIDER_SILENT: "border-caution/40 bg-caution/10 text-gold-200",

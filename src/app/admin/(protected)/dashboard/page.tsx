@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import type { OrderStatus } from "@prisma/client";
+import type { OrderStatus, ServiceType } from "@prisma/client";
 import { getOperatingSettings } from "@/lib/settings";
+import { SHOPPING_SERVICES, orderMoney } from "@/lib/orders/goodsMoney";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { visibilityWhere } from "@/lib/orders/filters";
 import { DashboardStats } from "@/components/admin/DashboardStats";
@@ -25,6 +26,37 @@ const OUT_ON_THE_ROAD: OrderStatus[] = [
   "RIDER_GOING_TO_DELIVERY",
   "RIDER_ARRIVED_AT_DELIVERY",
 ];
+
+/**
+ * Statuses from the moment a shopping rider has the goods in hand. Past this
+ * point the receipt should exist: the payable is still the cap until it does, so
+ * the customer is about to be asked for the wrong amount and the rider's advance
+ * is not on the books.
+ */
+const GOODS_DUE_STATUSES: OrderStatus[] = [
+  "ITEM_COLLECTED",
+  "RIDER_GOING_TO_DELIVERY",
+  "RIDER_ARRIVED_AT_DELIVERY",
+  "DELIVERY_PROOF_SUBMITTED",
+  "DELIVERED",
+];
+
+/**
+ * Finished orders. A money problem on one of these has either been dealt with
+ * or is no longer dispatch's to chase, and closing an order is the dispatcher's
+ * explicit "this is settled" — so it is also how a declined overspend stops
+ * shouting once somebody has actually resolved it.
+ */
+const CLOSED_OUT: OrderStatus[] = [
+  "CLOSED",
+  "CANCELLED_BY_CUSTOMER",
+  "CANCELLED_BY_UNL",
+  "REJECTED",
+  "REFUNDED",
+];
+
+/** The services where we buy things, widened for a Prisma `in` filter. */
+const SHOPPING_SERVICE_TYPES: ServiceType[] = [...SHOPPING_SERVICES];
 
 const ACTIVE_STATUSES = [
   "RIDER_ASSIGNED",
@@ -87,6 +119,30 @@ export default async function AdminDashboardPage() {
             riderAcceptedAt: { not: null },
             OR: [{ riderLocationAt: null }, { riderLocationAt: { lt: trackingCutoff } }],
           },
+          // The shop charged more than the customer agreed to and nobody has
+          // answered yet. Until they do, the overage is not collectable.
+          {
+            goodsActualXaf: { gt: 0 },
+            overCapApprovedAt: null,
+            orderStatus: { notIn: CLOSED_OUT },
+            OR: [
+              { goodsCapXaf: null },
+              { goodsActualXaf: { gt: prisma.order.fields.goodsCapXaf } },
+            ],
+          },
+          // They answered, and the answer was no. The goods are already bought,
+          // so this is real money sitting on a decision only dispatch can make.
+          {
+            overCapApprovedAt: { not: null },
+            overCapApprovedXaf: null,
+            orderStatus: { notIn: CLOSED_OUT },
+          },
+          // Shopping done, no receipt recorded — the payable is still the cap.
+          {
+            serviceType: { in: SHOPPING_SERVICE_TYPES },
+            orderStatus: { in: GOODS_DUE_STATUSES },
+            goodsActualXaf: null,
+          },
         ],
       },
       orderBy: { createdAt: "asc" },
@@ -105,6 +161,14 @@ export default async function AdminDashboardPage() {
         assignedAt: true,
         riderAcceptedAt: true,
         riderLocationAt: true,
+        serviceType: true,
+        estimatedDeliveryFeeXaf: true,
+        finalDeliveryFeeXaf: true,
+        goodsCapXaf: true,
+        goodsActualXaf: true,
+        goodsRecordedAt: true,
+        overCapApprovedXaf: true,
+        overCapApprovedAt: true,
         customer: { select: { fullName: true } },
         assignedRider: { select: { fullName: true } },
       },
@@ -113,8 +177,28 @@ export default async function AdminDashboardPage() {
 
   /** The single most urgent thing wrong with an order, in escalation order. */
   const attentionRows = attention.map((o) => {
+    // The panel must not have its own opinion about what money is owed — it
+    // reads the same module the receipt and the payable read, so dispatch can
+    // never be told one figure while the customer is shown another.
+    const money = orderMoney({
+      serviceType: o.serviceType,
+      deliveryFeeXaf: o.finalDeliveryFeeXaf ?? o.estimatedDeliveryFeeXaf,
+      goodsCapXaf: o.goodsCapXaf,
+      goodsActualXaf: o.goodsActualXaf,
+      overCapApprovedXaf: o.overCapApprovedXaf,
+    });
+    // A decline is stored as "answered, with nothing approved".
+    const overCapDeclined = o.overCapApprovedAt != null && o.overCapApprovedXaf == null && money.needsCustomerApproval;
+    const overCapWaiting = o.overCapApprovedAt == null && money.needsCustomerApproval;
+    const goodsNotRecorded =
+      money.shopping && o.goodsActualXaf == null && GOODS_DUE_STATUSES.includes(o.orderStatus);
+
     let kind: string;
-    if (o.quoteSentAt && !o.customerNotifiedAt) kind = "CUSTOMER_NOT_TOLD";
+    // Money already spent and refused outranks everything: nobody else can move it.
+    if (overCapDeclined) kind = "OVER_CAP_DECLINED";
+    else if (overCapWaiting) kind = "OVER_CAP_WAITING";
+    else if (goodsNotRecorded) kind = "GOODS_NOT_RECORDED";
+    else if (o.quoteSentAt && !o.customerNotifiedAt) kind = "CUSTOMER_NOT_TOLD";
     else if (o.paymentStatus === "SUBMITTED_UNVERIFIED") kind = "PAYMENT_UNVERIFIED";
     else if (o.assignedRiderId && !o.riderAcceptedAt) kind = "RIDER_SILENT";
     else if (o.orderStatus === "PAYMENT_VERIFIED" && !o.assignedRiderId) kind = "NO_RIDER";
@@ -127,7 +211,14 @@ export default async function AdminDashboardPage() {
       kind = "TRACKING_LOST";
     else kind = "UNREVIEWED";
 
-    const since = kind === "RIDER_SILENT" && o.assignedAt ? o.assignedAt : o.createdAt;
+    // Time the clock from the moment the problem started, not from the order.
+    // An overspend has been outstanding since the money left the rider's hand.
+    const since =
+      kind === "RIDER_SILENT" && o.assignedAt
+        ? o.assignedAt
+        : (kind === "OVER_CAP_DECLINED" || kind === "OVER_CAP_WAITING") && o.goodsRecordedAt
+          ? o.goodsRecordedAt
+          : o.createdAt;
     return {
       id: o.id,
       orderCode: o.orderCode,
