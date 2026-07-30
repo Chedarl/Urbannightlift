@@ -96,7 +96,7 @@ async function main() {
     data: {
       channel: "EMAIL",
       event: "order.created",
-      recipient: "urbannighlift@gmail.com",
+      recipient: "urbannightlift@gmail.com",
       subject: "New order UNL-TEST",
       status: "FAILED",
       error: "RESEND_API_KEY is not set",

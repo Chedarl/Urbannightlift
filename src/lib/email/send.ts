@@ -22,7 +22,7 @@ import { prisma } from "@/lib/prisma";
  */
 
 const FROM = process.env.EMAIL_FROM || "Urban Night Lift <onboarding@resend.dev>";
-const FALLBACK_TO = "urbannighlift@gmail.com";
+const FALLBACK_TO = "urbannightlift@gmail.com";
 
 export interface SendResult {
   ok: boolean;

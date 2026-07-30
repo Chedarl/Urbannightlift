@@ -8,7 +8,7 @@ import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { Button } from "@/components/shared/Button";
 import { cn } from "@/lib/utils";
 
-const SUPPORT_EMAIL = "urbannighlift@gmail.com";
+const SUPPORT_EMAIL = "urbannightlift@gmail.com";
 const PHONE_DISPLAY = "+237 680 038 004";
 
 interface Faq { q: { en: string; fr: string }; a: { en: string; fr: string } }

@@ -364,7 +364,7 @@ export function SettingsManager({
               type="email"
               value={form.notificationEmail}
               onChange={(e) => setForm({ ...form, notificationEmail: e.target.value })}
-              placeholder="urbannighlift@gmail.com"
+              placeholder="urbannightlift@gmail.com"
             />
           </label>
           <label className="mt-3 flex items-start gap-3">

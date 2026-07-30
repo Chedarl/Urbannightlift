@@ -302,8 +302,8 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         Text,
         { style: s.issuer },
         fr
-          ? "Émis par Urban Night Lift · urbannighlift.com · urbannighlift@gmail.com · +237 680 038 004"
-          : "Issued by Urban Night Lift · urbannighlift.com · urbannighlift@gmail.com · +237 680 038 004"
+          ? "Émis par Urban Night Lift · urbannighlift.com · urbannightlift@gmail.com · +237 680 038 004"
+          : "Issued by Urban Night Lift · urbannighlift.com · urbannightlift@gmail.com · +237 680 038 004"
       ),
       h(Text, { style: s.legal }, data.legalNotice)
     )

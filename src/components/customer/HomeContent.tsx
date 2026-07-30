@@ -19,7 +19,7 @@ import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { cn } from "@/lib/utils";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
-const SUPPORT_EMAIL = "urbannighlift@gmail.com";
+const SUPPORT_EMAIL = "urbannightlift@gmail.com";
 const PHONE_DISPLAY = "+237 680 038 004";
 
 type L = { en: string; fr: string };
