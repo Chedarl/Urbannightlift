@@ -10,12 +10,15 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
+import { decideAutoPrice } from "@/lib/orders/autoPrice";
+import { priceCopy } from "@/lib/orders/priceCopy";
 import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
+import { MoreDetails } from "@/components/customer/order/fields/MoreDetails";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
@@ -75,6 +78,21 @@ export function ParcelForm() {
 
   const effZone = (sel: SelectedLocation | null) => sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } : null;
   const estimatedFee = useMemo(() => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel)), [pickupSel, deliverySel]);
+  /**
+   * Whether that fee is the final zone tariff, using the same rule the server
+   * applies on submit. Wording only — the server re-decides authoritatively.
+   */
+  const priceFirm = useMemo(
+    () =>
+      decideAutoPrice({
+        pickupZone: effZone(pickupSel),
+        deliveryZone: effZone(deliverySel),
+        estimatedFeeXaf: estimatedFee,
+        highValueFlag: false,
+        riskFlag: false,
+      }).firm,
+    [pickupSel, deliverySel, estimatedFee]
+  );
 
   function applySel(which: "pickup" | "delivery", loc: SelectedLocation | null) {
     const text = loc ? `${loc.primaryName}${loc.neighbourhood ? ` — ${loc.neighbourhood}` : ""}` : "";
@@ -110,7 +128,7 @@ export function ParcelForm() {
       fullName: (sd?.senderName as string)?.trim() || data.fullName?.trim() || (fr ? "Expéditeur" : "Sender"),
       pickupLat: pickupSel?.latitude ?? null, pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null, deliveryLng: deliverySel?.longitude ?? null,
-      estimatedFeeXaf: estimatedFee, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
+      estimatedFeeXaf: estimatedFee, priceFirm, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
     router.push("/order/review");
   }
@@ -146,14 +164,6 @@ export function ParcelForm() {
       <div className="flex flex-col gap-4 px-4 pt-5">
         <WelcomeBack accent={ACCENT} fr={fr} />
 
-        <VoiceNoteField
-          accent={ACCENT}
-          fr={fr}
-          onChange={(n) => {
-            setValue("voiceNoteUrl", n?.url ?? "");
-            setValue("voiceNoteSeconds", n?.seconds ?? null);
-          }}
-        />
 
         {/* Sender */}
         <div className={card}>
@@ -227,6 +237,18 @@ export function ParcelForm() {
           </div>
         </div>
 
+                {/* Everything optional, folded away. Fields stay mounted inside the
+            disclosure, so nothing typed is lost and validation still sees it. */}
+        <MoreDetails accent={ACCENT} fr={fr}>
+        <VoiceNoteField
+          accent={ACCENT}
+          fr={fr}
+          onChange={(n) => {
+            setValue("voiceNoteUrl", n?.url ?? "");
+            setValue("voiceNoteSeconds", n?.seconds ?? null);
+          }}
+        />
+
         {/* Toggles */}
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => setValue("isFragile", !watch("isFragile"))} className={cn(card, "flex items-center justify-between text-left")}>
@@ -278,6 +300,7 @@ export function ParcelForm() {
             ))}
           </div>
         </div>
+        </MoreDetails>
 
         {/* Payment */}
         <div className={card}>
@@ -314,7 +337,7 @@ export function ParcelForm() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         {estimatedFee != null && (
           <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{fr ? "Frais de livraison estimés" : "Estimated delivery fee"}</span>
+            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr).label}</span>
             <span className="font-display text-base font-bold text-mist-100">{estimatedFee.toLocaleString("fr-FR")} XAF</span>
           </div>
         )}
