@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { visibilityWhere } from "@/lib/orders/filters";
-import { riderBalanceForOrder } from "@/lib/orders/earnings";
+import { riderSettlementFromOrder } from "@/lib/orders/goodsMoney";
 import { EarningsReport, type RiderLine } from "@/components/admin/EarningsReport";
 
 export const dynamic = "force-dynamic";
@@ -46,11 +46,18 @@ export default async function EarningsPage({
       id: true,
       orderCode: true,
       completedAt: true,
+      serviceType: true,
       paymentMethod: true,
       riderPayoutXaf: true,
       companyEarningXaf: true,
       cashCollectedXaf: true,
       cashSettledAt: true,
+      // What the rider laid out on the customer's behalf, so the outstanding
+      // column shows what they owe rather than what they spent for us.
+      goodsCapXaf: true,
+      goodsActualXaf: true,
+      overCapApprovedXaf: true,
+      goodsAdvancedXaf: true,
       assignedRiderId: true,
       assignedRider: { select: { fullName: true } },
     },
@@ -88,12 +95,7 @@ export default async function EarningsPage({
     line.companyXaf += company;
 
     if (!o.cashSettledAt) {
-      const balance = riderBalanceForOrder({
-        paymentMethod: o.paymentMethod,
-        riderPayoutXaf: o.riderPayoutXaf,
-        companyEarningXaf: o.companyEarningXaf,
-        cashCollectedXaf: o.cashCollectedXaf,
-      });
+      const balance = riderSettlementFromOrder(o);
       line.outstandingXaf += balance;
       if (balance > 0) unsettledCash += balance;
     }

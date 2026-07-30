@@ -4,6 +4,7 @@ import { getOperatingSettings } from "@/lib/settings";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { RiderDashboard } from "@/components/rider/RiderDashboard";
 import { riderStanding } from "@/lib/riders/standing";
+import { loadRiderFloat } from "@/lib/riders/floatAccount";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function RiderDashboardPage() {
   const settings = await getOperatingSettings();
   const { start, end } = tonightWindow(settings.operatingStartHour);
 
-  const [tonightOrders, totalDeliveries] = await Promise.all([
+  const [tonightOrders, float] = await Promise.all([
     prisma.order.findMany({
       where: {
         assignedRiderId: rider.id,
@@ -40,7 +41,7 @@ export default async function RiderDashboardPage() {
         deliveryZone: { select: { zoneName: true } },
       },
     }),
-    prisma.order.count({ where: { assignedRiderId: rider.id, orderStatus: { in: ["DELIVERED", "CLOSED"] } } }),
+    loadRiderFloat(rider.id),
   ]);
 
   /**
@@ -83,15 +84,18 @@ export default async function RiderDashboardPage() {
     <RiderDashboard
       rows={rows}
       stats={{
-        assigned: rows.length,
         completedTonight,
-        totalDeliveries,
         activeOrderId: activeOrder?.id ?? null,
         nextPickupId: nextPickup?.id ?? null,
       }}
       isOnline={rider.isOnline}
       earnedTonightXaf={earnedTonightXaf}
       standing={standing}
+      float={{
+        limitXaf: float?.limitXaf ?? 0,
+        spendableXaf: float?.spendableXaf ?? 0,
+        suspended: float?.suspended ?? false,
+      }}
     />
   );
 }

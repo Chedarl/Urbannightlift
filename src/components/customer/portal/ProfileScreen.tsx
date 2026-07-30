@@ -17,7 +17,7 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { refreshProfile } from "@/lib/account/profile";
 import { formatXaf } from "@/lib/utils";
-import { InitialAvatar, QuickAction, CardGroup, ListRow, RowDivider, SectionLabel } from "@/components/customer/portal/kit";
+import { InitialAvatar, QuickAction, CardGroup, ListRow, RowDivider, SectionLabel } from "@/components/shared/portalKit";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 
 /**

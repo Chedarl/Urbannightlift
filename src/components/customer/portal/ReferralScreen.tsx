@@ -5,7 +5,7 @@ import { Gift, Copy, Check, MessageCircle, Coins } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { formatXaf } from "@/lib/utils";
-import { PageHeader, CardGroup } from "@/components/customer/portal/kit";
+import { PageHeader, CardGroup } from "@/components/shared/portalKit";
 
 /**
  * Credit and the referral code, on their own screen — the reference apps'

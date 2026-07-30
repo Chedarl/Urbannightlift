@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
+import { RiderFloatPanel } from "@/components/admin/RiderFloatPanel";
 import type { UserRole, UserStatus } from "@prisma/client";
 
 export interface UserItem {
@@ -160,6 +161,7 @@ export function UsersManager({
                       );
                     })}
                   </div>
+                  <RiderFloatPanel riderId={u.id} riderName={u.fullName} />
                 </div>
               )}
             </div>

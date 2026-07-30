@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES, getSessionUser } from "@/lib/auth/session";
 import { recordAudit } from "@/lib/audit";
 import { orderMoney, isShoppingService } from "@/lib/orders/goodsMoney";
+import { loadRiderFloat } from "@/lib/riders/floatAccount";
+import { canCoverPurchase } from "@/lib/riders/float";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +108,27 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
       { error: "You can record this once you're on the way to the shop." },
       { status: 409 }
     );
+  }
+
+  // The company funds the shopping, not the rider. If the float in their hand
+  // does not cover this, recording it would mean they paid from their own pocket
+  // — the exact thing the float exists to prevent. An admin correcting an
+  // already-recorded figure is fixing the books, not spending, so it does not
+  // apply to them.
+  if (!alreadyRecorded && order.assignedRiderId) {
+    const float = await loadRiderFloat(order.assignedRiderId);
+    if (float && !canCoverPurchase(float.account, float.entries, amountXaf, float.advancedXaf)) {
+      return NextResponse.json(
+        {
+          error:
+            float.limitXaf <= 0
+              ? "You have no float yet. Ask dispatch to give you one before buying anything."
+              : `Your float only covers ${float.spendableXaf.toLocaleString("fr-FR")} XAF right now. Call dispatch before you pay.`,
+          spendableXaf: float.spendableXaf,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const feeXaf = order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? 0;

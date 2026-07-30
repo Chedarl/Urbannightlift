@@ -4,7 +4,7 @@ import { Globe, Bell, FileText, Shield, Store, Bike } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { EnableNotifications } from "@/components/shared/EnableNotifications";
-import { PageHeader, CardGroup, ListRow, RowDivider, SectionLabel } from "@/components/customer/portal/kit";
+import { PageHeader, CardGroup, ListRow, RowDivider, SectionLabel } from "@/components/shared/portalKit";
 
 /**
  * Settings, as a grid of grouped toggle/link cards — the shape every reference

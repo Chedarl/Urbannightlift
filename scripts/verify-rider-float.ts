@@ -9,6 +9,7 @@ import {
   riderFloatAvailable,
   riderFloatBalance,
   riderReturnEntry,
+  spendableXaf,
   type RiderFloatEntry,
 } from "../src/lib/riders/float";
 
@@ -55,6 +56,17 @@ check("exactly enough", canCoverPurchase(OPEN, [topup(6000)], 6000), true);
 check("not enough is caught before dispatch, not at the counter",
   canCoverPurchase(OPEN, [topup(3000)], 6000), false);
 check("nothing needed is always coverable", canCoverPurchase(NONE, [], 0), true);
+
+console.log("\nCash they have already laid out tonight");
+check("what's spent is off the table",
+  canCoverPurchase(OPEN, [topup(20000)], 6000, 15000), false);
+check("what's left still covers a smaller job",
+  canCoverPurchase(OPEN, [topup(20000)], 5000, 15000), true);
+check("spending the lot leaves nothing",
+  canCoverPurchase(OPEN, [topup(20000)], 1, 20000), false);
+check("spendable is held less advanced", spendableXaf([topup(20000)], 15000), 5000);
+check("a negative advance can't inflate what they hold",
+  spendableXaf([topup(20000)], -5000), 20000);
 
 console.log(`\n${failures === 0 ? "All rider-float rules hold — no rider carries company cash nobody granted." : `${failures} check(s) FAILED.`}\n`);
 process.exit(failures === 0 ? 0 : 1);
