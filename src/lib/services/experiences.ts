@@ -87,6 +87,17 @@ export const SERVICE_EXPERIENCES: Record<ServiceType, ServiceExperience> = {
     leadFieldKey: "exp.CUSTOM_ERRAND.lead",
     motif: "chat",
   },
+  CONCIERGE_NIGHT: {
+    service: "CONCIERGE_NIGHT",
+    accent: "#9645de",
+    gradient: "from-violet-500/30 via-indigo-600/10 to-transparent",
+    icon: "ClipboardList",
+    layout: "conversational",
+    titleKey: "exp.CONCIERGE_NIGHT.title",
+    taglineKey: "exp.CONCIERGE_NIGHT.tagline",
+    leadFieldKey: "exp.CONCIERGE_NIGHT.lead",
+    motif: "chat",
+  },
   MERCHANT_DELIVERY: {
     service: "MERCHANT_DELIVERY",
     accent: "#d946ef",

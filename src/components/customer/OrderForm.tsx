@@ -48,6 +48,10 @@ const LOC_LABELS: Record<ServiceType, { pickup: { en: string; fr: string }; deli
   SMALL_PARCEL: { pickup: { en: "Sender pickup location", fr: "Lieu de ramassage (expéditeur)" }, delivery: { en: "Receiver drop-off location", fr: "Lieu de dépôt (destinataire)" } },
   URGENT_ITEM: { pickup: { en: "Urgent pickup location", fr: "Lieu de ramassage urgent" }, delivery: { en: "Urgent delivery location", fr: "Lieu de livraison urgent" } },
   CUSTOM_ERRAND: { pickup: { en: "Starting location", fr: "Point de départ" }, delivery: { en: "Destination", fr: "Destination" } },
+  CONCIERGE_NIGHT: {
+    pickup: { en: "Collect from", fr: "Récupérer à" },
+    delivery: { en: "Deliver to", fr: "Livrer à" },
+  },
   MERCHANT_DELIVERY: { pickup: { en: "Merchant location", fr: "Lieu du commerçant" }, delivery: { en: "Customer delivery location", fr: "Lieu de livraison client" } },
 };
 
