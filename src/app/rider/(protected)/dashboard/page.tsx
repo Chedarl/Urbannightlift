@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/session";
 import { getOperatingSettings } from "@/lib/settings";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { RiderDashboard } from "@/components/rider/RiderDashboard";
+import { riderStanding } from "@/lib/riders/standing";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,25 @@ export default async function RiderDashboardPage() {
     prisma.order.count({ where: { assignedRiderId: rider.id, orderStatus: { in: ["DELIVERED", "CLOSED"] } } }),
   ]);
 
+  /**
+   * The rider's own record: what they have earned across every finished night,
+   * how customers rate them, and one honest line about how it is going. Until
+   * now the app told a rider almost nothing about their own work — which is a
+   * strange thing to withhold from the person the whole business depends on.
+   */
+  const historyRows = await prisma.order.findMany({
+    where: { assignedRiderId: rider.id },
+    select: { orderStatus: true, riderPayoutXaf: true, ratingStars: true, isTest: true },
+  });
+  const standing = riderStanding(
+    historyRows.map((o) => ({
+      completed: o.orderStatus === "DELIVERED" || o.orderStatus === "CLOSED",
+      riderPayoutXaf: o.riderPayoutXaf,
+      ratingStars: o.ratingStars,
+      isTest: o.isTest,
+    }))
+  );
+
   const rows = tonightOrders.map((o) => ({
     id: o.id,
     orderCode: o.orderCode,
@@ -71,6 +91,7 @@ export default async function RiderDashboardPage() {
       }}
       isOnline={rider.isOnline}
       earnedTonightXaf={earnedTonightXaf}
+      standing={standing}
     />
   );
 }
