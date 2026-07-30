@@ -574,17 +574,56 @@ model Merchant {
   /// Stamped when someone actually reached them on the phone.
   phoneVerifiedAt  DateTime?
   lastConfirmedAt  DateTime?
+
+  /// How much delivery fee we will carry for this merchant before they settle.
+  /// 0 means no float, and that is the default: a float is us lending money, so
+  /// it is only ever granted by a person, never earned automatically.
+  floatLimitXaf         Int       @default(0)
+  /// Pauses new float charges without closing the account. A suspended merchant
+  /// can still settle what they owe.
+  floatSuspended        Boolean   @default(false)
+  floatGrantedAt        DateTime?
+  /// Who granted or last changed the limit. Lending decisions need a name on them.
+  floatGrantedByUserId  String?
+
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  orders     Order[]
-  products   MerchantProduct[]
-  dutyShifts PharmacyDuty[]
-  staffNotes MerchantNote[]
+  orders      Order[]
+  products    MerchantProduct[]
+  dutyShifts  PharmacyDuty[]
+  staffNotes  MerchantNote[]
+  floatLedger MerchantFloatLedger[]
 
   @@index([category, verified, active])
   @@index([verified, active])
   @@index([popularityRank])
+}
+
+/// Every movement on a merchant's float, append-only.
+///
+/// The balance is always summed from these rows and never stored on the
+/// merchant, the same discipline `AmbassadorLedger` uses for money owed
+/// outward — money a business owes us has to be reconstructable line by line,
+/// not inferred from a counter somebody might have edited.
+model MerchantFloatLedger {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  /// The delivery whose fee we carried. Null for settlements and adjustments.
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  /// Positive = we carried it and they owe us. Negative = they paid it down.
+  amountXaf  Int
+  type       String // CHARGE | SETTLEMENT | ADJUSTMENT
+  note       String?
+  /// Who recorded it. Null only for a system-generated charge at checkout.
+  recordedById String?
+  createdAt  DateTime @default(now())
+
+  /// One charge per order — a retried request can never double-charge a float.
+  @@unique([orderId, type])
+  @@index([merchantId, createdAt])
 }
 
 /// What a merchant sells, with a price. Deliberately small — five accurate
@@ -803,6 +842,7 @@ model Order {
   failures          DeliveryFailure[]
   cases             SupportRequest[]
   ambassadorLedgers AmbassadorLedger[]
+  merchantFloatEntries MerchantFloatLedger[]
 
   @@index([orderStatus])
   @@index([createdAt])
