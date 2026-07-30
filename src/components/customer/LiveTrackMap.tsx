@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
+import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Navigation, ExternalLink, Clock } from "lucide-react";
@@ -141,7 +142,7 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
       {hasCoords ? (
         <div style={{ height: 240 }}>
           <MapContainer center={[3.848, 11.502]} zoom={13} className="h-full w-full" scrollWheelZoom={false}>
-            <TileLayer attribution="&copy; OpenStreetMap &copy; CARTO" url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+            <BaseTiles />
             <Fit points={pts} />
             {pickup && <Marker position={[pickup.lat, pickup.lng]} icon={icon("#d4af37")} />}
             {delivery && <Marker position={[delivery.lat, delivery.lng]} icon={icon("#9645de")} />}

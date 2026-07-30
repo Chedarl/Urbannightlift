@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -42,7 +43,7 @@ export function ConfirmMap({
   return (
     <div className="relative overflow-hidden rounded-2xl border border-ink-700" style={{ height: 260 }}>
       <MapContainer center={point ? [point.lat, point.lng] : YAOUNDE} zoom={point ? 15 : 12} className="h-full w-full" scrollWheelZoom={false}>
-        <TileLayer attribution="&copy; OpenStreetMap &copy; CARTO" url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+        <BaseTiles />
         <ClickHandler onMove={onMove} />
         <Recenter point={point ? [point.lat, point.lng] : null} />
         {point && (
