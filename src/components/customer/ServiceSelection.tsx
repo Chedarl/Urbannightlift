@@ -19,14 +19,16 @@ import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
 import { getExperience } from "@/lib/services/experiences";
 import type { ServiceType } from "@prisma/client";
 
-const services: { type: ServiceType; icon: React.ElementType; grad: string }[] = [
-  { type: "FOOD_PICKUP", icon: UtensilsCrossed, grad: "from-orange-500/25 to-amber-500/10 text-amber-300" },
-  { type: "MEDICINE_PICKUP", icon: Pill, grad: "from-emerald-500/25 to-teal-500/10 text-emerald-300" },
-  { type: "GROCERY_PICKUP", icon: ShoppingBasket, grad: "from-lime-500/25 to-green-500/10 text-lime-300" },
-  { type: "SMALL_PARCEL", icon: Package, grad: "from-sky-500/25 to-blue-500/10 text-sky-300" },
-  { type: "URGENT_ITEM", icon: Zap, grad: "from-yellow-500/25 to-gold-400/10 text-gold-300" },
-  { type: "CUSTOM_ERRAND", icon: ClipboardList, grad: "from-violet-500/25 to-fuchsia-500/10 text-violet-300" },
-  { type: "MERCHANT_DELIVERY", icon: Store, grad: "from-pink-500/25 to-rose-500/10 text-pink-300" },
+// One brand: the icon distinguishes the service, the colour stays violet — no
+// per-service rainbow. Matches the portal home and the public hero.
+const services: { type: ServiceType; icon: React.ElementType }[] = [
+  { type: "FOOD_PICKUP", icon: UtensilsCrossed },
+  { type: "MEDICINE_PICKUP", icon: Pill },
+  { type: "GROCERY_PICKUP", icon: ShoppingBasket },
+  { type: "SMALL_PARCEL", icon: Package },
+  { type: "URGENT_ITEM", icon: Zap },
+  { type: "CUSTOM_ERRAND", icon: ClipboardList },
+  { type: "MERCHANT_DELIVERY", icon: Store },
 ];
 
 export function ServiceSelection({ enabledServices }: { enabledServices: ServiceType[] }) {
@@ -44,14 +46,14 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
       <h1 className="animate-fade-up font-display text-2xl font-bold">{t("services.title")}</h1>
       <p className="animate-fade-up mt-1 text-sm text-mist-500">{t("services.subtitle")}</p>
       <div className="animate-fade-up mt-6 flex flex-col gap-3">
-        {services.map(({ type, icon: Icon, grad }) =>
+        {services.map(({ type, icon: Icon }) =>
           isLive(type) ? (
             <Link
               key={type}
               href={`/order/new?service=${type}${suffix}`}
               className="group flex items-center gap-4 rounded-2xl border border-ink-700/60 bg-ink-900/40 p-4 transition-all hover:-translate-y-0.5 hover:border-violet-500/60"
             >
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${grad}`}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-500/12 text-violet-300">
                 <Icon className="h-6 w-6" />
               </span>
               <span className="min-w-0 flex-1">
@@ -69,7 +71,7 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
               onClick={() => setPending(type)}
               className="flex items-center gap-4 rounded-2xl border border-dashed border-ink-600 bg-ink-900/20 p-4 text-left transition-colors hover:border-ink-500"
             >
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br opacity-50 ${grad}`}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-300/60">
                 <Icon className="h-6 w-6" />
               </span>
               <span className="min-w-0 flex-1">

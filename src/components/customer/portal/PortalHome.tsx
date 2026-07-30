@@ -51,14 +51,21 @@ import type { OrderStatus, PaymentMethod, PreferredLanguage, ServiceType } from 
  * the menu. The greeting knows the hour in Yaoundé and knows their name.
  */
 
-const SERVICE_UI: Record<ServiceType, { icon: React.ElementType; ring: string; glow: string; text: string }> = {
-  FOOD_PICKUP: { icon: UtensilsCrossed, ring: "from-amber-500/30 to-orange-600/5", glow: "shadow-amber-500/20", text: "text-amber-300" },
-  MEDICINE_PICKUP: { icon: Pill, ring: "from-teal-500/30 to-emerald-600/5", glow: "shadow-teal-500/20", text: "text-teal-300" },
-  GROCERY_PICKUP: { icon: ShoppingBasket, ring: "from-lime-500/30 to-green-600/5", glow: "shadow-lime-500/20", text: "text-lime-300" },
-  SMALL_PARCEL: { icon: Package, ring: "from-sky-500/30 to-blue-600/5", glow: "shadow-sky-500/20", text: "text-sky-300" },
-  URGENT_ITEM: { icon: Zap, ring: "from-yellow-500/30 to-gold-400/5", glow: "shadow-gold-400/20", text: "text-gold-300" },
-  CUSTOM_ERRAND: { icon: ClipboardList, ring: "from-violet-500/30 to-fuchsia-600/5", glow: "shadow-violet-500/20", text: "text-violet-300" },
-  MERCHANT_DELIVERY: { icon: Store, ring: "from-pink-500/30 to-rose-600/5", glow: "shadow-pink-500/20", text: "text-pink-300" },
+/**
+ * One brand, not a rainbow. The tiles used to carry a different hue per service
+ * (amber/teal/lime/sky/pink…), which read as a template rather than as Urban
+ * Night Lift. Now the icon is the only differentiator and the colour is the
+ * brand's: violet for a service, gold reserved for the highlighted "usual" —
+ * one accent per state, the way Uber and Yango hold a single palette.
+ */
+const SERVICE_UI: Record<ServiceType, { icon: React.ElementType }> = {
+  FOOD_PICKUP: { icon: UtensilsCrossed },
+  MEDICINE_PICKUP: { icon: Pill },
+  GROCERY_PICKUP: { icon: ShoppingBasket },
+  SMALL_PARCEL: { icon: Package },
+  URGENT_ITEM: { icon: Zap },
+  CUSTOM_ERRAND: { icon: ClipboardList },
+  MERCHANT_DELIVERY: { icon: Store },
 };
 
 const ORDER: ServiceType[] = [
@@ -221,8 +228,7 @@ export function PortalHome({ data }: { data: PortalData }) {
         </h2>
         <div className="grid grid-cols-2 gap-3">
           {services.map((type, i) => {
-            const ui = SERVICE_UI[type];
-            const Icon = ui.icon;
+            const Icon = SERVICE_UI[type].icon;
             const usual = i === 0 && data.favoriteService === type && !active;
             return (
               <div
@@ -233,13 +239,18 @@ export function PortalHome({ data }: { data: PortalData }) {
                 <Link
                   href={`/order/new?service=${type}`}
                   className={cn(
-                    "group relative flex h-full items-center gap-3 overflow-hidden rounded-2xl border border-ink-700 bg-gradient-to-br p-4 transition-transform active:scale-[0.98]",
-                    ui.ring,
-                    usual ? "shadow-lg" : "",
-                    ui.glow
+                    "group relative flex h-full items-center gap-3 overflow-hidden rounded-2xl border p-4 transition-transform active:scale-[0.98]",
+                    usual
+                      ? "border-gold-400/40 bg-gradient-to-br from-gold-400/12 to-transparent shadow-lg shadow-gold-400/10"
+                      : "border-ink-700 bg-ink-900/50"
                   )}
                 >
-                  <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-ink-950/50", ui.text)}>
+                  <span
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                      usual ? "bg-gold-400/15 text-gold-300" : "bg-violet-500/12 text-violet-300"
+                    )}
+                  >
                     <Icon className="h-6 w-6" />
                   </span>
                   <span className="min-w-0">
@@ -363,7 +374,7 @@ export function PortalHome({ data }: { data: PortalData }) {
                   href={`/order/confirmation/${o.orderCode}`}
                   className="flex items-center gap-3 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 hover:border-ink-600"
                 >
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-950/60", SERVICE_UI[o.serviceType].text)}>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink-950/60 text-violet-300">
                     {(() => {
                       const Icon = SERVICE_UI[o.serviceType].icon;
                       return <Icon className="h-4 w-4" />;
@@ -413,22 +424,18 @@ export function PortalHome({ data }: { data: PortalData }) {
  */
 function ActiveOrderCard({ order, fr }: { order: PortalOrder; fr: boolean }) {
   const { t } = useTranslation();
-  const ui = SERVICE_UI[order.serviceType];
-  const Icon = ui.icon;
+  const Icon = SERVICE_UI[order.serviceType].icon;
   return (
     <div className="animate-rise-in">
       <Link
         href={`/order/confirmation/${order.orderCode}`}
-        className={cn(
-          "relative flex items-center gap-3 overflow-hidden rounded-2xl border border-violet-500/40 bg-gradient-to-br p-4 shadow-lg shadow-violet-500/10",
-          ui.ring
-        )}
+        className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-violet-500/40 bg-gradient-to-br from-violet-500/15 to-transparent p-4 shadow-lg shadow-violet-500/10"
       >
         <span aria-hidden className="absolute right-4 top-4 flex h-2.5 w-2.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-safe/70" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-safe" />
         </span>
-        <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-ink-950/50", ui.text)}>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-ink-950/50 text-violet-300">
           <Icon className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">

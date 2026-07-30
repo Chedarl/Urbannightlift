@@ -128,7 +128,7 @@ export function HelpContent() {
   const inputCls = "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-mist-100 placeholder:text-mist-500 focus:border-violet-500 focus:outline-none";
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pb-16 pt-6">
+    <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pb-28 pt-6">
       <div>
         <div className="flex items-center gap-2">
           <LifeBuoy className="h-6 w-6 text-violet-400" />

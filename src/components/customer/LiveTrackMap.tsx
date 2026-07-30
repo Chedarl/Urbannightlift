@@ -108,6 +108,17 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <p className="flex items-center gap-2 text-xs font-semibold text-mist-300">
           {t("track.mapTitle")}
+          {/* A legible "live" state — the pulsing dot the reference apps use so
+              you can see at a glance that the position is current, not frozen. */}
+          {rider && !isStale && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-[11px] font-semibold text-safe">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-safe/70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-safe" />
+              </span>
+              {locale === "fr" ? "En direct" : "Live"}
+            </span>
+          )}
           {etaMinutes != null && (
             <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-[11px] font-semibold text-safe">
               <Clock className="h-3 w-3" />
