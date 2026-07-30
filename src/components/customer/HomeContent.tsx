@@ -12,7 +12,6 @@ import { useTranslation } from "@/lib/i18n";
 import { getClosedNotice } from "@/lib/i18n/legal";
 import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
-import { Reveal } from "@/components/shared/motion";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
 import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
@@ -229,130 +228,135 @@ export function HomeContent({
         </nav>
       </header>
 
-      {/* ───── Hero ───── */}
-      <section className="relative overflow-hidden border-b border-ink-800">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 md:grid-cols-2 md:py-16">
-          <div>
-            {/* Reserve the row's height either way so the pill can't shift the
-                headline when it resolves after mount. */}
-            <div className="mb-4 flex h-7 items-center">
-              {openNow !== null && (
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
-                    openNow
-                      ? "border-safe/40 bg-safe/10 text-safe"
-                      : "border-ink-600 bg-ink-900/70 text-mist-300"
-                  )}
-                >
-                  <span className={cn("h-2 w-2 rounded-full", openNow ? "animate-pulse bg-safe" : "bg-mist-500")} />
-                  {openNow
-                    ? fr
-                      ? `Ouvert · jusqu'à ${hourLabel(endHour, true)}`
-                      : `Open now · until ${hourLabel(endHour, false)}`
-                    : fr
-                      ? `Fermé · ouverture à ${hourLabel(startHour, true)}`
-                      : `Closed · opens at ${hourLabel(startHour, false)}`}
-                </span>
-              )}
-            </div>
-            <h1 className="font-display text-4xl font-bold leading-tight md:text-5xl">
-              {fr ? "Votre ville," : "Your city,"}<br />
-              {fr ? "Notre course." : "Our ride."}<br />
-              <span className="text-gold-400">{fr ? "Livré la nuit." : "Night "}</span>
-              {!fr && <span className="text-violet-400">delivered.</span>}
-            </h1>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-mist-300">
-              {fr
-                ? "Livraison rapide, sûre et fiable à travers Yaoundé et autour de Biyem-Assi. Nous bougeons quand vous en avez le plus besoin."
-                : "Fast, safe and reliable delivery across Yaoundé and around Biyem-Assi. We move when you need us most."}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/order" className="inline-flex items-center gap-2 rounded-xl bg-gold-400 px-5 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-300">
-                <ShoppingBasket className="h-4 w-4" /> {fr ? "Passer une commande" : "Place an Order"}
-              </Link>
-              {/* Was "Explore Services", which only scrolled to a grid already
-                  in view. WhatsApp is a genuinely different route to an order —
-                  and the one most people here reach for first. */}
-              <a href={waHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-ink-600 bg-ink-900/60 px-5 py-3 text-sm font-semibold text-mist-200 hover:border-safe/60">
-                <MessageCircle className="h-4 w-4 text-safe" /> {fr ? "Commander sur WhatsApp" : "Order on WhatsApp"}
-              </a>
-            </div>
+      {/* ───── Hero: the question first, the way Uber opens ───── */}
+      <section id="services" className="relative overflow-hidden border-b border-ink-800">
+        {/* A quiet night aurora behind the fold. */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-gradient-to-b from-violet-700/20 via-violet-900/5 to-transparent blur-2xl" />
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+          {/* Location + open state — DoorDash's "delivering to" line. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-900/70 px-3 py-1.5 text-xs font-semibold text-mist-200">
+              <MapPin className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Yaoundé · cette nuit" : "Yaoundé · tonight"}
+            </span>
+            {openNow !== null && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold",
+                  openNow ? "border-safe/40 bg-safe/10 text-safe" : "border-ink-600 bg-ink-900/70 text-mist-300"
+                )}
+              >
+                <span className={cn("h-2 w-2 rounded-full", openNow ? "animate-pulse bg-safe" : "bg-mist-500")} />
+                {openNow
+                  ? fr ? `Ouvert · jusqu'à ${hourLabel(endHour, true)}` : `Open now · until ${hourLabel(endHour, false)}`
+                  : fr ? `Fermé · ouvre à ${hourLabel(startHour, true)}` : `Closed · opens ${hourLabel(startHour, false)}`}
+              </span>
+            )}
           </div>
 
-          <HeroMedia fr={fr} />
-        </div>
+          <h1 className="mt-5 font-display text-4xl font-bold leading-tight md:text-5xl">
+            {fr ? "De quoi avez-vous besoin " : "What do you need "}
+            <span className="text-gold-400">{fr ? "cette nuit ?" : "tonight?"}</span>
+          </h1>
+          <p className="mt-3 max-w-md text-[15px] leading-relaxed text-mist-300">
+            {fr
+              ? "Nous récupérons et livrons à travers Yaoundé, de 18h à 4h — quand vous n'avez pas le temps, ou pas envie de sortir."
+              : "We pick up and deliver across Yaoundé, 6 PM to 4 AM — for the nights you have no time, or no reason to go out."}
+          </p>
 
-        {mode === "CLOSED" && (
-          <div className="mx-auto max-w-6xl px-4 pb-8">
-            <div className="rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-[13px] leading-relaxed text-gold-200">
+          {/* A returning customer's shortcut. Nothing for guests. */}
+          <div className="mt-5">
+            <WelcomeBack accent="#9645de" fr={fr} />
+          </div>
+
+          {/* The service tiles ARE the hero — Uber leads with the choice, not a
+              banner. Big, icon-forward, tappable. The video sits below as an
+              ambient panel rather than on the critical path. */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {liveServices.map((s) => (
+              <Link
+                key={s.key}
+                href={`/order/new?service=${s.key}`}
+                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-ink-700 bg-ink-900/60 p-4 transition-all hover:-translate-y-0.5 hover:border-ink-500"
+                style={{ minHeight: "7rem" }}
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
+                  <s.icon className="h-6 w-6" />
+                </span>
+                <span className="mt-3 flex items-center justify-between gap-1">
+                  <span className="font-display text-sm font-semibold leading-tight text-mist-100">{tr(fr, s.title)}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" style={{ color: s.accent }} />
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          {/* Paused services — a scrollable chip rail, DoorDash's category row. */}
+          {soonServices.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-mist-500">
+                {fr ? "Bientôt — dites-nous si vous en avez besoin" : "Coming soon — tell us if you need it"}
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {soonServices.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setPending(s)}
+                    className="flex shrink-0 items-center gap-2 rounded-xl border border-dashed border-ink-600 bg-ink-900/30 px-3 py-2 text-left hover:border-ink-500"
+                  >
+                    <s.icon className="h-4 w-4 shrink-0 opacity-60" style={{ color: s.accent }} />
+                    <span className="text-xs font-medium text-mist-300">{tr(fr, s.title)}</span>
+                    <BellRing className="h-3 w-3 text-mist-500" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === "CLOSED" && (
+            <div className="mt-6 rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-[13px] leading-relaxed text-gold-200">
               {getClosedNotice(locale)}
             </div>
+          )}
+
+          {/* The brand film, kept but demoted below the choice. */}
+          <div className="mt-8">
+            <HeroMedia fr={fr} />
           </div>
-        )}
+        </div>
       </section>
 
-      {/* ───── Services ───── */}
-      <section id="services" className="mx-auto max-w-6xl px-4 py-12">
-        <Reveal>
-          <h2 className="font-display text-2xl font-bold md:text-3xl">
-            {fr ? "De quoi avez-vous besoin " : "What do you need "}<span className="text-violet-400">{fr ? "ce soir ?" : "tonight?"}</span>
-          </h2>
-          <p className="mt-1 text-sm text-mist-400">{fr ? "Choisissez un service pour commencer" : "Choose a service to get started"}</p>
-        </Reveal>
-        {/* A returning customer's shortcut past the whole grid. Renders
-            nothing at all for guests. */}
-        <div className="mt-5">
-          <WelcomeBack accent="#9645de" fr={fr} />
-        </div>
-        {/* Only orderable services get a full card. The paused ones used to
-            take three of the eight slots on the page's main conversion
-            surface — a third of it advertising things nobody can buy. */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {liveServices.map((s) => (
-            <Link key={s.key} href={`/order/new?service=${s.key}`} className="group flex flex-col rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all hover:-translate-y-0.5 hover:border-ink-500">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${s.accent}22`, color: s.accent }}>
-                <s.icon className="h-6 w-6" />
-              </span>
-              <h3 className="mt-3 font-display text-base font-semibold text-mist-100">{tr(fr, s.title)}</h3>
-              <p className="mt-1 flex-1 text-xs leading-relaxed text-mist-400">{tr(fr, s.desc)}</p>
-              <ArrowRight className="mt-3 h-4 w-4 transition-transform group-hover:translate-x-1" style={{ color: s.accent }} />
-            </Link>
-          ))}
-          {/* WhatsApp — the catch-all for anything the cards don't cover. */}
-          <a href={waHref} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center rounded-2xl border border-gold-400/50 bg-gradient-to-b from-gold-400/10 to-transparent p-5 text-center">
-            <MessageCircle className="h-7 w-7 text-gold-400" />
-            <h3 className="mt-2 font-display text-base font-semibold text-gold-200">{fr ? "Autre chose ?" : "Need something else?"}</h3>
-            <p className="mt-1 text-xs text-mist-400">{fr ? "Discutez avec notre dispatcher sur WhatsApp." : "Chat with our dispatcher on WhatsApp."}</p>
-            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-safe/20 px-3 py-1.5 text-xs font-semibold text-safe"><MessageCircle className="h-4 w-4" /> WhatsApp</span>
-          </a>
-        </div>
-
-        {/* Paused services, demoted to a compact row. Still tappable, because
-            "notify me" is how we measure whether to launch them. */}
-        {soonServices.length > 0 && (
-          <div className="mt-8">
-            <p className="text-xs font-semibold uppercase tracking-wide text-mist-500">
-              {fr ? "Bientôt disponible — dites-nous si vous en avez besoin" : "Coming soon — tell us if you need it"}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              {soonServices.map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => setPending(s)}
-                  className="flex items-center gap-2.5 rounded-2xl border border-dashed border-ink-600 bg-ink-900/30 px-4 py-2.5 text-left transition-colors hover:border-ink-500"
-                >
-                  <s.icon className="h-4 w-4 shrink-0 opacity-60" style={{ color: s.accent }} />
-                  <span className="text-sm font-medium text-mist-300">{tr(fr, s.title)}</span>
-                  <span className="inline-flex items-center gap-1 text-xs text-mist-500">
-                    <BellRing className="h-3.5 w-3.5" /> {fr ? "Prévenez-moi" : "Notify me"}
+      {/* ───── Safety banner — Yango's "Safety Tools" card, our night promise ───── */}
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <div className="overflow-hidden rounded-3xl border border-violet-500/30 bg-gradient-to-br from-violet-800/30 via-ink-900 to-ink-950 p-6 md:p-8">
+          <div className="flex items-start gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-500/20 text-violet-200">
+              <ShieldCheck className="h-6 w-6" />
+            </span>
+            <div>
+              <h2 className="font-display text-xl font-bold md:text-2xl">
+                {fr ? "Rentrez bien. La nuit est à nous." : "Get home safe. The night is ours."}
+              </h2>
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist-300">
+                {fr
+                  ? "Vous voyez qui arrive avant qu'il frappe, vous suivez la course en direct, et vous pouvez partager votre livraison avec un proche — le code n'est donné qu'à la porte."
+                  : "See who's coming before they knock, follow the ride live, and share your delivery with someone you trust — the code is given only at the door."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  { en: "Verified riders", fr: "Livreurs vérifiés" },
+                  { en: "Live tracking", fr: "Suivi en direct" },
+                  { en: "Share my delivery", fr: "Partager ma livraison" },
+                  { en: "Code at the door", fr: "Code à la porte" },
+                ].map((c) => (
+                  <span key={c.en} className="rounded-full border border-violet-500/30 bg-violet-950/40 px-3 py-1 text-xs font-medium text-violet-200">
+                    {tr(fr, c)}
                   </span>
-                </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </section>
 
       {/* ───── How it works ───── */}
