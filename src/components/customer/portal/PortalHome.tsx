@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,7 +18,6 @@ import {
   Gift,
   ShieldCheck,
   LifeBuoy,
-  LogOut,
   Plus,
   Moon,
   Home as HomeIcon,
@@ -26,9 +25,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { InstallPrompt } from "@/components/shared/InstallPrompt";
+import { InitialAvatar } from "@/components/customer/portal/kit";
 import { useTranslation } from "@/lib/i18n";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
-import { refreshProfile } from "@/lib/account/profile";
 import { CUSTOMER_STATUS_KEY } from "@/lib/orders/statusLabels";
 import { formatXaf, cn } from "@/lib/utils";
 import {
@@ -123,7 +122,6 @@ export function PortalHome({ data }: { data: PortalData }) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
 
   const active = data.orders.find((o) => o.orderCode === data.activeOrderCode) ?? null;
   const firstName = (data.customer.fullName || "").trim().split(/\s+/)[0] || (fr ? "vous" : "there");
@@ -170,15 +168,6 @@ export function PortalHome({ data }: { data: PortalData }) {
     router.push("/order/review");
   }
 
-  async function logout() {
-    await fetch("/api/account/logout", { method: "POST" });
-    refreshProfile();
-    startTransition(() => {
-      router.push("/");
-      router.refresh();
-    });
-  }
-
   return (
     <div className="relative mx-auto flex max-w-lg flex-col gap-5 px-4 pb-28 pt-5">
       {/* A quiet aurora behind the whole portal — the night, made ambient. */}
@@ -193,14 +182,9 @@ export function PortalHome({ data }: { data: PortalData }) {
           <h1 className="truncate font-display text-3xl font-bold text-mist-100">{firstName}</h1>
           <p className="mt-0.5 text-sm text-mist-400">{relationshipLine(data.customer.nights, fr)}</p>
         </div>
-        <button
-          type="button"
-          onClick={logout}
-          disabled={pending}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-ink-700 px-2.5 py-1.5 text-[11px] text-mist-400 hover:text-mist-200"
-        >
-          <LogOut className="h-3.5 w-3.5" /> {t("common.logout")}
-        </button>
+        <Link href="/account/profile" aria-label={fr ? "Profil" : "Profile"} className="shrink-0">
+          <InitialAvatar name={data.customer.fullName} className="h-11 w-11 text-lg ring-2 ring-ink-700 transition-transform active:scale-95" />
+        </Link>
       </header>
 
       {/* ── The live order, if there is one: the "trip you're on" ── */}

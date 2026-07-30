@@ -2,23 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingBag, MapPin, MessageCircle, UserCircle } from "lucide-react";
+import { Home, ShoppingBag, MapPin, LifeBuoy, UserCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
-import { buildWaLink, MAIN_WHATSAPP_NUMBER } from "@/lib/whatsapp/links";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const pathname = usePathname();
-  const greeting =
-    locale === "fr"
-      ? "Bonsoir, je souhaite passer une commande Urban Night Lift."
-      : "Good evening, I would like to place an Urban Night Lift order.";
 
   const items = [
     { href: "/", icon: Home, label: t("nav.home"), active: pathname === "/" },
     { href: "/order", icon: ShoppingBag, label: t("nav.order"), active: pathname.startsWith("/order") },
     { href: "/track", icon: MapPin, label: t("nav.track"), active: pathname === "/track" },
+    // Help now stays in-app rather than handing off to WhatsApp — the same
+    // move as removing the WhatsApp hand-off from the order screen.
+    { href: "/help", icon: LifeBuoy, label: t("nav.help"), active: pathname.startsWith("/help") },
     { href: "/account", icon: UserCircle, label: t("nav.account"), active: pathname.startsWith("/account") },
   ];
 
@@ -38,15 +36,6 @@ export function BottomNav() {
             {label}
           </Link>
         ))}
-        <a
-          href={buildWaLink(MAIN_WHATSAPP_NUMBER, greeting)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium text-mist-500 transition-colors hover:text-[#25D366]"
-        >
-          <MessageCircle className="h-5 w-5" />
-          {t("nav.help")}
-        </a>
       </div>
     </nav>
   );
