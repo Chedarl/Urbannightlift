@@ -580,6 +580,7 @@ model Merchant {
   orders     Order[]
   products   MerchantProduct[]
   dutyShifts PharmacyDuty[]
+  staffNotes MerchantNote[]
 
   @@index([category, verified, active])
   @@index([verified, active])
@@ -995,7 +996,28 @@ enum SupportCategory {
 enum SupportStatus {
   NEW
   IN_PROGRESS
+  /// Parked on the customer — the ball is in their court, so it drops out of
+  /// the "waiting on us" queue without being resolved.
+  WAITING_ON_CUSTOMER
   RESOLVED
+  /// Archived. Resolved and put away; kept for the record and the metrics.
+  CLOSED
+}
+
+/// Where a case came from, so one inbox can hold help-centre requests, threads
+/// raised on an order, incidents, and cases a dispatcher opened proactively.
+enum CaseSource {
+  HELP_CENTER
+  ORDER_THREAD
+  INCIDENT
+  PROACTIVE
+}
+
+enum CasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 
 /// Customer help/support request captured from the Help Center so support runs
@@ -1007,6 +1029,10 @@ model SupportRequest {
   email                 String?
   orderCode             String?
   category              SupportCategory @default(OTHER)
+  /// How it reached us and how hard it presses — both drive the one inbox and
+  /// the order cases are answered in.
+  source                CaseSource      @default(HELP_CENTER)
+  priority              CasePriority    @default(NORMAL)
   message               String
   status                SupportStatus   @default(NEW)
   handledByUserId       String?
@@ -1053,6 +1079,44 @@ model CaseMessage {
   createdAt    DateTime       @default(now())
 
   @@index([caseId])
+}
+
+/// A reusable answer the desk can drop into a reply.
+///
+/// A support desk repeats itself — "your rider is on the way", "we've refunded
+/// you", "can you confirm the address?" — and typing each one fresh is slow and
+/// drifts off-brand. Macros keep the common answers one tap away and consistent.
+model CannedReply {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  /// Optional grouping, e.g. the SupportCategory it usually answers.
+  category  String?
+  /// Most-used first, so the list stays useful as it grows.
+  useCount  Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([active])
+}
+
+/// What the desk knows about a merchant that the numbers do not say.
+///
+/// The SMB half of the business is a relationship, not a row: who we spoke to,
+/// what they asked for, whether they are happy. Append-only with an author, the
+/// same discipline as CustomerNote — a contact log survives the person who kept it.
+model MerchantNote {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  authorId   String?
+  authorName String
+  body       String
+  /// GENERAL | CALL | VISIT | ISSUE | OPPORTUNITY — what kind of contact it was.
+  kind       String   @default("GENERAL")
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, createdAt])
 }
 
 /// Waiting list for a service that isn't live yet. Doubles as the market-demand
