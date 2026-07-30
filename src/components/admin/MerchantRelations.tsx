@@ -16,6 +16,7 @@ import {
   Check,
 } from "lucide-react";
 import { buildWaLink } from "@/lib/whatsapp/links";
+import { SellTonightPanel } from "@/components/admin/SellTonightPanel";
 import { cn } from "@/lib/utils";
 import { STANDING_LABEL, type MerchantStanding } from "@/lib/merchants/health";
 
@@ -275,6 +276,13 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
           <button type="button" onClick={copyInvite} className="flex items-center justify-center gap-1.5 rounded-xl border border-ink-700 px-3 py-2 text-xs font-semibold text-mist-300 hover:text-mist-100">
             {copied ? <Check className="h-3.5 w-3.5 text-safe" /> : <Copy className="h-3.5 w-3.5" />} Invite link
           </button>
+        </div>
+
+        {/* Their sales, and one tap to tell them about it. This is the "help
+            them sell more" lens — the reason a merchant stays with us rather
+            than with whoever else can carry a bag across town. */}
+        <div className="mt-4">
+          <SellTonightPanel merchantId={m.id} />
         </div>
 
         {/* Contact log */}
