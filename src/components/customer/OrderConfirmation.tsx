@@ -25,10 +25,34 @@ import { JourneyStage } from "@/components/customer/journey/JourneyStage";
 import { JourneyProgress } from "@/components/customer/journey/JourneyProgress";
 import { Farewell } from "@/components/customer/journey/Farewell";
 import { buildJourney, journeyComplete, stageOpen } from "@/lib/orders/customerJourney";
+import { orderMoney } from "@/lib/orders/goodsMoney";
+import { ApproveOverCap } from "@/components/customer/ApproveOverCap";
 
 const LiveTrackMap = dynamic(() => import("@/components/customer/LiveTrackMap").then((m) => m.LiveTrackMap), { ssr: false });
 import type { OrderStatus, PaymentMethod, PreferredLanguage, PrescriptionRequired, ServiceType } from "@prisma/client";
 import type { CustomerStatusKey } from "@/lib/orders/statusLabels";
+
+/**
+ * What we bought, for the receipt's line items. An unrecognised shape yields
+ * nothing rather than a guess — a wrong line on a receipt is worse than none.
+ */
+function receiptLineItems(details: Record<string, unknown> | null): { name: string; qty?: number }[] {
+  if (!details) return [];
+  const out: { name: string; qty?: number }[] = [];
+  for (const key of ["foodItems", "items", "groceryItems", "meds"]) {
+    const list = details[key];
+    if (!Array.isArray(list)) continue;
+    for (const row of list) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const name = typeof r.name === "string" ? r.name.trim() : "";
+      if (!name) continue;
+      const qty = Number(r.qty);
+      out.push({ name, qty: Number.isFinite(qty) && qty > 0 ? qty : undefined });
+    }
+  }
+  return out;
+}
 
 /** Confirming before the rider is on the way with the goods means nothing. */
 const CAN_CONFIRM: OrderStatus[] = [
@@ -88,6 +112,12 @@ export interface ConfirmationOrder {
   paymentVerifiedAt: string | null;
   /** Their rating, if they have already given one — makes the widget a thank-you. */
   ratingStars: number | null;
+  /** The ceiling they agreed we could spend on their behalf. */
+  goodsCapXaf: number | null;
+  /** What the shop charged, once the rider recorded it. */
+  goodsActualXaf: number | null;
+  /** Set once they agreed to a spend above their cap. */
+  overCapApprovedXaf: number | null;
 }
 
 /**
@@ -172,6 +202,22 @@ export function OrderConfirmation({
   // reads at the door. The second closes the transaction once they confirm
   // they received the goods. A customer who has paid deserves something in
   // writing before the rider arrives, not only afterwards.
+  /**
+   * The receipt's money, from the same module the checkout and the rider read,
+   * so the document can never disagree with what the customer was told.
+   */
+  const receiptMoney = orderMoney({
+    serviceType: order.serviceType,
+    deliveryFeeXaf: order.estimatedFeeXaf,
+    goodsCapXaf: order.goodsCapXaf,
+    goodsActualXaf: order.goodsActualXaf,
+    overCapApprovedXaf: order.overCapApprovedXaf,
+  });
+  // On mobile money the fee was taken up front and the goods settle in cash at
+  // the door — the receipt says which part was which.
+  const goodsDueAtDoorXaf =
+    receiptMoney.shopping && order.paymentMethod !== "CASH" ? receiptMoney.goodsXaf : null;
+
   const dispatched = order.riderName != null && order.otpCode != null;
   const receiptStage: "DISPATCH" | "DELIVERED" = order.customerConfirmedAt ? "DELIVERED" : "DISPATCH";
   const receiptData: ReceiptPdfData = {
@@ -197,6 +243,13 @@ export function OrderConfirmation({
     confirmedAt: order.customerConfirmedAt ? new Date(order.customerConfirmedAt) : null,
     riderName: order.riderName,
     legalNotice: getLegalNotice(fr ? "fr" : "en"),
+    shopping: receiptMoney.shopping,
+    lineItems: receiptLineItems(order.serviceDetails),
+    goodsXaf: receiptMoney.shopping ? receiptMoney.goodsXaf : null,
+    goodsCapXaf: order.goodsCapXaf,
+    deliveryFeeXaf: receiptMoney.deliveryFeeXaf,
+    totalXaf: receiptMoney.totalXaf,
+    goodsDueAtDoorXaf,
   };
 
   const otpBox = order.otpCode && !isCancelled && (
@@ -346,6 +399,19 @@ export function OrderConfirmation({
 
           {/* Where the rider is. Kept outside the stage cards because it is
               something to watch, not something to do. */}
+          {/* The shop charged more than they allowed. Asking is the promise
+              the cap made; nothing is collectable until they answer. */}
+          {verified && receiptMoney.needsCustomerApproval && order.goodsActualXaf != null && (
+            <ApproveOverCap
+              orderCode={order.orderCode}
+              capXaf={order.goodsCapXaf ?? 0}
+              actualXaf={order.goodsActualXaf}
+              overByXaf={receiptMoney.overCapByXaf}
+              fr={fr}
+              onAnswered={() => window.location.reload()}
+            />
+          )}
+
           {!isCancelled && <LiveTrackMap orderCode={order.orderCode} />}
 
           {/* Offered here as well as at the end, because a guest who never gets
