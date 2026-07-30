@@ -20,6 +20,7 @@ import { SaveAccountPrompt } from "@/components/customer/account/SaveAccountProm
 import { OrderAgain } from "@/components/customer/order/OrderAgain";
 import { RiderIdentityCard } from "@/components/customer/RiderIdentityCard";
 import { ShareDelivery } from "@/components/customer/ShareDelivery";
+import { RateDelivery } from "@/components/customer/RateDelivery";
 import { JourneyStage } from "@/components/customer/journey/JourneyStage";
 import { JourneyProgress } from "@/components/customer/journey/JourneyProgress";
 import { Farewell } from "@/components/customer/journey/Farewell";
@@ -85,6 +86,8 @@ export interface ConfirmationOrder {
   amountPaidXaf: number | null;
   paymentReference: string | null;
   paymentVerifiedAt: string | null;
+  /** Their rating, if they have already given one — makes the widget a thank-you. */
+  ratingStars: number | null;
 }
 
 /**
@@ -249,6 +252,8 @@ export function OrderConfirmation({
           deliveredAt={order.deliveredAt ?? order.customerConfirmedAt}
           fr={fr}
         >
+          {/* How it went — asked once, right after the goods are in hand. */}
+          {verified && <RateDelivery orderCode={order.orderCode} initialStars={order.ratingStars} fr={fr} />}
           {verified && <DownloadReceiptButton data={receiptData} label={fr ? "Télécharger le reçu final" : "Download your final receipt"} />}
           {verified && (
             <OrderAgain
