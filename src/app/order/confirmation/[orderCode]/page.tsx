@@ -111,6 +111,7 @@ export default async function ConfirmationPage({
             steps,
             deliveredAt: order.completedAt?.toISOString() ?? null,
             riderName: order.assignedRider?.fullName ?? null,
+            ratingStars: order.ratingStars,
             amountPaidXaf: order.finalDeliveryFeeXaf ?? order.quotedFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
             paymentReference: redact(payment?.transactionReference ?? null),
             paymentVerifiedAt: payment?.verifiedAt?.toISOString() ?? null,
