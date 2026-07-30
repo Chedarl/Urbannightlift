@@ -17,6 +17,7 @@ import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox"
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
+import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
@@ -141,6 +142,15 @@ export function ParcelForm() {
 
       <div className="flex flex-col gap-4 px-4 pt-5">
         <WelcomeBack accent={ACCENT} fr={fr} />
+
+        <VoiceNoteField
+          accent={ACCENT}
+          fr={fr}
+          onChange={(n) => {
+            setValue("voiceNoteUrl", n?.url ?? "");
+            setValue("voiceNoteSeconds", n?.seconds ?? null);
+          }}
+        />
 
         {/* Sender */}
         <div className={card}>
