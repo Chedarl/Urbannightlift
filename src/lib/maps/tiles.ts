@@ -1,43 +1,54 @@
 import "server-only";
 
 import { serverKey, tilesKey } from "@/lib/maps/google";
+import { maptilerConfig } from "@/lib/maps/maptiler";
 
 /**
- * Google's basemap, in our night palette, drawn by Leaflet.
+ * Which basemap the whole product draws, and why.
  *
- * We buy **tiles**, not the Maps JavaScript API. Dynamic Maps bills $7 per
- * 1,000 map loads; 2D tiles give 100,000 free a month and then $0.60 per 1,000,
- * and Google's Map Tiles policy explicitly covers using them "to display Google
- * Maps using a third-party renderer" — provided their attribution shows and
- * nothing covers their logo, which `TileAttribution` handles.
+ * Three providers, tried in order, each falling through to the next:
  *
- * A tile session is a POST that returns a token good for about two weeks. It is
- * cached in module memory so a busy night is one createSession call per server
- * instance, not one per map.
+ *  1. **MapTiler** — signs up with no billing details, 100,000 tiles a month
+ *     free, and takes a style so the map wears this product's night palette.
+ *     Preferred because Google Cloud billing rejects most Cameroonian cards,
+ *     which puts Google out of reach indefinitely rather than temporarily.
+ *  2. **Google** — the best data, kept wired and one environment variable away
+ *     should a card ever work. We buy *tiles*, never the Maps JavaScript API:
+ *     Dynamic Maps bills $7 per 1,000 map loads against $0.60 for tiles, and
+ *     Google's Map Tiles policy explicitly covers a third-party renderer so long
+ *     as their attribution shows.
+ *  3. **CARTO** — free, keyless, and what the site has always run on.
  *
- * **Everything degrades to CARTO.** No key, a failed session, a Google outage —
- * the map still draws on the free OpenStreetMap-derived tiles it used before.
- * A slightly plainer map is a nuisance; a blank one is a customer who thinks
+ * Google needs a session token minted by a server-side POST, cached here for
+ * days so a busy night is one call per instance rather than one per map.
+ * MapTiler needs nothing of the kind, which is also why it cannot repeat the
+ * referrer mistake that left the maps silently on CARTO for a day.
+ *
+ * **Everything degrades.** No key, a failed session, an outage — the map still
+ * draws. A plainer map is a nuisance; a blank one is a customer who thinks
  * their delivery has vanished.
  */
+
+export type TileProvider = "maptiler" | "google" | "carto";
 
 export const CARTO_FALLBACK = {
   url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   attribution: "&copy; OpenStreetMap &copy; CARTO",
-  google: false as const,
+  provider: "carto" as const,
 };
 
 export interface TileConfig {
   url: string;
   attribution: string;
-  google: boolean;
+  provider: TileProvider;
   /**
-   * Why we fell back, in Google's own words where they gave any.
+   * Why we are not on the provider we would prefer, in the provider's own words
+   * where they gave any.
    *
-   * Four different problems — no key, a referrer-restricted key, billing off,
-   * the API not enabled — used to produce one identical silent fallback, which
-   * left whoever was configuring it with nothing to go on. Admin-only: the
-   * public endpoint strips it.
+   * Several different problems — no key, a referrer-restricted key, billing
+   * off, an API not enabled — used to produce one identical silent fallback,
+   * which left whoever was configuring it with nothing to go on. Admin-only:
+   * the public endpoint strips it.
    */
   reason?: string;
 }
@@ -148,9 +159,17 @@ async function createSession(language: string): Promise<SessionAttempt> {
  * configuring this; it is stripped before the public endpoint answers.
  */
 export async function tileConfig(fr: boolean): Promise<TileConfig> {
+  // MapTiler first: no card, no session call, and nothing about it can fail
+  // silently in the way Google's referrer restriction did.
+  const maptiler = maptilerConfig();
+  if (maptiler) return { ...maptiler, provider: "maptiler" };
+
   const browserKey = tilesKey() ?? serverKey();
   if (!browserKey) {
-    return { ...CARTO_FALLBACK, reason: "No Google Maps key is configured." };
+    return {
+      ...CARTO_FALLBACK,
+      reason: "No MAPTILER_KEY and no Google Maps key are configured.",
+    };
   }
 
   const language = fr ? "fr-FR" : "en-GB";
@@ -186,6 +205,6 @@ function googleConfig(session: string, key: string): TileConfig {
     url: `https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${encodeURIComponent(session)}&key=${encodeURIComponent(key)}`,
     // Required by the Map Tiles policy, and it must not be obscured.
     attribution: "&copy; Google",
-    google: true,
+    provider: "google",
   };
 }

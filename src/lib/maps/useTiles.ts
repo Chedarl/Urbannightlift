@@ -14,16 +14,18 @@ import { useEffect, useState } from "react";
  * load; the CARTO tiles are a real map, not an error state.
  */
 
+export type TileProvider = "maptiler" | "google" | "carto";
+
 export interface TileConfig {
   url: string;
   attribution: string;
-  google: boolean;
+  provider: TileProvider;
 }
 
 export const CARTO: TileConfig = {
   url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   attribution: "&copy; OpenStreetMap &copy; CARTO",
-  google: false,
+  provider: "carto",
 };
 
 let cached: TileConfig | null = null;

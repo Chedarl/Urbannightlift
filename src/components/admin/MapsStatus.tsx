@@ -5,22 +5,30 @@ import { Map as MapIcon, RefreshCw } from "lucide-react";
 
 /**
  * One line telling the owner which basemap the site is actually drawing, and
- * why.
+ * why it is not the one they configured.
  *
- * Before this, four different problems — no key, a key restricted by HTTP
- * referrer, billing not enabled, the Map Tiles API not enabled — all produced
- * the identical silent fallback to OpenStreetMap. There was no way to tell them
- * apart from the outside, and each needs a completely different fix. This turns
- * that into a glance.
+ * Several different problems — no key, a key restricted the wrong way, billing
+ * not enabled, an API not enabled — all produced the identical silent fallback.
+ * There was no way to tell them apart from the outside, and each needs a
+ * completely different fix. This turns that into a glance.
  *
  * It reads the same endpoint every map reads, so it cannot report something
  * different from what customers are seeing — but it reads it **uncached**. The
- * public response is held by the CDN for a few minutes, which is right for
- * customers and wrong for the person who has just changed a key and is standing
- * here waiting to find out whether it worked.
+ * public response is held briefly by the CDN, which is right for customers and
+ * wrong for the person who has just changed a key and is standing here waiting
+ * to find out whether it worked.
  */
+
+type Provider = "maptiler" | "google" | "carto";
+
+const LABEL: Record<Provider, string> = {
+  maptiler: "MapTiler",
+  google: "Google",
+  carto: "OpenStreetMap",
+};
+
 export function MapsStatus() {
-  const [state, setState] = useState<{ google: boolean; reason?: string } | null>(null);
+  const [state, setState] = useState<{ provider: Provider; reason?: string } | null>(null);
   const [checking, setChecking] = useState(false);
 
   const check = useCallback(async (retry: boolean) => {
@@ -44,22 +52,26 @@ export function MapsStatus() {
 
   if (!state) return null;
 
+  // CARTO is the floor. It works and always has, but it is the plainest of the
+  // three and means a key somewhere is not doing its job.
+  const onFallback = state.provider === "carto";
+
   return (
     <div
       className={`rounded-xl border p-3 ${
-        state.google ? "border-safe/40 bg-safe/5" : "border-caution/40 bg-caution/5"
+        onFallback ? "border-caution/40 bg-caution/5" : "border-safe/40 bg-safe/5"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-2 text-sm font-semibold">
-          <MapIcon className={`h-4 w-4 ${state.google ? "text-safe" : "text-caution"}`} />
-          <span className={state.google ? "text-safe" : "text-caution"}>
-            Maps: {state.google ? "Google" : "OpenStreetMap"}
+          <MapIcon className={`h-4 w-4 ${onFallback ? "text-caution" : "text-safe"}`} />
+          <span className={onFallback ? "text-caution" : "text-safe"}>
+            Maps: {LABEL[state.provider] ?? state.provider}
           </span>
         </p>
         {/* Forces a real retry rather than the remembered rejection. Without it,
-            somebody who just enabled billing waits five minutes to learn whether
-            it worked — long enough to assume it didn't and undo it. */}
+            somebody who just fixed a key waits five minutes to learn whether it
+            worked — long enough to assume it didn't and undo it. */}
         <button
           type="button"
           onClick={() => check(true)}
@@ -71,23 +83,25 @@ export function MapsStatus() {
         </button>
       </div>
 
-      {state.google ? (
+      {!onFallback ? (
         <p className="mt-1 text-xs text-mist-500">
-          Google tiles and address search are live.
+          {state.provider === "maptiler"
+            ? "MapTiler tiles are live, in the night palette."
+            : "Google tiles and address search are live."}
         </p>
       ) : (
         <>
-          {/* Google's own words. They are what distinguish a referrer
-              restriction from billing being off, and the fix differs entirely. */}
+          {/* The provider's own words. They are what distinguish a key
+              restriction from billing being off, and the fixes differ entirely. */}
           <p className="mt-1 text-xs leading-relaxed text-mist-300">
             {state.reason ?? "No reason reported."}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-mist-500">
-            Maps still work — this is the free OpenStreetMap basemap, which knows
-            far less of Yaoundé. The two most common causes are billing not being
-            enabled on the Google Cloud project, and an HTTP-referrer restriction
-            on the key: the tile session is created by our server, which sends no
-            referrer, so Google refuses it. See docs/GOOGLE-MAPS-SETUP.md.
+            Maps still work — this is the free OpenStreetMap basemap. The quickest
+            way onto a better one is MapTiler: it needs no card, no billing
+            account and no server setup, just a key in{" "}
+            <span className="font-mono text-mist-400">MAPTILER_KEY</span>. See
+            docs/MAPS-SETUP.md.
           </p>
         </>
       )}
