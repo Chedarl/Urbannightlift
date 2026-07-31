@@ -34,7 +34,17 @@ export type AuditChanges = Record<string, { from: unknown; to: unknown }>;
 export interface AuditEntry {
   actor: AuditActor | null;
   action: string;
-  entityType: "order" | "payment" | "settings" | "user" | "zone" | "merchant" | "customer";
+  entityType:
+    | "order"
+    | "payment"
+    | "settings"
+    | "user"
+    | "zone"
+    | "merchant"
+    | "customer"
+    // A catalogue place decides where a rider is sent at 1 AM, so a wrong pin
+    // is a wasted trip and a safety question rather than a typo.
+    | "location";
   entityId: string;
   /** Something human-readable that still means something once the entity is gone. */
   entityLabel?: string | null;

@@ -189,6 +189,32 @@ export const GUIDES: Record<string, Guide> = {
     },
   },
 
+  "/admin/locations": {
+    title: { en: "Places", fr: "Lieux" },
+    purpose: {
+      en: "The address book. People here navigate by landmarks, not street addresses, so no map provider can look one up — this list can.",
+      fr: "Le carnet d'adresses. Ici on se repère aux points de repère, pas aux adresses postales : aucun fournisseur de cartes ne sait les trouver — cette liste, si.",
+    },
+    steps: [
+      {
+        en: "Work the \"Not found\" tab from the top. Each row is an address a customer typed that we couldn't find, and the number is how many customers it has already failed.",
+        fr: "Traitez l'onglet « Introuvable » du haut vers le bas. Chaque ligne est une adresse tapée par un client que nous n'avons pas trouvée, et le chiffre indique combien de clients elle a déjà fait échouer.",
+      },
+      {
+        en: "Adding one keeps the customer's exact wording as an alias, so the next person who types it gets a match instead of another guess.",
+        fr: "En l'ajoutant, la formulation exacte du client est conservée comme alias : la prochaine personne qui la tape obtient une correspondance plutôt qu'une supposition.",
+      },
+      {
+        en: "\"Learned by delivering\" are places a rider has actually reached. Naming one puts it in the catalogue so it matches the other ways people write it.",
+        fr: "« Appris en livrant » : des lieux qu'un livreur a réellement atteints. En le nommant, il entre au catalogue et correspond aux autres façons de l'écrire.",
+      },
+    ],
+    watchOut: {
+      en: "Drop the pin where a rider should actually stop, not on the rough area. The zone and the delivery fee are worked out from that pin, and a pin a street away is a failed first attempt at 1 AM.",
+      fr: "Placez le repère là où un livreur doit réellement s'arrêter, pas sur la zone approximative. La zone et le tarif en découlent, et un repère à une rue près, c'est une livraison ratée à 1 h du matin.",
+    },
+  },
+
   "/admin/merchants": {
     title: { en: "Merchants", fr: "Commerçants" },
     purpose: {
