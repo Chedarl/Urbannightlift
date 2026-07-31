@@ -31,16 +31,25 @@ import "server-only";
 /**
  * The style the tiles are rendered in.
  *
- * `dark-matter` is MapTiler's hosted dark style and the closest ready-made
- * match to the ink/violet/gold system — near-black ground, legible roads, muted
- * labels. A bespoke style built in MapTiler Cloud can be dropped in later by
- * setting `MAPTILER_STYLE` to its id; nothing else has to change, which is the
- * point of keeping it configurable rather than hardcoded.
+ * Was `dark-matter`, which is **CARTO's** name for their dark style and does not
+ * exist at MapTiler — every tile 404'd, the browser fell back to CARTO, and the
+ * map looked unchanged while the server insisted MapTiler was live. Style ids do
+ * not transfer between providers; each one's are its own.
+ *
+ * `streets-v2-dark` over the prettier, more muted `dataviz-dark` and
+ * `basic-v2-dark` because this is a delivery app: street names and landmarks
+ * have to stay legible on a phone at 1 AM, and that detail is the whole thing
+ * being paid for. A bespoke style built in MapTiler Cloud drops in via
+ * `MAPTILER_STYLE` with nothing else changing.
  */
-const DEFAULT_STYLE = "dark-matter";
+const DEFAULT_STYLE = "streets-v2-dark";
 
 export function maptilerKey(): string | null {
   return process.env.MAPTILER_KEY || null;
+}
+
+export function maptilerStyle(): string {
+  return process.env.MAPTILER_STYLE || DEFAULT_STYLE;
 }
 
 export interface MapTilerConfig {
@@ -63,7 +72,7 @@ export function maptilerConfig(): MapTilerConfig | null {
   const key = maptilerKey();
   if (!key) return null;
 
-  const style = process.env.MAPTILER_STYLE || DEFAULT_STYLE;
+  const style = maptilerStyle();
 
   return {
     url: `https://api.maptiler.com/maps/${encodeURIComponent(style)}/{z}/{x}/{y}@2x.png?key=${encodeURIComponent(key)}`,
@@ -72,4 +81,114 @@ export function maptilerConfig(): MapTilerConfig | null {
     attribution:
       '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">&copy; MapTiler</a> &copy; OpenStreetMap',
   };
+}
+
+/**
+ * Does the configured style actually exist, and is the key actually valid?
+ *
+ * This exists because of a real failure: the style id was wrong, every tile
+ * 404'd, the browser quietly fell back to CARTO, and the admin panel went on
+ * saying "Maps: MapTiler" — the one screen built to catch this pointed away from
+ * it. A key being present is not the same as a map being drawn, and only the
+ * provider can tell us which we have.
+ *
+ * ## Reading MapTiler's answers, which are not all what they look like
+ *
+ * Checked against the live account rather than assumed:
+ *
+ * | Response | Means | What we do |
+ * |---|---|---|
+ * | 200 | the style exists and the key is good | use MapTiler |
+ * | 404 | **no such style** — this was the bug | fall back, and say so |
+ * | 403 + "Invalid key" | the key is wrong | fall back, and say so |
+ * | 403, anything else | an origin restriction refusing *our server* | **use MapTiler** |
+ * | network error | our server, not their service | **use MapTiler** |
+ *
+ * The last two rows are the important ones. Our server sends no `Referer`, so a
+ * correctly origin-restricted key can refuse us while serving the browser
+ * perfectly — treating that as failure would break the setup the owner was
+ * told to build, which is exactly the mistake the Google work already made once.
+ * When we are unsure, we stay on MapTiler and let `BaseTiles` fall back on real
+ * tile errors, because it is the browser that knows.
+ */
+export type MapTilerCheck =
+  | { ok: true; note?: string }
+  | { ok: false; reason: string };
+
+/** A rejection stays a rejection until somebody changes something. */
+const RECHECK_AFTER_FAILURE_MS = 5 * 60 * 1000;
+
+let checked: { style: string; key: string; at: number; result: MapTilerCheck } | null = null;
+
+/** Backs the admin "Re-check" button — see `clearTileFailureMemo`. */
+export function clearMaptilerCheck(): void {
+  checked = null;
+}
+
+export async function checkMaptilerStyle(): Promise<MapTilerCheck> {
+  const key = maptilerKey();
+  if (!key) return { ok: false, reason: "No MAPTILER_KEY is configured." };
+
+  const style = maptilerStyle();
+  const now = Date.now();
+  if (checked && checked.style === style && checked.key === key) {
+    // A success is good until the process restarts; a failure is re-tried
+    // shortly, so a corrected variable is not disbelieved for an hour.
+    if (checked.result.ok || now - checked.at < RECHECK_AFTER_FAILURE_MS) {
+      return checked.result;
+    }
+  }
+
+  const result = await fetchStyleCheck(style, key);
+  checked = { style, key, at: now, result };
+  return result;
+}
+
+async function fetchStyleCheck(style: string, key: string): Promise<MapTilerCheck> {
+  const url = `https://api.maptiler.com/maps/${encodeURIComponent(style)}/style.json?key=${encodeURIComponent(key)}`;
+
+  try {
+    // One small JSON document, not a tile — cheap enough to do on a cold start
+    // and it is the only thing that can answer the question.
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+
+    if (res.ok) return { ok: true };
+
+    const body = (await res.text().catch(() => "")).slice(0, 200);
+
+    if (res.status === 404) {
+      return {
+        ok: false,
+        reason:
+          `MapTiler has no style called "${style}", so every tile fails and the map ` +
+          `falls back to OpenStreetMap. Valid ids include streets-v2-dark, ` +
+          `basic-v2-dark, dataviz-dark, toner-v2 and backdrop — set one in MAPTILER_STYLE.`,
+      };
+    }
+
+    if (res.status === 403 && /invalid key/i.test(body)) {
+      return { ok: false, reason: "MapTiler rejected the key in MAPTILER_KEY as invalid." };
+    }
+
+    if (res.status === 403) {
+      // Almost certainly the origin restriction doing its job. The browser sends
+      // a Referer; we do not.
+      return {
+        ok: true,
+        note: "MapTiler refused our server (no Referer), which is what an origin-restricted key should do. Browsers are unaffected.",
+      };
+    }
+
+    return {
+      ok: true,
+      note: `MapTiler answered HTTP ${res.status} when we checked the style. Tiles may still be fine — the browser check below is the one that counts.`,
+    };
+  } catch {
+    // Our network, not their service. Falling back to CARTO over one failed
+    // request from a serverless instance would be the wrong trade.
+    return {
+      ok: true,
+      note: "Couldn't reach MapTiler from the server to verify the style. Tiles are fetched by the browser, so this may not affect anyone.",
+    };
+  }
 }

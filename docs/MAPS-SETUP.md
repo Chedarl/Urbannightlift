@@ -47,10 +47,30 @@ the usual reason people think it did not work.
 
 ### Making it yours
 
-`dark-matter` is the default style and the closest ready-made match to this
-app's palette. To have the map drawn in exactly the violet/gold system, build a
-style in MapTiler Cloud (**Maps** → **Customize**) and put its id in
-`MAPTILER_STYLE`. Nothing else changes.
+The default style is **`streets-v2-dark`** — street names and landmarks stay
+legible on a phone at 1 AM, which is the detail this is being paid for.
+
+To use a different one, put its id in `MAPTILER_STYLE`. **Style ids do not
+transfer between providers.** `dark-matter` is *CARTO's* name for their dark
+style; MapTiler has no such map, and using it was a real bug — every tile 404'd,
+the browser fell back to OpenStreetMap, and the panel went on saying MapTiler
+was live. These ids are checked working:
+
+| Id | Looks like |
+|---|---|
+| `streets-v2-dark` ← default | dark, full street detail |
+| `basic-v2-dark` | dark, quieter |
+| `dataviz-dark` | dark, very muted — pretty, fewer labels |
+| `toner-v2` | high-contrast black and white |
+| `backdrop` | soft, minimal |
+| `streets-v2`, `bright-v2`, `basic-v2` | daylight |
+| `hybrid`, `satellite` | imagery |
+
+For the exact violet/gold system, build a style in MapTiler Cloud (**Maps** →
+**Customize**) and put its id in `MAPTILER_STYLE`. Nothing else changes.
+
+If the id is wrong, `/admin/settings` now says so by name instead of claiming
+MapTiler is live.
 
 ### What it costs
 
@@ -104,23 +124,52 @@ backstop.
 
 ---
 
-## Reading the error
+## Reading the panel
 
-`/admin/settings` quotes the provider's own words and has a **Re-check** button
-that retries immediately rather than making you wait out the five-minute memo.
+`/admin/settings` reports **two** things, and they can disagree:
+
+1. **Which provider the server chose** — and, if it is not the one you set up,
+   that provider's own words about why.
+2. **Whether a real tile loaded in the browser you are reading this on.** The
+   panel fetches one tile of Yaoundé, the same way the map does, from the same
+   origin a customer would.
+
+The second line is there because of a day lost to the first one being right on
+its own terms and wrong about what customers saw. **If they disagree, believe
+the browser** — it is the one drawing the map.
+
+There is a **Re-check** button that retries immediately rather than making you
+wait out the five-minute memo.
 
 | What it says | What to do |
 |---|---|
 | "No MAPTILER_KEY and no Google Maps key are configured." | Nothing is set in Vercel, or you did not redeploy after adding it. |
+| "MapTiler has no style called …" | `MAPTILER_STYLE` is not a real id. Use one from the table above. |
+| "MapTiler rejected the key … as invalid" | Wrong or deleted key. Copy it again from cloud.maptiler.com → Keys. |
+| "MapTiler refused our server (no Referer)" | **Nothing.** Your origin restriction is working; browsers are unaffected. |
+| "could not load a … tile" (browser line) | Console → look at the tile request's status. See below. |
 | "API keys with referer restrictions cannot be used with this API" | The Google server key has a website restriction. Remove it. |
 | "This API project is not authorized" / "is not enabled" | Enable the Map Tiles API on the Google project. |
 | "Billing has not been enabled" | Attach a billing account to the Google project. |
 | "Couldn't reach …" | Network or outage. It retries by itself. |
 
-If tiles fail in the **browser** rather than on the server — a key restricted to
-the wrong origin — the map falls back to OpenStreetMap after a few failed tiles
-rather than showing an empty grid. Check the browser console for 401/403 on tile
-requests.
+### 403 and 404 are completely different problems
+
+Both leave you on OpenStreetMap, and they have nothing to do with each other:
+
+| Status on a tile | Means | Fix |
+|---|---|---|
+| **404** | the style id does not exist | correct `MAPTILER_STYLE` |
+| **403** from a browser | the key is restricted to an origin this page is not on | add the origin in MapTiler → Keys |
+| **403** from our server | expected, and harmless — servers send no `Referer` | nothing |
+
+That last row is why the server-side check treats a plain 403 as *fine* and
+stays on MapTiler. Treating it as a failure would break the correctly locked-down
+setup you were told to build.
+
+If tiles fail in the browser, the map falls back to OpenStreetMap after a few
+failed tiles rather than showing an empty grid — so a misconfiguration always
+costs you a plainer map, never a blank one.
 
 ---
 
