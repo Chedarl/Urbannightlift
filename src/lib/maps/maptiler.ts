@@ -144,13 +144,30 @@ export async function checkMaptilerStyle(): Promise<MapTilerCheck> {
   return result;
 }
 
+/**
+ * Our own site, sent as the `Referer` on the check.
+ *
+ * Not a trick: this request **is** made by urbannighlift.com, on behalf of the
+ * page that is about to draw the tiles. Saying so is accurate.
+ *
+ * It is also necessary. An origin-restricted key — the setup we tell the owner
+ * to build — answers **403 to everything** without one, including `style.json`,
+ * so a wrong style id and a right one look identical and the check learns
+ * nothing. Verified against the live key: with this header, `streets-v2-dark`
+ * returns 200 and `dark-matter` returns 404. Without it, both return 403.
+ */
+const SITE_REFERER = `${(process.env.NEXT_PUBLIC_SITE_URL || "https://urbannighlift.com").replace(/\/+$/, "")}/`;
+
 async function fetchStyleCheck(style: string, key: string): Promise<MapTilerCheck> {
   const url = `https://api.maptiler.com/maps/${encodeURIComponent(style)}/style.json?key=${encodeURIComponent(key)}`;
 
   try {
     // One small JSON document, not a tile — cheap enough to do on a cold start
     // and it is the only thing that can answer the question.
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(url, {
+      headers: { Referer: SITE_REFERER },
+      signal: AbortSignal.timeout(6000),
+    });
 
     if (res.ok) return { ok: true };
 

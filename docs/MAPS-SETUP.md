@@ -146,7 +146,7 @@ wait out the five-minute memo.
 | "No MAPTILER_KEY and no Google Maps key are configured." | Nothing is set in Vercel, or you did not redeploy after adding it. |
 | "MapTiler has no style called …" | `MAPTILER_STYLE` is not a real id. Use one from the table above. |
 | "MapTiler rejected the key … as invalid" | Wrong or deleted key. Copy it again from cloud.maptiler.com → Keys. |
-| "MapTiler refused our server (no Referer)" | **Nothing.** Your origin restriction is working; browsers are unaffected. |
+| "MapTiler refused our server (no Referer)" | The key is restricted to an origin that is **not** `urbannighlift.com`. Add it in MapTiler → Keys → Origins. |
 | "could not load a … tile" (browser line) | Console → look at the tile request's status. See below. |
 | "API keys with referer restrictions cannot be used with this API" | The Google server key has a website restriction. Remove it. |
 | "This API project is not authorized" / "is not enabled" | Enable the Map Tiles API on the Google project. |
@@ -163,9 +163,16 @@ Both leave you on OpenStreetMap, and they have nothing to do with each other:
 | **403** from a browser | the key is restricted to an origin this page is not on | add the origin in MapTiler → Keys |
 | **403** from our server | expected, and harmless — servers send no `Referer` | nothing |
 
-That last row is why the server-side check treats a plain 403 as *fine* and
-stays on MapTiler. Treating it as a failure would break the correctly locked-down
-setup you were told to build.
+A restricted key answers **403 to everything** that does not name your site —
+including the style check, where it hides the 404 completely. So the check
+identifies itself as `urbannighlift.com`, which is simply what it is: a request
+made by this site, for the page about to draw the tiles. With that header a wrong
+style id shows up as the 404 it is; without it, right and wrong look identical.
+
+If a 403 comes back even then, the key is restricted to some *other* origin — and
+the server-side check still keeps MapTiler rather than falling back, because it is
+the browser that decides, and the browser may well be on the allowed origin.
+Treating that as a failure would break a correctly locked-down setup.
 
 If tiles fail in the browser, the map falls back to OpenStreetMap after a few
 failed tiles rather than showing an empty grid — so a misconfiguration always
