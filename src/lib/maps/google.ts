@@ -22,26 +22,42 @@ import "server-only";
  * *map loads*. We deliberately do not use it: Leaflet stays the renderer and we
  * buy tiles, which Google's Map Tiles policy explicitly provides for.
  *
- * ## Two keys, on purpose
+ * ## Two keys, and the split is by *where the call is made*
  * Tiles are fetched by the browser, so a tile key is necessarily public — the
- * same as the key in any Google-powered site's page source. It must therefore be
- * **restricted to the Map Tiles API and to our own domain** in the Cloud console,
- * which is the mitigation Google designs for. Places and Geocoding are called
- * only from here and use a second, server-held key that is never sent to a
- * browser. One key in both variables works, but leaves the search quota
- * spendable by anyone who reads the page.
+ * same as the key in any Google-powered site's page source. That one may be
+ * restricted to the Map Tiles API and the `urbannighlift.com` referrer.
+ *
+ * Everything else — Places, Geocoding, and **creating the tile session** — is
+ * called from our server, which sends no referrer. A referrer-restricted key is
+ * rejected for those, so the server key must carry no application restriction
+ * (API restrictions are fine and encouraged). Getting this backwards is exactly
+ * how the maps sat on OpenStreetMap while looking correctly configured.
+ *
+ * One key in both variables works and is the right way to start; it just leaves
+ * the search quota spendable by anyone who reads the page.
  *
  * Every function returns null instead of throwing. A geocode we could not do is
  * a missing pin; it must never be a customer who cannot place an order.
  */
 
-/** Public, browser-visible, restricted to the Map Tiles API + our domain. */
+/**
+ * Public, browser-visible. Goes in the tile URL the browser fetches, so this is
+ * the one that may — and should — be restricted by HTTP referrer.
+ */
 export function tilesKey(): string | null {
   return process.env.GOOGLE_MAPS_TILES_KEY || process.env.GOOGLE_MAPS_API_KEY || null;
 }
 
-/** Server-only. Places + Geocoding. Never sent to a client. */
-function serverKey(): string | null {
+/**
+ * Server-only. Places, Geocoding, and creating the tile session.
+ *
+ * **This key must not carry an HTTP-referrer restriction.** Every call using it
+ * is made from our server, which sends no referrer, so Google rejects a
+ * referrer-restricted key outright. That mistake is invisible — it surfaces as
+ * maps quietly staying on OpenStreetMap — which is why `tiles.ts` now reports
+ * the reason rather than swallowing it.
+ */
+export function serverKey(): string | null {
   return process.env.GOOGLE_MAPS_SERVER_KEY || process.env.GOOGLE_MAPS_API_KEY || null;
 }
 

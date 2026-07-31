@@ -1,6 +1,6 @@
 import "server-only";
 
-import { tilesKey } from "@/lib/maps/google";
+import { serverKey, tilesKey } from "@/lib/maps/google";
 
 /**
  * Google's basemap, in our night palette, drawn by Leaflet.
@@ -31,6 +31,15 @@ export interface TileConfig {
   url: string;
   attribution: string;
   google: boolean;
+  /**
+   * Why we fell back, in Google's own words where they gave any.
+   *
+   * Four different problems — no key, a referrer-restricted key, billing off,
+   * the API not enabled — used to produce one identical silent fallback, which
+   * left whoever was configuring it with nothing to go on. Admin-only: the
+   * public endpoint strips it.
+   */
+  reason?: string;
 }
 
 /**
@@ -59,13 +68,26 @@ const NIGHT_STYLE = [
 ];
 
 const SESSION_TTL_MS = 10 * 24 * 60 * 60 * 1000; // Google says ~2 weeks; renew early.
+/** Don't hammer Google on every map mount while a key is misconfigured. */
+const RETRY_AFTER_FAILURE_MS = 5 * 60 * 1000;
+
+interface SessionAttempt {
+  token: string | null;
+  /** Google's own words when it refused, for the admin readout. */
+  error: string | null;
+}
 
 let cached: { token: string; expires: number; language: string } | null = null;
-let inFlight: Promise<string | null> | null = null;
+let lastFailure: { at: number; error: string } | null = null;
+let inFlight: Promise<SessionAttempt> | null = null;
 
-async function createSession(language: string): Promise<string | null> {
-  const key = tilesKey();
-  if (!key) return null;
+async function createSession(language: string): Promise<SessionAttempt> {
+  // The **server** key, not the tiles key. This POST comes from our server and
+  // carries no referrer, so a referrer-restricted key is rejected — which is
+  // precisely the misconfiguration that used to fail silently.
+  const key = serverKey() ?? tilesKey();
+  if (!key) return { token: null, error: "No Google Maps key is configured." };
+
   try {
     const res = await fetch(`https://tile.googleapis.com/v1/createSession?key=${encodeURIComponent(key)}`, {
       method: "POST",
@@ -78,43 +100,72 @@ async function createSession(language: string): Promise<string | null> {
         scale: "scaleFactor2x",
         styles: NIGHT_STYLE,
       }),
-      // A tile session is not per-request state; let Next cache the fetch too.
-      next: { revalidate: 3600 },
     });
-    if (!res.ok) return null;
+
+    if (!res.ok) {
+      // Google's message is the whole value here: it distinguishes a referrer
+      // restriction from billing being off from the API not being enabled, and
+      // those need three completely different fixes.
+      const body = (await res.json().catch(() => null)) as
+        | { error?: { message?: string; status?: string } }
+        | null;
+      return {
+        token: null,
+        error: body?.error?.message ?? `Google refused the session (HTTP ${res.status}).`,
+      };
+    }
+
     const data = (await res.json()) as { session?: string };
-    return data.session ?? null;
-  } catch {
-    return null;
+    return data.session
+      ? { token: data.session, error: null }
+      : { token: null, error: "Google returned no session token." };
+  } catch (err) {
+    return { token: null, error: `Couldn't reach Google: ${(err as Error).message}` };
   }
 }
 
 /**
  * The tile URL template Leaflet should use, or the CARTO fallback.
  *
- * `{z}/{x}/{y}` are left for Leaflet to substitute. The key rides in the query
- * string because the browser fetches these directly — see the note in
- * `google.ts` about why that key must be referrer-restricted.
+ * `{z}/{x}/{y}` are left for Leaflet to substitute. The key in the query string
+ * is the **tiles** key, because the browser fetches these directly — that is
+ * the one that may be referrer-restricted.
+ *
+ * Always returns a usable map. `reason` explains a fallback for whoever is
+ * configuring this; it is stripped before the public endpoint answers.
  */
 export async function tileConfig(fr: boolean): Promise<TileConfig> {
-  const key = tilesKey();
-  if (!key) return CARTO_FALLBACK;
+  const browserKey = tilesKey() ?? serverKey();
+  if (!browserKey) {
+    return { ...CARTO_FALLBACK, reason: "No Google Maps key is configured." };
+  }
 
   const language = fr ? "fr-FR" : "en-GB";
   const now = Date.now();
   if (cached && cached.expires > now && cached.language === language) {
-    return googleConfig(cached.token, key);
+    return googleConfig(cached.token, browserKey);
+  }
+
+  // A rejected key stays rejected until someone changes it, so retrying on
+  // every single map mount would turn one mistake into thousands of calls.
+  if (lastFailure && now - lastFailure.at < RETRY_AFTER_FAILURE_MS) {
+    return { ...CARTO_FALLBACK, reason: lastFailure.error };
   }
 
   // One createSession at a time, however many maps mount at once.
   inFlight ??= createSession(language).finally(() => {
     inFlight = null;
   });
-  const token = await inFlight;
-  if (!token) return CARTO_FALLBACK;
+  const attempt = await inFlight;
 
-  cached = { token, expires: now + SESSION_TTL_MS, language };
-  return googleConfig(token, key);
+  if (!attempt.token) {
+    lastFailure = { at: now, error: attempt.error ?? "Unknown error." };
+    return { ...CARTO_FALLBACK, reason: lastFailure.error };
+  }
+
+  lastFailure = null;
+  cached = { token: attempt.token, expires: now + SESSION_TTL_MS, language };
+  return googleConfig(attempt.token, browserKey);
 }
 
 function googleConfig(session: string, key: string): TileConfig {
