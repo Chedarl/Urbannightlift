@@ -27,11 +27,11 @@ export function BaseTiles({ fr = false }: { fr?: boolean }) {
   const [rejected, setRejected] = useState(false);
   const failures = useRef(0);
 
-  // The server can hand us a valid session and the browser still be refused —
-  // a tiles key restricted to the wrong referrer, or to the wrong API, fails
-  // only at this point. Left alone that renders an *empty grid*, which is worse
-  // than OpenStreetMap because the map looks broken rather than plain. So the
-  // client makes its own last call and falls back too.
+  // The server can hand us a working config and the browser still be refused —
+  // a key restricted to the wrong origin, or to the wrong API, fails only at
+  // this point. Left alone that renders an *empty grid*, which is worse than
+  // OpenStreetMap because the map looks broken rather than plain. So the client
+  // makes its own last call and falls back too.
   const active = rejected ? CARTO : config;
 
   return (
@@ -41,7 +41,8 @@ export function BaseTiles({ fr = false }: { fr?: boolean }) {
       url={active.url}
       eventHandlers={{
         tileerror: () => {
-          if (rejected || !config.google) return;
+          // CARTO is already the floor; there is nothing to fall back to.
+          if (rejected || config.provider === "carto") return;
           failures.current += 1;
           if (failures.current >= FAILURES_BEFORE_FALLBACK) setRejected(true);
         },
