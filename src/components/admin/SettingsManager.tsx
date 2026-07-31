@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Save, BellRing } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { OperatingModeControls } from "@/components/admin/OperatingModeControls";
+import { MapsStatus } from "@/components/admin/MapsStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -151,6 +152,11 @@ export function SettingsManager({
         <h2 className="mb-3 font-display text-sm font-semibold text-gold-300">{t("admin.settings.mode")}</h2>
         <OperatingModeControls mode={settings.mode} />
       </section>
+
+      {/* Not a setting — a readout. It lives here because this is the screen
+          somebody opens when they have changed an environment variable and want
+          to know whether it took. */}
+      <MapsStatus />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain
