@@ -75,11 +75,58 @@ wait five minutes or redeploy.
 
 ## What it costs
 
-Nothing, at this volume. Autocomplete sessions are free and unlimited; Place
-Details and Geocoding get 10,000 free calls a month each (we use roughly 1,800
-and 900 at 900 orders); 2D tiles get 100,000 free tiles a month. We deliberately
-do not use the Maps JavaScript API, which is the expensive one at $7 per 1,000
-map loads — Leaflet stays the renderer and we buy tiles instead.
+Nothing, at this volume.
+
+| SKU | Free each month | Then | We use, at ~900 orders |
+|---|---|---|---|
+| Autocomplete (per session) | **unlimited** | — | all of it |
+| Place Details (Essentials) | 10,000 | $5 / 1,000 | ~1,800 |
+| Geocoding | 10,000 | $5 / 1,000 | ~900 |
+| Map Tiles (2D) | 100,000 tiles | $0.60 / 1,000 | comfortably under |
+| ~~Dynamic Maps (JS SDK)~~ | 10,000 loads | **$7 / 1,000** | **not used** |
+
+That last row is the whole cost story. Dynamic Maps is the expensive product and
+the one most sites reach for; we keep Leaflet as the renderer and buy raw tiles
+instead, which is roughly a tenth of the price and is what makes this free rather
+than merely cheap.
+
+The first thing that would ever cost money is tiles, at somewhere around 3,000
+orders a month — call it $50. Everything else stays inside the free tier well
+past that.
+
+**The apps do not add to any of this.** The customer app loads the website, so a
+customer using the app costs exactly what the same customer costs in a browser.
+The rider app renders no map at all — it opens `google.com/maps/dir/…`, a plain
+link that hands off to the rider's own Google Maps app, which is free, unmetered
+and needs no key.
+
+## Cap what you can be charged
+
+Google makes you attach a card even for the free tier, and that — not the usage —
+is the part worth defending against. Two settings, five minutes, and the
+exposure is closed:
+
+**1. A budget alert.** Billing → Budgets & alerts → Create budget. Set it to
+$1 and tick the alert thresholds. You will get an email the moment anything is
+billed at all, which at this volume should be never. This warns; it does not
+stop.
+
+**2. Quota caps — the one that actually stops it.** APIs & Services → each API →
+Quotas → set a daily limit:
+
+| API | Daily cap | Why |
+|---|---|---|
+| Map Tiles | 3,000 | ~90k/month, just inside the free 100k |
+| Places (New) | 300 | ~9k/month, inside the free 10k |
+| Geocoding | 300 | ~9k/month, inside the free 10k |
+
+Past the cap Google returns an error, our code falls back to OpenStreetMap and
+the catalogue, and **you are charged nothing**. The site keeps working. A hard
+cap that degrades gracefully is strictly better than a bill you find out about
+later, and this app was built to degrade at every one of those points.
+
+Raise the caps when real usage approaches them — the readout on
+`/admin/settings` will start reporting quota errors, which is your signal.
 
 ## If it stays on OpenStreetMap
 
