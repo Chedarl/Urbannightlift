@@ -1,7 +1,7 @@
 import "server-only";
 
 import { serverKey, tilesKey } from "@/lib/maps/google";
-import { maptilerConfig } from "@/lib/maps/maptiler";
+import { checkMaptilerStyle, clearMaptilerCheck, maptilerConfig } from "@/lib/maps/maptiler";
 
 /**
  * Which basemap the whole product draws, and why.
@@ -103,6 +103,7 @@ let inFlight: Promise<SessionAttempt> | null = null;
  */
 export function clearTileFailureMemo(): void {
   lastFailure = null;
+  clearMaptilerCheck();
 }
 
 async function createSession(language: string): Promise<SessionAttempt> {
@@ -161,14 +162,25 @@ async function createSession(language: string): Promise<SessionAttempt> {
 export async function tileConfig(fr: boolean): Promise<TileConfig> {
   // MapTiler first: no card, no session call, and nothing about it can fail
   // silently in the way Google's referrer restriction did.
+  //
+  // A key alone is not proof of a working map — a wrong style id 404s every
+  // tile and looks identical from here — so the style is verified with the
+  // provider before we claim it. `checkMaptilerStyle` deliberately errs towards
+  // *keeping* MapTiler when the answer is ambiguous.
   const maptiler = maptilerConfig();
-  if (maptiler) return { ...maptiler, provider: "maptiler" };
+  let maptilerReason: string | null = null;
+  if (maptiler) {
+    const check = await checkMaptilerStyle();
+    if (check.ok) return { ...maptiler, provider: "maptiler", reason: check.note };
+    maptilerReason = check.reason;
+  }
 
   const browserKey = tilesKey() ?? serverKey();
   if (!browserKey) {
     return {
       ...CARTO_FALLBACK,
-      reason: "No MAPTILER_KEY and no Google Maps key are configured.",
+      reason:
+        maptilerReason ?? "No MAPTILER_KEY and no Google Maps key are configured.",
     };
   }
 
@@ -181,7 +193,7 @@ export async function tileConfig(fr: boolean): Promise<TileConfig> {
   // A rejected key stays rejected until someone changes it, so retrying on
   // every single map mount would turn one mistake into thousands of calls.
   if (lastFailure && now - lastFailure.at < RETRY_AFTER_FAILURE_MS) {
-    return { ...CARTO_FALLBACK, reason: lastFailure.error };
+    return { ...CARTO_FALLBACK, reason: both(maptilerReason, lastFailure.error) };
   }
 
   // One createSession at a time, however many maps mount at once.
@@ -192,12 +204,23 @@ export async function tileConfig(fr: boolean): Promise<TileConfig> {
 
   if (!attempt.token) {
     lastFailure = { at: now, error: attempt.error ?? "Unknown error." };
-    return { ...CARTO_FALLBACK, reason: lastFailure.error };
+    return { ...CARTO_FALLBACK, reason: both(maptilerReason, lastFailure.error) };
   }
 
   lastFailure = null;
   cached = { token: attempt.token, expires: now + SESSION_TTL_MS, language };
   return googleConfig(attempt.token, browserKey);
+}
+
+/**
+ * Both reasons, when both providers had something to say.
+ *
+ * If MapTiler was misconfigured *and* Google refused, hearing only about Google
+ * sends whoever is fixing this to the wrong console — and MapTiler is the one
+ * they can actually fix, so it goes first.
+ */
+function both(maptiler: string | null, google: string): string {
+  return maptiler ? `${maptiler} Google was tried next: ${google}` : google;
 }
 
 function googleConfig(session: string, key: string): TileConfig {
