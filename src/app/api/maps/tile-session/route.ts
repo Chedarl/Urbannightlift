@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tileConfig } from "@/lib/maps/tiles";
+import { clearTileFailureMemo, tileConfig } from "@/lib/maps/tiles";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -22,23 +22,33 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const fr = req.nextUrl.searchParams.get("lang") === "fr";
-  const config = await tileConfig(fr);
 
   const user = await getSessionUser();
   const isStaff = Boolean(user && ADMIN_ROLES.includes(user.role));
+
+  // Staff asking again after changing something in Google Cloud get a real
+  // retry rather than the remembered rejection. Staff-only, because it is the
+  // one path that can force an outbound call on demand.
+  if (isStaff && req.nextUrl.searchParams.get("retry") === "1") {
+    clearTileFailureMemo();
+  }
+
+  const config = await tileConfig(fr);
   const { reason, ...visible } = config;
 
   return NextResponse.json(
     isStaff && reason ? { ...visible, reason } : visible,
     {
       headers: {
-        // The session lives for days, so letting the CDN hold it briefly keeps a
-        // busy night from re-asking on every map mount. Private and short when a
-        // staff member is asking, since that response carries the reason and is
-        // keyed to who they are.
+        // Ten minutes, not an hour. The server already caches the session token
+        // for days, so the CDN is only saving repeat function invocations — and
+        // an hour of it means somebody who has just fixed their key is told for
+        // another hour that it is still broken, which is long enough to make
+        // them undo the fix. Staff never get a cached answer at all, since
+        // theirs carries the reason and is keyed to who they are.
         "Cache-Control": isStaff
           ? "private, no-store"
-          : "public, max-age=600, s-maxage=3600",
+          : "public, max-age=300, s-maxage=600",
       },
     }
   );

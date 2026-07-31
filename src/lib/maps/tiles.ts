@@ -81,6 +81,19 @@ let cached: { token: string; expires: number; language: string } | null = null;
 let lastFailure: { at: number; error: string } | null = null;
 let inFlight: Promise<SessionAttempt> | null = null;
 
+/**
+ * Forget a previous rejection and try Google again on the next call.
+ *
+ * Backs the "Re-check" button on the admin readout. Somebody who has just
+ * enabled billing or removed a key restriction should be able to see the result
+ * immediately, rather than being told it is still broken for another five
+ * minutes — which is exactly the moment they would conclude the fix had not
+ * worked and undo it.
+ */
+export function clearTileFailureMemo(): void {
+  lastFailure = null;
+}
+
 async function createSession(language: string): Promise<SessionAttempt> {
   // The **server** key, not the tiles key. This POST comes from our server and
   // carries no referrer, so a referrer-restricted key is rejected — which is
