@@ -57,7 +57,7 @@ console.log("\nCoverage");
 // which reads as a bug rather than as a deliberate omission.
 const STAFF_ROUTES = [
   "/admin/dashboard", "/admin/orders", "/admin/orders/[orderId]", "/admin/live",
-  "/admin/customers", "/admin/earnings", "/admin/zones", "/admin/merchants",
+  "/admin/customers", "/admin/earnings", "/admin/zones", "/admin/locations", "/admin/merchants",
   "/admin/ambassadors", "/admin/riders/applications", "/admin/complaints",
   "/admin/support", "/admin/users", "/admin/settings",
   "/rider/dashboard", "/rider/earnings", "/rider/orders/[orderId]", "/rider/profile",
