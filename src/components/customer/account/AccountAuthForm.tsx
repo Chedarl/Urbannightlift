@@ -94,7 +94,10 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
         return;
       }
       refreshProfile();
-      router.push(next);
+      // A new account lands on its welcome; a returning customer goes straight
+      // where they were headed. Only added when `next` is the portal itself, so
+      // somebody signing up mid-order is still delivered back to their order.
+      router.push(isSignup && next === "/account" ? "/account?welcome=1" : next);
       router.refresh();
     } catch {
       setError(fr ? "Une erreur est survenue." : "Something went wrong.");

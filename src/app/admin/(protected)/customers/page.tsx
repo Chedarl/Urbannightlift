@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CustomersTable } from "@/components/admin/CustomersTable";
+import { WelcomeQueue } from "@/components/admin/WelcomeQueue";
 import { buildCustomerWhere, CUSTOMERS_PAGE_SIZE } from "@/lib/customers/query";
 
 export const dynamic = "force-dynamic";
@@ -45,24 +46,30 @@ export default async function CustomersPage({
   );
 
   return (
-    <CustomersTable
-      query={q}
-      page={page}
-      pageCount={Math.max(1, Math.ceil(total / CUSTOMERS_PAGE_SIZE))}
-      total={total}
-      rows={customers.map((c) => ({
-        id: c.id,
-        fullName: c.fullName,
-        whatsappNumber: c.whatsappNumber,
-        alternativePhone: c.alternativePhone,
-        preferredLanguage: c.preferredLanguage,
-        totalOrders: c.totalOrders,
-        orderCount: c._count.orders,
-        lastOrderAt: c.orders[0]?.createdAt.toISOString() ?? null,
-        lifetimeFeesXaf: feeByCustomer.get(c.id) ?? 0,
-        hasAccount: c.pinHash != null,
-        createdAt: c.createdAt.toISOString(),
-      }))}
-    />
+    <div className="flex flex-col gap-5">
+      {/* Above the table on purpose: a welcome nobody sends is the first
+          impression this business never made, and it only stays undone while
+          it is out of sight. Renders nothing when the queue is empty. */}
+      <WelcomeQueue kind="customer" />
+      <CustomersTable
+        query={q}
+        page={page}
+        pageCount={Math.max(1, Math.ceil(total / CUSTOMERS_PAGE_SIZE))}
+        total={total}
+        rows={customers.map((c) => ({
+          id: c.id,
+          fullName: c.fullName,
+          whatsappNumber: c.whatsappNumber,
+          alternativePhone: c.alternativePhone,
+          preferredLanguage: c.preferredLanguage,
+          totalOrders: c.totalOrders,
+          orderCount: c._count.orders,
+          lastOrderAt: c.orders[0]?.createdAt.toISOString() ?? null,
+          lifetimeFeesXaf: feeByCustomer.get(c.id) ?? 0,
+          hasAccount: c.pinHash != null,
+          createdAt: c.createdAt.toISOString(),
+        }))}
+      />
+    </div>
   );
 }

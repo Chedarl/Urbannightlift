@@ -108,11 +108,23 @@ export async function sendEmail(opts: {
   }
 }
 
-async function record(entry: {
+async function record(entry: Parameters<typeof recordNotification>[0]): Promise<void> {
+  return recordNotification(entry);
+}
+
+/**
+ * One row per message this business tried to send, whatever the channel.
+ *
+ * Exported so WhatsApp lands in the same table as email rather than a second
+ * one — the admin panel reads this log, and a channel that keeps its own record
+ * somewhere else is a channel nobody can diagnose.
+ */
+export async function recordNotification(entry: {
   to: string;
-  subject: string;
+  subject?: string;
   event: string;
   status: string;
+  channel?: string;
   providerId?: string;
   error?: string;
   entityType?: string;
@@ -121,7 +133,7 @@ async function record(entry: {
   try {
     await prisma.notificationLog.create({
       data: {
-        channel: "EMAIL",
+        channel: entry.channel ?? "EMAIL",
         event: entry.event,
         recipient: entry.to,
         subject: entry.subject,
