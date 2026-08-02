@@ -30,6 +30,19 @@ export interface SendResult {
   error?: string;
 }
 
+/**
+ * What is configured, for the admin readout — never the key itself.
+ *
+ * `from` is the single most common cause of mail silently not arriving: Resend
+ * refuses any address on a domain that has not been verified in their console,
+ * and the default in `.env.example` names a domain that has to be verified
+ * first. Showing it beside the send log is what makes that diagnosable instead
+ * of guessable.
+ */
+export function mailConfig(): { from: string; hasApiKey: boolean } {
+  return { from: FROM, hasApiKey: Boolean(process.env.RESEND_API_KEY) };
+}
+
 /** Where operational mail goes. Settings first, so it can change without a deploy. */
 export async function operationsInbox(): Promise<string> {
   try {
