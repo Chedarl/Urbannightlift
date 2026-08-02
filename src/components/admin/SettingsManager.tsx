@@ -6,6 +6,7 @@ import { Save, BellRing } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { OperatingModeControls } from "@/components/admin/OperatingModeControls";
 import { MapsStatus } from "@/components/admin/MapsStatus";
+import { MailStatus } from "@/components/admin/MailStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -157,6 +158,10 @@ export function SettingsManager({
           somebody opens when they have changed an environment variable and want
           to know whether it took. */}
       <MapsStatus />
+      {/* Same reason, different channel: mail that never arrives looks exactly
+          like mail nobody sent, and the difference was only visible in a table
+          nothing read. */}
+      <MailStatus />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain
