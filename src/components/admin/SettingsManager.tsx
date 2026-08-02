@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n";
 import { OperatingModeControls } from "@/components/admin/OperatingModeControls";
 import { MapsStatus } from "@/components/admin/MapsStatus";
 import { MailStatus } from "@/components/admin/MailStatus";
+import { AiStatus } from "@/components/admin/AiStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -69,8 +70,6 @@ export function SettingsManager({
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [form, setForm] = useState(settings);
 
   const openHoursLength = nightLength(form.operatingStartHour, form.operatingEndHour);
@@ -126,24 +125,6 @@ export function SettingsManager({
     startTransition(() => router.refresh());
   }
 
-  /** Proves the whole path works without waiting for a real order at 1 AM. */
-  async function sendTestEmail() {
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch("/api/settings/test-email", { method: "POST" });
-      const d = await res.json().catch(() => ({}));
-      setTestResult(
-        res.ok
-          ? { ok: true, message: `Sent to ${d.to}. If it doesn't arrive in a minute, check spam.` }
-          : { ok: false, message: d.error ?? "That didn't send." }
-      );
-    } catch {
-      setTestResult({ ok: false, message: "That didn't send." });
-    } finally {
-      setTesting(false);
-    }
-  }
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -162,6 +143,9 @@ export function SettingsManager({
           like mail nobody sent, and the difference was only visible in a table
           nothing read. */}
       <MailStatus />
+      {/* Third readout, same reason as the other two — except this one shipped
+          with the first line of AI code instead of after the incident. */}
+      <AiStatus />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain
@@ -408,23 +392,10 @@ export function SettingsManager({
               </span>
             </span>
           </label>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={sendTestEmail} disabled={testing}>
-              {testing ? "Sending…" : "Send me a test email"}
-            </Button>
-            <span className="text-[11px] text-mist-500">Save first if you just changed the address.</span>
-          </div>
-          {testResult && (
-            <p
-              className={
-                testResult.ok
-                  ? "mt-2 rounded-lg border border-safe/40 bg-safe/10 px-3 py-2 text-xs text-safe"
-                  : "mt-2 rounded-lg border border-restricted/40 bg-restricted/10 px-3 py-2 text-xs text-restricted"
-              }
-            >
-              {testResult.message}
-            </p>
-          )}
+          {/* The test button lives in the mail panel at the top of this page,
+              beside the send log and the reason for the last refusal — which is
+              where somebody diagnosing this is already looking. Two buttons for
+              one job is how the two error messages start disagreeing. */}
 
           <p className="mt-2 text-[11px] text-mist-500">
             Applications and signups always send an email — those need a decision. Documents people
