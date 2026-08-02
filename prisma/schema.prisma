@@ -1404,3 +1404,29 @@ model ReferralLedger {
   /// delivery is marked complete more than once.
   @@unique([orderId, type])
 }
+
+/// Every call this product makes to a model, and what it cost.
+///
+/// A model is the least predictable thing in this codebase, and the one most
+/// able to fail quietly — it returns null, the caller degrades, and everything
+/// looks fine while a feature has silently stopped working. That is exactly the
+/// shape that cost days on the maps panel and on operational email, so this one
+/// gets a log and a screen on day one rather than after the third incident.
+model AiCall {
+  id         String   @id @default(cuid())
+  /// What it was for: address.resolve, receipt.read, order.parse…
+  purpose    String
+  model      String
+  ok         Boolean
+  /// Round trip in milliseconds — the number that says whether this is worth
+  /// keeping in a customer-facing path.
+  ms         Int
+  tokens     Int?
+  error      String?
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
+
+  @@index([purpose, createdAt])
+  @@index([ok, createdAt])
+}

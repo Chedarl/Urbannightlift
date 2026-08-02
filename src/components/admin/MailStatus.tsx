@@ -70,7 +70,7 @@ export function MailStatus() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/admin/notifications/test", { method: "POST" });
+      const res = await fetch("/api/settings/test-email", { method: "POST" });
       setTestResult(await res.json());
     } catch {
       setTestResult({ ok: false, error: "Couldn't reach the server." });
