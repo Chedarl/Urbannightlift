@@ -4,6 +4,7 @@ import { normalizePhone } from "@/lib/utils";
 import { intakeMerchant } from "@/lib/merchants/intake";
 import { notifyMerchantSignup } from "@/lib/notify/triggers";
 import type { MerchantCategory } from "@prisma/client";
+import { sendWelcome } from "@/lib/welcome/deliver";
 
 /**
  * POST /api/merchant-signup — a business adds itself.
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
   });
 
   await notifyMerchantSignup(result.merchantName, category.toLowerCase().replace("_", " "), result.id);
+
+  // Same seam as the customer signup: silent on click-to-chat, real once the
+  // Meta Cloud API is configured, and never able to fail the signup itself.
+  await sendWelcome("merchant", result.id).catch(() => {});
 
   return NextResponse.json({ ok: true, merchantId: result.id });
 }

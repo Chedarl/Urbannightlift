@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { MerchantsManager } from "@/components/admin/MerchantsManager";
+import { WelcomeQueue } from "@/components/admin/WelcomeQueue";
 import { normalizeLoose } from "@/lib/locations/normalize";
 import type { Prisma } from "@prisma/client";
 
@@ -84,52 +85,58 @@ export default async function MerchantsPage({
   ]);
 
   return (
-    <MerchantsManager
-      merchants={merchants.map((m) => ({
-        id: m.id,
-        merchantName: m.merchantName,
-        category: m.category,
-        subcategory: m.subcategory,
-        whatsappNumber: m.whatsappNumber,
-        phone: m.phone,
-        address: m.address,
-        landmark: m.landmark,
-        neighbourhood: m.neighbourhood,
-        latitude: m.latitude,
-        longitude: m.longitude,
-        openingHours: m.openingHours,
-        nightOpen: m.nightOpen,
-        open24h: m.open24h,
-        acceptingOrders: m.acceptingOrders,
-        website: m.website,
-        notes: m.notes,
-        source: m.source,
-        socialUrl: m.socialUrl,
-        socialPlatform: m.socialPlatform,
-        logoUrl: m.logoUrl,
-        verified: m.verified,
-        active: m.active,
-        phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
-        lastConfirmedAt: m.lastConfirmedAt?.toISOString() ?? null,
-        // Whether the business has claimed its own login. Never the hash
-        // itself — the console has no business holding a password digest.
-        hasLogin: m.pinHash != null,
-        products: m.products,
-      }))}
-      onDuty={onDuty.map((d) => ({
-        id: d.id,
-        merchantId: d.merchantId,
-        merchantName: d.merchant.merchantName,
-        endsOn: d.endsOn.toISOString(),
-      }))}
-      pharmacies={pharmacies}
-      tab={tab === "live" ? "live" : tab === "all" ? "all" : tab === "duty" ? "duty" : "queue"}
-      query={search}
-      page={pageNum}
-      pageSize={PAGE_SIZE}
-      total={total}
-      liveCount={counts[0]}
-      queueCount={counts[1]}
-    />
+    <div className="flex flex-col gap-5">
+      {/* A business that filled in the form itself is trading tonight and is
+          the best lead in this list. Welcoming it is the cheapest thing we can
+          do with that. Renders nothing when nobody is waiting. */}
+      <WelcomeQueue kind="merchant" />
+      <MerchantsManager
+        merchants={merchants.map((m) => ({
+          id: m.id,
+          merchantName: m.merchantName,
+          category: m.category,
+          subcategory: m.subcategory,
+          whatsappNumber: m.whatsappNumber,
+          phone: m.phone,
+          address: m.address,
+          landmark: m.landmark,
+          neighbourhood: m.neighbourhood,
+          latitude: m.latitude,
+          longitude: m.longitude,
+          openingHours: m.openingHours,
+          nightOpen: m.nightOpen,
+          open24h: m.open24h,
+          acceptingOrders: m.acceptingOrders,
+          website: m.website,
+          notes: m.notes,
+          source: m.source,
+          socialUrl: m.socialUrl,
+          socialPlatform: m.socialPlatform,
+          logoUrl: m.logoUrl,
+          verified: m.verified,
+          active: m.active,
+          phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
+          lastConfirmedAt: m.lastConfirmedAt?.toISOString() ?? null,
+          // Whether the business has claimed its own login. Never the hash
+          // itself — the console has no business holding a password digest.
+          hasLogin: m.pinHash != null,
+          products: m.products,
+        }))}
+        onDuty={onDuty.map((d) => ({
+          id: d.id,
+          merchantId: d.merchantId,
+          merchantName: d.merchant.merchantName,
+          endsOn: d.endsOn.toISOString(),
+        }))}
+        pharmacies={pharmacies}
+        tab={tab === "live" ? "live" : tab === "all" ? "all" : tab === "duty" ? "duty" : "queue"}
+        query={search}
+        page={pageNum}
+        pageSize={PAGE_SIZE}
+        total={total}
+        liveCount={counts[0]}
+        queueCount={counts[1]}
+      />
+    </div>
   );
 }

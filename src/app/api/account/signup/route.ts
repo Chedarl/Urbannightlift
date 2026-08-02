@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { createCustomerSession, hashPin, isValidPin } from "@/lib/auth/customer";
 import { emailNewCustomer } from "@/lib/email/operations";
+import { sendWelcome } from "@/lib/welcome/deliver";
 import { bindReferral, ensureReferralCode } from "@/lib/referrals/accrual";
 
 /**
@@ -63,6 +64,12 @@ export async function POST(req: NextRequest) {
   }
 
   await emailNewCustomer(customer.id).catch(() => {});
+
+  // Welcomes them on WhatsApp — but only once the Meta Cloud API is configured.
+  // On click-to-chat this does nothing at all (a `wa.me` link cannot send
+  // itself), and the account instead appears in the admin welcome queue for
+  // somebody to send with one tap. Either way it can never fail a signup.
+  await sendWelcome("customer", customer.id).catch(() => {});
 
   const claimedOrders = existing ? await prisma.order.count({ where: { customerId: customer.id } }) : 0;
   return NextResponse.json({ ok: true, claimedOrders, referralCode, friendDiscountXaf }, { status: 201 });

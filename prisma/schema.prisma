@@ -329,6 +329,13 @@ model Customer {
   blockedAt     DateTime?
   blockedReason String?
 
+  /// When somebody sent them their welcome card.
+  ///
+  /// Null is a work queue, not a flag: it is the list of people who joined and
+  /// have never heard from us. A welcome sent twice reads as a mailing list; a
+  /// welcome never sent is the first impression we did not make.
+  welcomeSentAt DateTime?
+
   orders    Order[]
   payments  Payment[]
   addresses CustomerAddress[]
@@ -610,6 +617,10 @@ model Merchant {
   pinAttempts      Int              @default(0)
   pinLockedUntil   DateTime?
   lastLoginAt      DateTime?
+
+  /// When somebody sent this business its welcome card. Same queue logic as
+  /// `Customer.welcomeSentAt`.
+  welcomeSentAt    DateTime?
 
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt

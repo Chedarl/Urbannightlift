@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { BottomNav } from "@/components/customer/BottomNav";
 import { PortalHome } from "@/components/customer/portal/PortalHome";
+import { WelcomeBanner } from "@/components/customer/portal/WelcomeBanner";
 import { getCustomerId } from "@/lib/auth/customer";
 import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,14 @@ import { activeOrder, completedNights, favoriteService, primaryIntent } from "@/
 
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  // Signup sends people here with ?welcome=1. Only then — a greeting that
+  // reappears on every visit stops being a greeting.
+  const { welcome } = await searchParams;
   const customerId = await getCustomerId();
   if (!customerId) redirect("/account/login?next=/account");
 
@@ -38,6 +46,11 @@ export default async function AccountPage() {
     <>
       <CustomerHeader />
       <main>
+        {welcome === "1" && (
+          <div className="mx-auto max-w-lg px-4 pt-4">
+            <WelcomeBanner />
+          </div>
+        )}
         <PortalHome
           data={{
             customer: {
