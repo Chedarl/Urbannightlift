@@ -221,8 +221,10 @@ export function MerchantCapture() {
       <div className="mt-2 flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={busy}>
           {busy && progress ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-          {progress ? `Reading ${progress.done}/${progress.total}…` : "Screenshots"}
+          {progress ? `Reading ${progress.done}/${progress.total}…` : "Add screenshots"}
         </Button>
+        {/* The input has always taken several; nothing said so. */}
+        <span className="self-center text-[11px] text-mist-500">pick as many as you like</span>
         <Button size="sm" variant="outline" onClick={readThread} disabled={busy || thread.trim().length < 20}>
           <ClipboardPaste className="h-3.5 w-3.5" /> Read the conversation
         </Button>
