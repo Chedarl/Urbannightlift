@@ -74,7 +74,7 @@ const MAX_BYTES = 6 * 1024 * 1024;
 /**
  * What the bytes actually are, regardless of what anything claims.
  *
- * `imageDataUrl` used to take the MIME from Supabase's blob type, falling back
+ * This used to take the MIME from Supabase's blob type, falling back
  * to the file extension. Both are **metadata**, and both can disagree with the
  * bytes: a rename, a wrong `Content-Type` on upload, or a storage client
  * returning `application/octet-stream` all produce a data URI that says one
@@ -168,9 +168,4 @@ export async function readImage(path: string | null | undefined): Promise<ImageP
   } catch {
     return nothing("Something went wrong reading that file.");
   }
-}
-
-/** The data URI alone, for callers that only need "did it work". */
-export async function imageDataUrl(path: string | null | undefined): Promise<string | null> {
-  return (await readImage(path)).dataUrl;
 }

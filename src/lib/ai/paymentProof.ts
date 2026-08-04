@@ -1,7 +1,8 @@
 import "server-only";
 
-import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { imageDataUrl } from "@/lib/ai/images";
+import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { readImage } from "@/lib/ai/images";
+import { got, none, type AiRead } from "@/lib/ai/result";
 
 /**
  * Reading a MTN MoMo or Orange Money confirmation screenshot.
@@ -74,39 +75,45 @@ Never report a PIN, a secret code or an account balance, even if one is visible
 in the image. Those are not part of the answer.`;
 
 /**
- * Reads one payment screenshot, or returns null.
+ * Reads one payment screenshot.
  *
- * Null when there is no key, no image, or nothing legible — and the dispatcher
- * simply types the reference as they always have.
+ * No answer means the dispatcher types the reference as they always have — but
+ * the reason travels with it now, because "we could not read it" and "that file
+ * is not an image" send a person to two different places.
  */
 export async function readPaymentProof(
   proofPath: string | null,
   orderId?: string
-): Promise<ProofReading | null> {
-  if (!kimiConfigured() || !proofPath) return null;
+): Promise<AiRead<ProofReading>> {
+  if (!kimiConfigured()) return none("No Kimi key is configured.");
 
-  const url = await imageDataUrl(proofPath);
-  if (!url) return null;
+  const image = await readImage(proofPath);
+  if (!image.dataUrl) return none(image.problem ?? "Couldn't read that file.");
 
-  const answer = await kimiJson<Answer>({
+  const result = await kimiJsonResult<Answer>({
     purpose: "payment.read",
     system: SYSTEM,
     user: "Read this mobile money confirmation and report the reference, amount and sender.",
-    images: [url],
+    images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
     entityType: "order",
     entityId: orderId,
   });
-  if (!answer || answer.readable === false) return null;
+
+  const answer = result.answer;
+  if (!answer) return none(result.error ?? "No answer came back.");
+  if (answer.readable === false) {
+    return none("Couldn't make that screenshot out. Type the reference from it instead.");
+  }
 
   const reference = answer.reference?.trim() || null;
   // A reading with no reference is not worth showing a dispatcher: the
   // reference is the only field they cannot get from the order itself.
-  if (!reference) return null;
+  if (!reference) return none("Read it, but found no transaction reference in it.");
 
   const provider = answer.provider?.trim().toUpperCase();
 
-  return {
+  return got({
     reference: reference.slice(0, 60),
     amountXaf:
       typeof answer.amountXaf === "number" && Number.isFinite(answer.amountXaf) && answer.amountXaf > 0
@@ -114,5 +121,5 @@ export async function readPaymentProof(
         : null,
     senderPhone: answer.senderPhone?.replace(/[^\d]/g, "").slice(0, 15) || null,
     provider: provider === "MTN" || provider === "ORANGE" ? provider : null,
-  };
+  });
 }

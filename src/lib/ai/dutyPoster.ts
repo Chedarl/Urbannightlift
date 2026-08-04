@@ -1,7 +1,8 @@
 import "server-only";
 
-import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { imageDataUrl } from "@/lib/ai/images";
+import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { readImage } from "@/lib/ai/images";
+import { got, none, type AiRead } from "@/lib/ai/result";
 
 /**
  * The *pharmacie de garde* roster, read off a photograph of the poster.
@@ -143,21 +144,26 @@ export function shapeDutyRows(shifts: DutyShift[]): DutyDraft[] {
   return rows;
 }
 
-/** Reads one roster photograph, or returns null. */
-export async function readDutyPoster(photoPath: string | null): Promise<DutyDraft[] | null> {
-  if (!kimiConfigured() || !photoPath) return null;
+/** Reads one roster photograph. */
+export async function readDutyPoster(photoPath: string | null): Promise<AiRead<DutyDraft[]>> {
+  if (!kimiConfigured()) return none("No Kimi key is configured.");
 
-  const url = await imageDataUrl(photoPath);
-  if (!url) return null;
+  const image = await readImage(photoPath);
+  if (!image.dataUrl) return none(image.problem ?? "Couldn't read that file.");
 
-  const answer = await kimiJson<Answer>({
+  const result = await kimiJsonResult<Answer>({
     purpose: "pharmacy.duty_poster",
     system: system(new Date().toISOString().slice(0, 10)),
     user: "Read this pharmacie de garde roster and return every shift on it.",
-    images: [url],
+    images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
-  if (!answer || answer.readable === false) return null;
 
-  return shapeDutyRows(answer.shifts ?? []);
+  const answer = result.answer;
+  if (!answer) return none(result.error ?? "No answer came back.");
+  if (answer.readable === false) {
+    return none("Couldn't make the names and dates out. Try again with more light, or enter this week by hand.");
+  }
+
+  return got(shapeDutyRows(answer.shifts ?? []));
 }

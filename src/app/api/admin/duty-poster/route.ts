@@ -45,12 +45,9 @@ export async function POST(req: NextRequest) {
   const photoPath = typeof body.photoPath === "string" ? body.photoPath.trim() : "";
   if (!photoPath) return NextResponse.json({ error: "No photo was given." }, { status: 400 });
 
-  const rows = await readDutyPoster(photoPath);
-  if (rows === null) {
-    return NextResponse.json({
-      shifts: [],
-      note: "Couldn't read that poster. Try again with more light, or enter this week's duty by hand below.",
-    });
+  const { data: rows, error } = await readDutyPoster(photoPath);
+  if (!rows) {
+    return NextResponse.json({ shifts: [], note: error ?? "Nothing came back." });
   }
 
   const pharmacies = await prisma.merchant.findMany({

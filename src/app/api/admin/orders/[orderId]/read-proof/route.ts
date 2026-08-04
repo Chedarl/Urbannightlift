@@ -40,12 +40,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ or
     return NextResponse.json({ error: "There is no payment screenshot on this order." }, { status: 404 });
   }
 
-  const reading = await readPaymentProof(payment.proofScreenshotUrl, orderId);
+  const { data: reading, error } = await readPaymentProof(payment.proofScreenshotUrl, orderId);
   if (!reading) {
     return NextResponse.json({
       ok: false,
-      error:
-        "Couldn't read the screenshot. Type the reference from the image — that is the same as before, nothing is broken.",
+      // The reason, then the reassurance. A dispatcher needs to know whether to
+      // retake the screenshot or just type it, and those are different problems.
+      error: `${error ?? "Nothing came back."} Type the reference from the image — that is the same as before, nothing is broken.`,
     });
   }
 

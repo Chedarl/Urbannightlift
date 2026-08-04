@@ -1,7 +1,8 @@
 import "server-only";
 
-import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { imageDataUrl } from "@/lib/ai/images";
+import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { readImage } from "@/lib/ai/images";
+import { got, none, type AiRead } from "@/lib/ai/result";
 
 /**
  * Turning a photograph of a menu board into rows somebody can tick.
@@ -110,22 +111,32 @@ Rules:
 export async function readMenuPhoto(
   photoPath: string | null,
   merchantId?: string
-): Promise<DraftItem[] | null> {
-  if (!kimiConfigured() || !photoPath) return null;
+): Promise<AiRead<DraftItem[]>> {
+  if (!kimiConfigured()) return none("No Kimi key is configured.");
 
-  const url = await imageDataUrl(photoPath);
-  if (!url) return null;
+  // Sniffed from the bytes, so a mislabelled upload says what it actually is
+  // instead of becoming "invalid or unsupported image format" at the provider.
+  const image = await readImage(photoPath);
+  if (!image.dataUrl) return none(image.problem ?? "Couldn't read that file.");
 
-  const answer = await kimiJson<Answer>({
+  const result = await kimiJsonResult<Answer>({
     purpose: "menu.read",
     system: SYSTEM,
     user: "Read this menu or price list and return every sellable item you can make out.",
-    images: [url],
+    images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
     entityType: "merchant",
     entityId: merchantId,
   });
-  if (!answer || answer.readable === false) return null;
+
+  const answer = result.answer;
+  if (!answer) return none(result.error ?? "No answer came back.");
+  if (answer.readable === false) {
+    // The model saying it cannot make the photo out is a good answer, not a
+    // failure — and it needs a different response from the person holding the
+    // phone than a provider rejection does.
+    return none("Couldn't make the prices out. Try again with more light, or type them from the phone call.");
+  }
 
   const seen = new Set<string>();
   const items: DraftItem[] = [];
@@ -143,9 +154,9 @@ export async function readMenuPhoto(
     const price = Number(raw.priceXaf);
     items.push({
       name: name.slice(0, 80),
-      nameFr: raw.nameFr?.trim()?.slice(0, 80) || null,
       // A blank price is a real answer and is stored as unknown — the customer
       // can still order the dish and dispatch confirms the amount.
+      nameFr: raw.nameFr?.trim()?.slice(0, 80) || null,
       priceXaf: Number.isFinite(price) && price > 0 ? Math.round(price) : null,
       unit: raw.unit?.trim()?.slice(0, 24) || null,
       category: raw.category?.trim()?.slice(0, 32).toUpperCase() || null,
@@ -155,5 +166,5 @@ export async function readMenuPhoto(
     if (items.length >= 60) break;
   }
 
-  return items;
+  return got(items);
 }
