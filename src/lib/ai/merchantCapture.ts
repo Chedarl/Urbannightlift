@@ -1,7 +1,7 @@
 import "server-only";
 
-import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { signedImageUrl } from "@/lib/ai/images";
+import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { imageDataUrl } from "@/lib/ai/images";
 
 /**
  * Getting a business into the catalogue in fifteen seconds instead of five
@@ -189,27 +189,40 @@ export function shapeDraft(answer: CaptureAnswer): MerchantDraft | null {
 }
 
 /**
- * A screenshot of a business's own page, read into a draft.
+ * What came back, and — when nothing did — why.
  *
- * Null covers no key, an unreadable image and a timeout identically, because
- * the admin does the same thing in all three: takes a clearer screenshot, or
- * types the four fields.
+ * The reason is carried rather than swallowed because the first version of this
+ * could only say *"Couldn't read that screenshot"*, which is what the owner saw
+ * while the actual cause (we were sending Moonshot a URL it does not accept)
+ * sat in a log on another screen. A capture tool that cannot say what went
+ * wrong sends somebody off to retake a photograph that was fine.
  */
-export async function fromScreenshot(photoPath: string | null): Promise<MerchantDraft | null> {
-  if (!kimiConfigured() || !photoPath) return null;
+export interface CaptureResult {
+  draft: MerchantDraft | null;
+  error: string | null;
+}
 
-  const url = await signedImageUrl(photoPath);
-  if (!url) return null;
+/** A screenshot of a business's own page, read into a draft. */
+export async function fromScreenshot(photoPath: string | null): Promise<CaptureResult> {
+  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured." };
+  if (!photoPath) return { draft: null, error: "No photo was given." };
 
-  const answer = await kimiJson<CaptureAnswer>({
+  const url = await imageDataUrl(photoPath);
+  if (!url) {
+    return {
+      draft: null,
+      error: "Couldn't read that file back from storage — it may be too large, or not an image.",
+    };
+  }
+
+  const result = await kimiJsonResult<CaptureAnswer>({
     purpose: "merchant.screenshot",
     system: SCREENSHOT_SYSTEM,
     user: "Read this business page and return its details.",
     images: [url],
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
-  if (!answer || answer.readable === false) return null;
-  return shapeDraft(answer);
+  return finish(result);
 }
 
 /**
@@ -219,17 +232,37 @@ export async function fromScreenshot(photoPath: string | null): Promise<Merchant
  * a note somebody has to re-type later. Text only; no vision, no upload, and
  * the thread is never stored.
  */
-export async function fromThread(text: string): Promise<MerchantDraft | null> {
-  if (!kimiConfigured()) return null;
+export async function fromThread(text: string): Promise<CaptureResult> {
+  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured." };
   const body = text.trim().slice(0, 6000);
-  if (body.length < 20) return null;
+  if (body.length < 20) {
+    return { draft: null, error: "That is too short to find any business details in." };
+  }
 
-  const answer = await kimiJson<CaptureAnswer>({
+  const result = await kimiJsonResult<CaptureAnswer>({
     purpose: "merchant.thread",
     system: THREAD_SYSTEM,
     user: body,
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
-  if (!answer || answer.readable === false) return null;
-  return shapeDraft(answer);
+  return finish(result);
+}
+
+/**
+ * One place where a model answer becomes a draft or a sentence.
+ *
+ * `readable: false` is the model doing the right thing — saying it could not
+ * make the page out — and is reported as such rather than as a failure, because
+ * the two need different responses from the person holding the phone.
+ */
+function finish(result: { answer: CaptureAnswer | null; error: string | null }): CaptureResult {
+  if (!result.answer) return { draft: null, error: result.error ?? "No answer came back." };
+  if (result.answer.readable === false) {
+    return { draft: null, error: "Couldn't make out a business page in that. Try a clearer capture." };
+  }
+  const draft = shapeDraft(result.answer);
+  return {
+    draft,
+    error: draft ? null : "Read it, but found no business name — so there is nothing to save yet.",
+  };
 }

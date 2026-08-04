@@ -1,7 +1,7 @@
 import "server-only";
 
 import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { signedImageUrl } from "@/lib/ai/images";
+import { imageDataUrl } from "@/lib/ai/images";
 
 /**
  * Reading the shop receipt the rider photographed.
@@ -82,7 +82,7 @@ export async function readReceipt(
 ): Promise<ReceiptReading | null> {
   if (!kimiConfigured() || !receiptPath) return null;
 
-  const url = await signedImageUrl(receiptPath);
+  const url = await imageDataUrl(receiptPath);
   if (!url) return null;
 
   const answer = await kimiJson<Answer>({

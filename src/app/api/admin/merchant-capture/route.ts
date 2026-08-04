@@ -38,15 +38,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Give a screenshot or paste a conversation." }, { status: 400 });
   }
 
-  const draft = photoPath ? await fromScreenshot(photoPath) : await fromThread(thread);
+  const { draft, error } = photoPath
+    ? await fromScreenshot(photoPath)
+    : await fromThread(thread);
 
   if (!draft) {
-    return NextResponse.json({
-      draft: null,
-      note: photoPath
-        ? "Couldn't read that screenshot. Try one showing the name and the phone number, or type the four fields."
-        : "Couldn't find business details in that conversation.",
-    });
+    // The provider's own sentence, not a generic apology. The first version of
+    // this said "Couldn't read that screenshot" while the real cause — we were
+    // handing Moonshot a URL it does not accept — sat unread in a log.
+    return NextResponse.json({ draft: null, note: error ?? "Nothing came back." });
   }
 
   return NextResponse.json({

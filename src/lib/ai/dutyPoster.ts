@@ -1,7 +1,7 @@
 import "server-only";
 
 import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { signedImageUrl } from "@/lib/ai/images";
+import { imageDataUrl } from "@/lib/ai/images";
 
 /**
  * The *pharmacie de garde* roster, read off a photograph of the poster.
@@ -147,7 +147,7 @@ export function shapeDutyRows(shifts: DutyShift[]): DutyDraft[] {
 export async function readDutyPoster(photoPath: string | null): Promise<DutyDraft[] | null> {
   if (!kimiConfigured() || !photoPath) return null;
 
-  const url = await signedImageUrl(photoPath);
+  const url = await imageDataUrl(photoPath);
   if (!url) return null;
 
   const answer = await kimiJson<Answer>({
