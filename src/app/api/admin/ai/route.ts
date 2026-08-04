@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { kimiConfigured, kimiModel } from "@/lib/ai/kimi";
+import { redactSecrets } from "@/lib/redact";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,9 @@ export async function GET() {
       .sort((a, b) => b.ok + b.failed - (a.ok + a.failed)),
     failures: recentFailures.map((f) => ({
       purpose: f.purpose,
-      error: f.error,
+      // Redacted on the way out as well as in. Rows written before the fix
+      // still hold a key, and a screen must not be the thing that shows it.
+      error: f.error ? redactSecrets(f.error) : null,
       at: f.createdAt.toISOString(),
     })),
   });
