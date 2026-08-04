@@ -20,7 +20,7 @@ const CUSTOMER_BUCKETS = ["rider-documents", "rider-photos"];
 // `goods-receipts` holds the shop receipt a rider photographs when buying on a
 // customer's behalf. Private: it is the customer's proof that we charged what
 // we were charged, not something to hand around in a shareable link.
-const STAFF_BUCKETS = ["delivery-proofs", "goods-receipts", "merchant-menus"];
+const STAFF_BUCKETS = ["delivery-proofs", "goods-receipts", "merchant-menus", "merchant-captures"];
 
 /**
  * POST /api/upload — returns a short-lived signed upload URL so the browser

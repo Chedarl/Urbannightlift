@@ -13,6 +13,7 @@ import { normalizePhone, cn } from "@/lib/utils";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantProducts";
 import { MerchantListImport } from "@/components/admin/MerchantListImport";
+import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
 import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
@@ -159,7 +160,10 @@ export function MerchantsManager({
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold">{t("admin.merchants.title")}</h1>
         <div className="flex flex-wrap gap-2">
+          {/* A list you already checked, versus one business off a screen you
+              are looking at now. Different moments, both faster than typing. */}
           <MerchantListImport />
+          <MerchantCapture />
           <Button size="sm" variant="outline" onClick={copyInvite}>
             <Send className="h-4 w-4" /> {inviteCopied ? "Link copied" : "Invite a merchant"}
           </Button>

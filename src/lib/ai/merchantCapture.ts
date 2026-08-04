@@ -1,0 +1,235 @@
+import "server-only";
+
+import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
+import { signedImageUrl } from "@/lib/ai/images";
+
+/**
+ * Getting a business into the catalogue in fifteen seconds instead of five
+ * minutes.
+ *
+ * The food page and the medicine page are both correct and both empty, because
+ * nothing is verified. Everything already built to fill them — the menu-photo
+ * reader, `/merchant/join`, the website menu-draft — assumes the merchant is
+ * *already in the system*. Getting them in is still typing a name, a phone
+ * number, a neighbourhood and a set of hours, per business, by hand. That is
+ * the actual bottleneck.
+ *
+ * ## Why a screenshot, of all things
+ *
+ * Every automated route has been tried and closed, and the reasons have not
+ * changed: Google's terms forbid storing Places content and the account is
+ * unreachable anyway; a map import put 959 mostly-defunct businesses in the
+ * catalogue and was deleted in v12; Meta has no name-search API and blocks
+ * unauthenticated page reads outright.
+ *
+ * But the owner is already doing the work — sitting with a phone, looking at a
+ * business's Instagram or Facebook page, deciding whether it is real. Nothing
+ * blocks a screenshot of a screen you are lawfully looking at, and what is read
+ * out of it is **factual business contact information**: a name, a phone
+ * number, a neighbourhood, opening hours. No photographs are copied, no listing
+ * content is republished, and a person confirms every field before it saves.
+ *
+ * ## Nothing here writes anything
+ *
+ * It returns a draft. The route that saves it is separate and takes only the
+ * rows an admin ticked — the same two-step shape as the menu photo and the
+ * website menu-draft, for the same reason: this project has twice paid for a
+ * catalogue that was filled without a human looking.
+ */
+
+export interface MerchantDraft {
+  merchantName: string | null;
+  category: "FOOD" | "PHARMACY" | "GROCERY" | "GENERAL_STORE" | "OTHER" | null;
+  subcategory: string | null;
+  phone: string | null;
+  whatsappNumber: string | null;
+  neighbourhood: string | null;
+  address: string | null;
+  openingHours: string | null;
+  /** Open during our trading night — the only availability that matters here. */
+  nightOpen: boolean | null;
+  open24h: boolean | null;
+  socialUrl: string | null;
+  /** Anything priced that was visible. Fed into the products editor, not saved. */
+  products: { name: string; priceXaf: number | null }[];
+}
+
+export interface CaptureAnswer {
+  readable?: boolean;
+  merchantName?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  phone?: string | null;
+  whatsappNumber?: string | null;
+  neighbourhood?: string | null;
+  address?: string | null;
+  openingHours?: string | null;
+  nightOpen?: boolean | null;
+  open24h?: boolean | null;
+  socialUrl?: string | null;
+  products?: { name?: string; priceXaf?: number | null }[];
+}
+
+const SCHEMA = {
+  type: "object",
+  properties: {
+    readable: { type: "boolean" },
+    merchantName: { type: "string" },
+    category: { type: "string" },
+    subcategory: { type: "string" },
+    phone: { type: "string" },
+    whatsappNumber: { type: "string" },
+    neighbourhood: { type: "string" },
+    address: { type: "string" },
+    openingHours: { type: "string" },
+    nightOpen: { type: "boolean" },
+    open24h: { type: "boolean" },
+    socialUrl: { type: "string" },
+    products: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["name"],
+        properties: { name: { type: "string" }, priceXaf: { type: "number" } },
+      },
+    },
+  },
+} as const;
+
+const RULES = `You extract business contact details for a delivery service in
+Yaoundé, Cameroon. The result is reviewed by a person before anything is saved.
+
+Rules:
+- Report ONLY what is actually stated. Leave a field out rather than guessing it.
+  A wrong phone number sends a rider to nobody; a blank one is asked for on the
+  next call.
+- category: FOOD for restaurants, street food, bakeries, cafés and fast food;
+  PHARMACY for pharmacies; GROCERY for supermarkets, mini-markets and alimentations;
+  GENERAL_STORE for other shops; OTHER when it is genuinely unclear.
+- subcategory: the plain word the business uses for itself — braise, snack,
+  boulangerie, alimentation, supérette.
+- Cameroonian numbers are nine digits and usually written 6XX XX XX XX, sometimes
+  with +237. Return digits only, keeping the 237 if it is shown.
+- neighbourhood: the quartier — Bastos, Biyem-Assi, Mvog-Mbi, Nlongkak, Essos,
+  Mvan, Ekounou, Nsam, Emana, Etoudi, Mendong, Odza, Ngousso, Tsinga, Mokolo.
+- openingHours: exactly as written. nightOpen true only if it plainly trades
+  after 8pm; open24h only if it says 24h or "24/24". Leave both out if unstated —
+  do not infer late opening from a business type.
+- prices are in XAF (FCFA). Return plain integers with no separators. Never
+  estimate a price that is not written down.`;
+
+const SCREENSHOT_SYSTEM = `${RULES}
+
+You are reading a screenshot of a business's own social media page or website.
+Take the name, contact details, location and hours from what is on screen. If
+the image is not a business page at all, set readable to false.`;
+
+const THREAD_SYSTEM = `${RULES}
+
+You are reading a WhatsApp or SMS conversation with a business. Take their
+details from what they themselves said. Ignore our side of the conversation and
+ignore pleasantries. If the conversation contains no business details, set
+readable to false.`;
+
+/** Digits only, keeping a 237 prefix if it is there. Never a partial number. */
+function phone(raw: string | null | undefined): string | null {
+  const digits = (raw ?? "").replace(/\D/g, "");
+  if (digits.length < 9) return null;
+  return digits.slice(0, 15);
+}
+
+function clean(raw: string | null | undefined, max: number): string | null {
+  const value = raw?.trim();
+  return value ? value.slice(0, max) : null;
+}
+
+const CATEGORIES = new Set(["FOOD", "PHARMACY", "GROCERY", "GENERAL_STORE", "OTHER"]);
+
+/**
+ * Everything the model said, reduced to what we are willing to store.
+ *
+ * Exported so it can be proved rather than trusted — this is the layer that
+ * decides a phone number is complete, a category is one we recognise, and an
+ * unstated fact stays unstated. `scripts/verify-merchant-capture.ts` runs it
+ * against the shapes a real page produces.
+ */
+export function shapeDraft(answer: CaptureAnswer): MerchantDraft | null {
+  // A draft with no name is not a merchant, it is a blank form with extra steps.
+  const merchantName = clean(answer.merchantName, 80);
+  if (!merchantName) return null;
+
+  const category = (answer.category ?? "").toUpperCase();
+
+  return {
+    merchantName,
+    category: CATEGORIES.has(category) ? (category as MerchantDraft["category"]) : null,
+    subcategory: clean(answer.subcategory, 32),
+    phone: phone(answer.phone),
+    whatsappNumber: phone(answer.whatsappNumber) ?? phone(answer.phone),
+    neighbourhood: clean(answer.neighbourhood, 60),
+    address: clean(answer.address, 160),
+    openingHours: clean(answer.openingHours, 80),
+    // Tri-state on purpose. `false` and "we were not told" are different
+    // answers, and defaulting the second to the first would quietly mark every
+    // captured business as closed at night — which is the only hour we trade.
+    nightOpen: typeof answer.nightOpen === "boolean" ? answer.nightOpen : null,
+    open24h: typeof answer.open24h === "boolean" ? answer.open24h : null,
+    socialUrl: clean(answer.socialUrl, 200),
+    products: (answer.products ?? [])
+      .map((p) => ({
+        name: clean(p?.name, 80) ?? "",
+        priceXaf:
+          typeof p?.priceXaf === "number" && Number.isFinite(p.priceXaf) && p.priceXaf > 0
+            ? Math.round(p.priceXaf)
+            : null,
+      }))
+      .filter((p) => p.name.length >= 3)
+      .slice(0, 20),
+  };
+}
+
+/**
+ * A screenshot of a business's own page, read into a draft.
+ *
+ * Null covers no key, an unreadable image and a timeout identically, because
+ * the admin does the same thing in all three: takes a clearer screenshot, or
+ * types the four fields.
+ */
+export async function fromScreenshot(photoPath: string | null): Promise<MerchantDraft | null> {
+  if (!kimiConfigured() || !photoPath) return null;
+
+  const url = await signedImageUrl(photoPath);
+  if (!url) return null;
+
+  const answer = await kimiJson<CaptureAnswer>({
+    purpose: "merchant.screenshot",
+    system: SCREENSHOT_SYSTEM,
+    user: "Read this business page and return its details.",
+    images: [url],
+    schema: SCHEMA as unknown as Record<string, unknown>,
+  });
+  if (!answer || answer.readable === false) return null;
+  return shapeDraft(answer);
+}
+
+/**
+ * A pasted WhatsApp thread, read into the same draft.
+ *
+ * The call to confirm a business is happening anyway — this stops it ending in
+ * a note somebody has to re-type later. Text only; no vision, no upload, and
+ * the thread is never stored.
+ */
+export async function fromThread(text: string): Promise<MerchantDraft | null> {
+  if (!kimiConfigured()) return null;
+  const body = text.trim().slice(0, 6000);
+  if (body.length < 20) return null;
+
+  const answer = await kimiJson<CaptureAnswer>({
+    purpose: "merchant.thread",
+    system: THREAD_SYSTEM,
+    user: body,
+    schema: SCHEMA as unknown as Record<string, unknown>,
+  });
+  if (!answer || answer.readable === false) return null;
+  return shapeDraft(answer);
+}
