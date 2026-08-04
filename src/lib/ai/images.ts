@@ -23,7 +23,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * like that gets broken.
  */
 
-const MAY_BE_READ = new Set(["goods-receipts", "order-screenshots"]);
+const MAY_BE_READ = new Set(["goods-receipts", "order-screenshots", "merchant-menus"]);
 
 const TTL_SECONDS = 5 * 60;
 

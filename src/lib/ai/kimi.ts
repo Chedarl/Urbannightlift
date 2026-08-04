@@ -116,8 +116,6 @@ export interface KimiRequest {
   /** Absolute image URLs. Signed and short-lived when the source is private. */
   images?: string[];
   schema: JsonSchema;
-  /** Near-zero by default: extraction should be repeatable, not creative. */
-  temperature?: number;
   entityType?: string;
   entityId?: string;
 }
@@ -162,7 +160,14 @@ export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
       },
       body: JSON.stringify({
         model: kimiModel(),
-        temperature: req.temperature ?? 0.1,
+        // No `temperature`. K3 is a reasoning model and accepts only 1 —
+        // anything else is refused outright with *"invalid temperature: only 1
+        // is allowed for this model"*, which is exactly what the live key
+        // returned once it was finally accepted. Sending the value it demands
+        // would be the same as not sending it, so the field is simply gone: one
+        // fewer parameter that can be wrong, and repeatability is already
+        // handled properly by `response_format` constraining the shape and by
+        // `matchesSchema` checking it on arrival.
         max_tokens: DEFAULT_MAX_TOKENS,
         reasoning_effort: process.env.KIMI_REASONING_EFFORT || DEFAULT_EFFORT,
         messages: [
