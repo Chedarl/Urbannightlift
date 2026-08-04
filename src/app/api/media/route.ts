@@ -33,6 +33,10 @@ export async function GET(req: NextRequest) {
     "delivery-proofs",
     "rider-documents",
     "order-voice-notes",
+    // Was missing, which meant the shop receipt a rider uploads could not be
+    // opened by anybody at all — the strongest trust device in the shopping
+    // flow existed as a file and as nothing else.
+    "goods-receipts",
   ];
   if (!PRIVATE_BUCKETS.includes(bucket) || !key) {
     return NextResponse.json({ error: "Bad path" }, { status: 400 });

@@ -28,6 +28,7 @@ import { formatSlot } from "@/lib/orders/timeSlots";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
 import { formatXaf, normalizePhone, cn } from "@/lib/utils";
+import { ProofReader } from "@/components/admin/ProofReader";
 import type {
   OrderStatus,
   PaymentStatus,
@@ -798,6 +799,9 @@ export function OrderDetail({
                 }
               />
             )}
+            {/* Suggests the reference off the image. It never verifies — that
+                decision releases somebody's goods to a rider. */}
+            {order.paymentProofUrl && !payOnDelivery && <ProofReader orderId={order.id} />}
             <div className="mt-2 flex flex-col gap-2">
               <Button
                 size="sm"

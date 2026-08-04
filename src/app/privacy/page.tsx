@@ -73,7 +73,7 @@ export default function PrivacyPage() {
         />
         <Row
           what="Payment method and, if you send one, a reference or screenshot"
-          why="To confirm the money arrived. We see the reference and the amount — never your PIN, and never your account balance."
+          why="To confirm the money arrived. We see the reference and the amount — never your PIN, and never your account balance. A screenshot, and the shop receipt on a shopping order, may be read by a processor we use so the figures can be checked; nothing else you upload is."
         />
         <Row
           what="A prescription, if you upload one"
