@@ -409,6 +409,7 @@ export function MerchantsManager({
                   merchantId={m.id}
                   merchantName={m.merchantName}
                   hasWebsite={Boolean(m.website)}
+                  isPharmacy={m.category === "PHARMACY"}
                   products={m.products}
                 />
               )}

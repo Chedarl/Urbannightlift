@@ -1,0 +1,12 @@
+-- Which pharmacy items a customer may see.
+--
+-- The food page can show every dish a merchant sells. A pharmacy cannot:
+-- dispensing prescription medicine is controlled by the Ordre des Pharmaciens,
+-- and a photographed price list will contain prescription drugs alongside the
+-- paracetamol. Publishing that list the way a menu is published would put a
+-- controlled medicine in front of a customer as a priced row with a plus button.
+--
+-- So the shelf is opt-in, one row at a time, by a person. FALSE is the default
+-- precisely because the failure of forgetting to set it must be an item that
+-- nobody can see, never an item that should not have been shown.
+ALTER TABLE "MerchantProduct" ADD COLUMN "otcApproved" BOOLEAN NOT NULL DEFAULT false;

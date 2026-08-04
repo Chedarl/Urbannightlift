@@ -20,6 +20,8 @@ export interface ProductRow {
   id: string;
   name: string;
   priceXaf: number | null;
+  /** Pharmacies only: cleared for a customer to see and tap. Default false. */
+  otcApproved?: boolean;
 }
 
 interface DraftRow {
@@ -31,11 +33,14 @@ export function MerchantProducts({
   merchantId,
   merchantName,
   hasWebsite,
+  isPharmacy,
   products,
 }: {
   merchantId: string;
   merchantName: string;
   hasWebsite: boolean;
+  /** Changes what may be published: a pharmacy's list is cleared item by item. */
+  isPharmacy?: boolean;
   products: ProductRow[];
 }) {
   const router = useRouter();
@@ -62,6 +67,24 @@ export function MerchantProducts({
     setName("");
     setPrice("");
     setBusy(false);
+    startTransition(() => router.refresh());
+  }
+
+  /**
+   * Put a pharmacy item on the customer-facing shelf, or take it off.
+   *
+   * Deliberately one item at a time and never in bulk. A photographed pharmacy
+   * price list contains prescription medicines next to the paracetamol, and
+   * dispensing those is controlled by the Ordre des Pharmaciens — so the
+   * question "may a customer see this and tap it" is answered per row, by a
+   * person, and the answer is no until they say otherwise.
+   */
+  async function setOtc(productId: string, otcApproved: boolean) {
+    await fetch(`/api/merchants/${merchantId}/products`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId, otcApproved }),
+    });
     startTransition(() => router.refresh());
   }
 
@@ -126,6 +149,25 @@ export function MerchantProducts({
               <span className="font-semibold text-gold-300">
                 {p.priceXaf != null ? formatXaf(p.priceXaf) : "price on the night"}
               </span>
+              {isPharmacy && (
+                <button
+                  type="button"
+                  onClick={() => setOtc(p.id, !p.otcApproved)}
+                  disabled={pending}
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    p.otcApproved
+                      ? "bg-safe/15 text-safe"
+                      : "border border-ink-600 text-mist-500"
+                  }`}
+                  title={
+                    p.otcApproved
+                      ? "Customers can see and tap this. Press to take it off the shelf."
+                      : "Hidden from customers. Press only if this is genuinely over-the-counter."
+                  }
+                >
+                  {p.otcApproved ? "On the shelf" : "Not shown"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => remove(p.id)}

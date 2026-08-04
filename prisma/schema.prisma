@@ -701,6 +701,13 @@ model MerchantProduct {
   description    String?
   descriptionFr  String?
   available      Boolean  @default(true)
+  /// Cleared for a customer to browse and tap. **Pharmacies only** — and it
+  /// defaults to false because the safe direction is invisible. Dispensing
+  /// prescription medicine is controlled by the Ordre des Pharmaciens, so a
+  /// photographed pharmacy price list must never put a prescription drug in
+  /// front of a customer as a priced row with a plus button. Someone ticks each
+  /// one. Food ignores this field entirely.
+  otcApproved    Boolean  @default(false)
   popularityRank Int      @default(0)
   /// Where the price came from: typed by staff, or drafted from the merchant's
   /// own published menu and then approved.
