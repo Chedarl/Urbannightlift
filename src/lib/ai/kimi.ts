@@ -66,11 +66,16 @@ const DEFAULT_EFFORT = "low";
 const DEFAULT_MAX_TOKENS = 4096;
 
 /**
- * Long enough for a vision call on a photographed receipt, short enough that
- * nobody watches a spinner. Whatever has not answered by now is not going to
- * rescue the request it is attached to.
+ * How long to wait, and why it is not one number.
+ *
+ * A trivial text question measured **5.4 seconds** against the live key. A
+ * photographed price board is a far larger prompt and a far harder read, so a
+ * flat 15 seconds meant vision calls timed out and reported themselves as
+ * *"couldn't read that photo"* — sending somebody off to retake a photograph
+ * that was perfectly good.
  */
-const TIMEOUT_MS = 15_000;
+const TEXT_TIMEOUT_MS = 20_000;
+const IMAGE_TIMEOUT_MS = 60_000;
 
 /**
  * The key, under either name.
@@ -263,6 +268,7 @@ export async function kimiJsonResult<T>(req: KimiRequest): Promise<KimiResult<T>
   for (const url of req.images ?? []) {
     content.push({ type: "image_url", image_url: { url } });
   }
+  const timeoutMs = (req.images?.length ?? 0) > 0 ? IMAGE_TIMEOUT_MS : TEXT_TIMEOUT_MS;
 
   // Built as an object rather than inline, so a field the provider rejects can
   // be removed and the call retried once. No `temperature`: K3 accepts only 1
@@ -300,7 +306,7 @@ export async function kimiJsonResult<T>(req: KimiRequest): Promise<KimiResult<T>
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       const data = (await res.json().catch(() => null)) as ChatResponse | null;
@@ -376,7 +382,9 @@ export async function kimiJsonResult<T>(req: KimiRequest): Promise<KimiResult<T>
     const message = e instanceof Error ? e.message : "unknown error";
     // A timeout is by far the most common failure and reads as nonsense
     // otherwise ("The operation was aborted").
-    const error = /abort|timeout/i.test(message) ? `No answer within ${TIMEOUT_MS / 1000}s.` : message;
+    const error = /abort|timeout/i.test(message)
+      ? `No answer within ${timeoutMs / 1000}s.`
+      : message;
     const ms = Date.now() - started;
     await record(req, { ok: false, ms, error });
     return { answer: null, error, ms };

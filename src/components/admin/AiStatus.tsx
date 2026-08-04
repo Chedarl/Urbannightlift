@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, RefreshCw, Play, CheckCircle2, XCircle } from "lucide-react";
+import { Sparkles, RefreshCw, Play, Image as ImageIcon, CheckCircle2, XCircle } from "lucide-react";
 
 /**
  * Whether the model is doing anything, and whether it is working.
@@ -65,6 +65,8 @@ export function AiStatus() {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string; ms?: number; answered?: string } | null>(null);
+  const [visionTesting, setVisionTesting] = useState(false);
+  const [visionResult, setVisionResult] = useState<{ ok: boolean; error?: string; ms?: number; saw?: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +95,27 @@ export function AiStatus() {
     } finally {
       setTesting(false);
       // The attempt is itself a logged call, so the counts below should move.
+      load();
+    }
+  }
+
+  /**
+   * Sends one small image and reports whether it came back read.
+   *
+   * This is the check whose absence let five vision features ship green: the
+   * key test sends no image, so it stayed happy while receipts, menu photos,
+   * screenshots and the duty poster all failed for the same reason.
+   */
+  async function runVisionTest() {
+    setVisionTesting(true);
+    setVisionResult(null);
+    try {
+      const res = await fetch("/api/admin/ai/test-vision", { method: "POST" });
+      setVisionResult(await res.json());
+    } catch {
+      setVisionResult({ ok: false, error: "Couldn't reach the server." });
+    } finally {
+      setVisionTesting(false);
       load();
     }
   }
@@ -232,6 +255,33 @@ export function AiStatus() {
             <Play className={`h-3.5 w-3.5 ${testing ? "animate-pulse" : ""}`} />
             {testing ? "Asking…" : "Test the key"}
           </button>
+          <button
+            type="button"
+            onClick={runVisionTest}
+            disabled={visionTesting}
+            className="ml-2 inline-flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-600/15 px-3 py-1.5 text-xs font-semibold text-violet-300 disabled:opacity-50"
+          >
+            <ImageIcon className={`h-3.5 w-3.5 ${visionTesting ? "animate-pulse" : ""}`} />
+            {visionTesting ? "Looking…" : "Test vision"}
+          </button>
+          {visionResult && (
+            <p
+              className={`mt-2 flex items-start gap-1.5 text-xs leading-relaxed ${
+                visionResult.ok ? "text-safe" : "text-caution"
+              }`}
+            >
+              {visionResult.ok ? (
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              ) : (
+                <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              )}
+              <span>
+                {visionResult.ok
+                  ? `It read the test image in ${visionResult.ms}ms. Receipts, menu boards, screenshots and the duty poster will all work.`
+                  : visionResult.error}
+              </span>
+            </p>
+          )}
           {testResult && (
             <p
               className={`mt-2 flex items-start gap-1.5 text-xs leading-relaxed ${

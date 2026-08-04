@@ -1,7 +1,7 @@
 import "server-only";
 
 import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { signedImageUrl } from "@/lib/ai/images";
+import { imageDataUrl } from "@/lib/ai/images";
 
 /**
  * Turning a photograph of a menu board into rows somebody can tick.
@@ -113,7 +113,7 @@ export async function readMenuPhoto(
 ): Promise<DraftItem[] | null> {
   if (!kimiConfigured() || !photoPath) return null;
 
-  const url = await signedImageUrl(photoPath);
+  const url = await imageDataUrl(photoPath);
   if (!url) return null;
 
   const answer = await kimiJson<Answer>({

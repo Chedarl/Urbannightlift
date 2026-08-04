@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { Camera, Loader2, Check, X } from "lucide-react";
 
+import { downscaleImage } from "@/lib/uploads/downscale";
+
 /**
  * Photograph a menu board, tick the rows, publish.
  *
@@ -47,7 +49,10 @@ export function MenuPhotoImport({
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function onPick(file: File) {
+  async function onPick(original: File) {
+    // A 3 MB phone photo becomes a few hundred kilobytes before it leaves the
+    // device — the difference between this working on mobile data and not.
+    const file = await downscaleImage(original);
     setError(null);
     setNote(null);
     setItems([]);

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { signedImageUrl } from "@/lib/ai/images";
+import { imageDataUrl } from "@/lib/ai/images";
 
 /**
  * Reading a MTN MoMo or Orange Money confirmation screenshot.
@@ -85,7 +85,7 @@ export async function readPaymentProof(
 ): Promise<ProofReading | null> {
   if (!kimiConfigured() || !proofPath) return null;
 
-  const url = await signedImageUrl(proofPath);
+  const url = await imageDataUrl(proofPath);
   if (!url) return null;
 
   const answer = await kimiJson<Answer>({
