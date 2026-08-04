@@ -70,6 +70,9 @@ export async function GET() {
 
   return NextResponse.json({
     configured: kimiConfigured(),
+    // Spending money on request is held to the same bar as every other
+    // privileged action here.
+    canTest: user.role === "OWNER",
     model: kimiModel(),
     windowDays: WINDOW_DAYS,
     calls: totals._count._all,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, Play, CheckCircle2, XCircle } from "lucide-react";
 
 /**
  * Whether the model is doing anything, and whether it is working.
@@ -29,6 +29,7 @@ interface Purpose {
 
 interface State {
   configured: boolean;
+  canTest: boolean;
   model: string;
   windowDays: number;
   calls: number;
@@ -40,6 +41,8 @@ interface State {
 export function AiStatus() {
   const [state, setState] = useState<State | null>(null);
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string; ms?: number; answered?: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,11 +60,27 @@ export function AiStatus() {
     load();
   }, [load]);
 
+  async function runTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/admin/ai/test", { method: "POST" });
+      setTestResult(await res.json());
+    } catch {
+      setTestResult({ ok: false, error: "Couldn't reach the server." });
+    } finally {
+      setTesting(false);
+      // The attempt is itself a logged call, so the counts below should move.
+      load();
+    }
+  }
+
   if (!state) return null;
 
-  // Nothing configured and nothing attempted is the normal state before any of
-  // this is switched on, and an alarming red box for it would be a lie.
-  if (!state.configured && state.calls === 0) return null;
+  // Nothing configured and nothing attempted used to hide the panel entirely —
+  // which removed the one control that tells you why. It stays for the owner,
+  // quietly, so the key can be checked the moment it is added.
+  if (!state.configured && state.calls === 0 && !state.canTest) return null;
 
   const broken = state.purposes.some((p) => p.failed > 0 && p.ok === 0);
 
@@ -128,6 +147,38 @@ export function AiStatus() {
             ))}
           </ul>
         </details>
+      )}
+
+      {state.canTest && (
+        <div className="mt-3 border-t border-ink-700 pt-3">
+          <button
+            type="button"
+            onClick={runTest}
+            disabled={testing}
+            className="flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-600/15 px-3 py-1.5 text-xs font-semibold text-violet-300 disabled:opacity-50"
+          >
+            <Play className={`h-3.5 w-3.5 ${testing ? "animate-pulse" : ""}`} />
+            {testing ? "Asking…" : "Test the key"}
+          </button>
+          {testResult && (
+            <p
+              className={`mt-2 flex items-start gap-1.5 text-xs leading-relaxed ${
+                testResult.ok ? "text-safe" : "text-caution"
+              }`}
+            >
+              {testResult.ok ? (
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              ) : (
+                <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              )}
+              <span>
+                {testResult.ok
+                  ? `It answered in ${testResult.ms}ms and knows we deliver in ${testResult.answered}. Everything else will work.`
+                  : testResult.error}
+              </span>
+            </p>
+          )}
+        </div>
       )}
 
       <p className="mt-2 text-xs leading-relaxed text-mist-500">
