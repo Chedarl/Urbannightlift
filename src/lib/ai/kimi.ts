@@ -47,8 +47,21 @@ const DEFAULT_BASE = "https://api.moonshot.ai/v1";
  */
 const TIMEOUT_MS = 15_000;
 
+/**
+ * The key, under either name.
+ *
+ * The repository's Kimi workflow was written against `MOONSHOT_API_KEY` and this
+ * client against `KIMI_API_KEY`, which meant a key could be correctly set in one
+ * place and invisible to the other — the app would report itself unconfigured
+ * while a GitHub secret sat there working. Accepting both costs one line and
+ * removes a trap that is very hard to see from the outside.
+ */
+export function kimiKey(): string | null {
+  return process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || null;
+}
+
 export function kimiConfigured(): boolean {
-  return Boolean(process.env.KIMI_API_KEY);
+  return Boolean(kimiKey());
 }
 
 export function kimiModel(): string {
@@ -89,11 +102,11 @@ interface ChatResponse {
  * unreliability spread through its own logic.
  */
 export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
-  const key = process.env.KIMI_API_KEY;
+  const key = kimiKey();
   if (!key) {
     // Not an error. The product is expected to run without a model configured,
     // and it is logged so the gap is visible rather than assumed.
-    await record(req, { ok: false, ms: 0, error: "KIMI_API_KEY is not set" });
+    await record(req, { ok: false, ms: 0, error: "No KIMI_API_KEY or MOONSHOT_API_KEY is set" });
     return null;
   }
 

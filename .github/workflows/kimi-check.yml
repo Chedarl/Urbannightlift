@@ -1,0 +1,69 @@
+name: Check the Kimi key
+
+# Answers one question honestly: does the Moonshot key work?
+#
+# This replaces a code-generation workflow that ran five times, produced no code
+# at all, and reported success every time. It never checked the HTTP status, and
+# `jq '.choices[0].message.content // ""'` quietly turned Moonshot's error body
+# into an empty string — so a dead key looked identical to a working one, right
+# down to the green tick and the merged pull request.
+#
+# A dead key and a working key must never look the same. This one prints what
+# the API actually said and fails the job when the call is refused.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask Kimi for one word
+        env:
+          # Either name. The app accepts both for the same reason.
+          KEY: ${{ secrets.MOONSHOT_API_KEY || secrets.KIMI_API_KEY }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${KEY:-}" ]; then
+            echo "::error::No MOONSHOT_API_KEY or KIMI_API_KEY secret is set on this repository."
+            echo "Add one under Settings → Secrets and variables → Actions."
+            echo
+            echo "Note: a key set in Vercel is NOT visible here. These are two"
+            echo "separate stores. The app reads Vercel; this workflow reads"
+            echo "GitHub. To check the key the live site is using, press"
+            echo "'Test the key' on /admin/settings instead."
+            exit 1
+          fi
+          echo "A key is present (${#KEY} characters). Calling the API…"
+
+          # -w writes the status on its own last line, so the body and the code
+          # are both available without a second request.
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST "https://api.moonshot.ai/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $KEY" \
+            -d '{"model":"kimi-k3","max_tokens":16,"messages":[{"role":"user","content":"Reply with exactly: OK"}]}')
+
+          STATUS=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+
+          echo "HTTP $STATUS"
+
+          if [ "$STATUS" != "200" ]; then
+            # Their message is the whole point of this workflow: it distinguishes
+            # a missing key from an invalid one from an account with no balance,
+            # and those need three completely different fixes.
+            echo "::error::Moonshot refused the call."
+            printf '%s\n' "$BODY" | head -c 2000
+            exit 1
+          fi
+
+          CONTENT=$(printf '%s' "$BODY" | jq -r '.choices[0].message.content // ""')
+          if [ -z "$CONTENT" ]; then
+            echo "::error::HTTP 200 but no completion came back — this is what an out-of-credit account looks like."
+            printf '%s\n' "$BODY" | head -c 2000
+            exit 1
+          fi
+
+          echo "The key works. Kimi replied: $CONTENT"
+          printf '%s' "$BODY" | jq -r '"model: \(.model // "?")   tokens: \(.usage.total_tokens // 0)"'
