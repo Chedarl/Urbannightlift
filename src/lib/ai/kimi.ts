@@ -119,9 +119,16 @@ export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
           { role: "system", content: req.system },
           { role: "user", content },
         ],
+        // Deliberately not `strict: true`. Strict mode requires every property
+        // to be listed in `required` and `additionalProperties: false`
+        // throughout — which would mean no optional fields and a provider-side
+        // 400 for any schema that has one. Since the answer is validated
+        // against the same schema on arrival either way, the looser form buys
+        // the same safety without a class of rejection that would show up as
+        // "the feature silently does nothing".
         response_format: {
           type: "json_schema",
-          json_schema: { name: "answer", strict: true, schema: req.schema },
+          json_schema: { name: "answer", schema: req.schema },
         },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),

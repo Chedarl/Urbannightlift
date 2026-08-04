@@ -5,6 +5,7 @@ import { scoreMatch, normalizeTokens } from "@/lib/locations/normalize";
 import { nearestZone } from "@/lib/orders/pricing";
 import { findVerifiedPlace } from "@/lib/locations/verifiedPlaces";
 import { geocodeText } from "@/lib/maps/google";
+import { aiMatchPlace, type AiPlace } from "@/lib/locations/aiResolve";
 
 /**
  * Best-effort geocoding for orders whose location was typed as free text.
@@ -16,20 +17,27 @@ import { geocodeText } from "@/lib/maps/google";
  *
  *   1. places we have actually delivered to before (see verifiedPlaces), then
  *   2. the seeded Yaoundé ServiceLocation catalogue (exact / alias / fuzzy), then
- *   3. Google Geocoding, bounded to Yaoundé, then
- *   4. OpenStreetMap Nominatim, if there is no Google key configured.
+ *   3. the same catalogue read by a model, which understands a sentence the
+ *      string matcher cannot ("derrière la station Total à Rond-Point Express"),
+ *      then
+ *   4. Google Geocoding, bounded to Yaoundé, then
+ *   5. OpenStreetMap Nominatim, if there is no Google key configured.
  *
  * The order is the point and has not changed: our own delivered places and our
  * own catalogue beat any third party, because they encode where a rider has
- * actually found a door in this city. Google was added at step 3 for the streets
- * OSM has never mapped, which in Yaoundé is most of them — but it can only ever
- * answer questions the first two could not.
+ * actually found a door in this city. Google buys the streets OSM has never
+ * mapped, which in Yaoundé is most of them, but it can only ever answer
+ * questions our own records could not. The model step is the same idea pointed
+ * back at our own data — it may only choose among places we already hold, so it
+ * can never invent a location, and it hands back the place words even when it
+ * matches nothing, which makes the two external lookups far better queries than
+ * the customer's whole sentence was.
  *
  * No customer data leaves the server beyond the place name itself. Every attempt
  * is logged, so the value of the paid step is measurable rather than assumed.
  */
 
-export type GeoSource = "DELIVERED" | "CATALOGUE" | "GOOGLE" | "OSM";
+export type GeoSource = "DELIVERED" | "CATALOGUE" | "AI" | "GOOGLE" | "OSM";
 
 export interface ResolvedAddress {
   latitude: number;
@@ -106,6 +114,48 @@ async function matchCatalogue(text: string): Promise<ResolvedAddress | null> {
     confidence: Math.min(0.95, best.score / 100),
     matchedName: best.loc.primaryName,
     zoneId: best.loc.zoneId,
+  };
+}
+
+/**
+ * The catalogue again, but read by something that understands the sentence.
+ *
+ * `matchCatalogue` compares strings, so it fails on the addresses this city
+ * actually uses — the identifying words sit among direction words and
+ * descriptive detail, and spelling varies. This step offers the same catalogue
+ * rows to a model and asks which one the customer means.
+ *
+ * The coordinates still come from our own row; the model only chooses. So the
+ * worst case is picking the wrong one of our places — the same failure the
+ * fuzzy matcher already has — rather than inventing a location.
+ */
+async function matchWithModel(
+  text: string
+): Promise<{ resolved: ResolvedAddress | null; place: AiPlace | null }> {
+  const place = await aiMatchPlace(text).catch(() => null);
+  if (!place?.locationId) return { resolved: null, place };
+
+  const loc = await prisma.serviceLocation
+    .findUnique({
+      where: { id: place.locationId },
+      select: { primaryName: true, latitude: true, longitude: true, zoneId: true, active: true },
+    })
+    .catch(() => null);
+  if (!loc || !loc.active) return { resolved: null, place };
+
+  return {
+    resolved: {
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      source: "AI",
+      // Capped in aiResolve below every hit we are more sure of. This is a
+      // rescue for an address that was about to resolve badly or not at all,
+      // never a challenge to somewhere a rider has actually been.
+      confidence: place.confidence,
+      matchedName: loc.primaryName,
+      zoneId: loc.zoneId,
+    },
+    place,
   };
 }
 
@@ -201,10 +251,27 @@ export async function resolveAddress(
     : null;
 
   if (!resolved) resolved = await matchCatalogue(trimmed);
-  if (!resolved) resolved = await matchGoogle(trimmed);
+
+  // The model reads the sentence the string matcher could not. It runs only
+  // after the cheap, certain steps have failed, so a catalogue hit is never
+  // paid for twice — and it hands back the place words even when it matches
+  // nothing, which makes the external lookups below much better queries.
+  let place: AiPlace | null = null;
+  if (!resolved) {
+    const attempt = await matchWithModel(trimmed);
+    resolved = attempt.resolved;
+    place = attempt.place;
+  }
+
+  // "station Total, Rond-Point Express" is a searchable place. The customer's
+  // whole sentence, with its direction words and the colour of the gate, is not.
+  const externalQuery =
+    [place?.landmark, place?.area].filter(Boolean).join(", ") || trimmed;
+
+  if (!resolved) resolved = await matchGoogle(externalQuery);
   // Only when there is no Google key. Keeping it means turning Google off
   // degrades geocoding rather than breaking order creation.
-  if (!resolved) resolved = await matchNominatim(trimmed);
+  if (!resolved) resolved = await matchNominatim(externalQuery);
 
   if (resolved && !resolved.zoneId) {
     // nearestZone takes the full ZoneWithCentroid shape and skips null centroids itself.
