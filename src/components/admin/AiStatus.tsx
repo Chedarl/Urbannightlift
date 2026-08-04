@@ -66,7 +66,13 @@ export function AiStatus() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string; ms?: number; answered?: string } | null>(null);
   const [visionTesting, setVisionTesting] = useState(false);
-  const [visionResult, setVisionResult] = useState<{ ok: boolean; error?: string; ms?: number; saw?: string } | null>(null);
+  const [visionResult, setVisionResult] = useState<{
+    ok: boolean;
+    error?: string;
+    ms?: number;
+    saw?: string;
+    stages?: { name: string; ok: boolean; detail: string }[];
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -277,10 +283,26 @@ export function AiStatus() {
               )}
               <span>
                 {visionResult.ok
-                  ? `It read the test image in ${visionResult.ms}ms. Receipts, menu boards, screenshots and the duty poster will all work.`
+                  ? `The whole chain works — storage, the reader and the model. Receipts, menu boards, screenshots and the duty poster will all read.`
                   : visionResult.error}
               </span>
             </p>
+          )}
+          {/*
+            Every stage, in order, so a failure names the link rather than the
+            chain. The one that has never been exercised until now is "read it
+            back" — the step the screenshot capture depends on entirely.
+          */}
+          {visionResult?.stages && visionResult.stages.length > 0 && (
+            <ul className="mt-1.5 flex flex-col gap-0.5">
+              {visionResult.stages.map((stage, i) => (
+                <li key={i} className="flex items-baseline gap-1.5 text-[11px]">
+                  <span className={stage.ok ? "text-safe" : "text-caution"}>{stage.ok ? "✓" : "✕"}</span>
+                  <span className="text-mist-400">{stage.name}</span>
+                  <span className="text-mist-600">— {stage.detail}</span>
+                </li>
+              ))}
+            </ul>
           )}
           {testResult && (
             <p
