@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { kimiJsonResult, kimiConfigured, kimiModel } from "@/lib/ai/kimi";
 import { redactSecrets } from "@/lib/redact";
+import { visionTestImage } from "@/lib/ai/testImage";
+import { sniffImageMime } from "@/lib/ai/images";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,16 +28,6 @@ export const runtime = "nodejs";
  * needing a catalogue, a bucket, or anything to have gone right first.
  */
 
-/**
- * A 32×32 solid red PNG, hand-built so there is nothing to fetch.
- *
- * Red because it is unambiguous in any language, and because a model inventing
- * an answer would have no reason to land on it.
- */
-const RED_SQUARE_PNG =
-  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAJElEQVR42u3NMQEAAAgDoC252H" +
-  "3iBiRgcqvArwYJhUKhUCgUCoXiEbYAB/0/8lhTAAAAAElFTkSuQmCC";
-
 export async function POST() {
   const user = await getSessionUser();
   if (!user || user.role !== "OWNER") {
@@ -49,13 +41,27 @@ export async function POST() {
     });
   }
 
+  // Built here rather than recalled. The previous version of this button sent a
+  // base64 string I wrote from memory which was not a valid PNG at all — the
+  // check meant to catch unproved features was itself unproved.
+  const { bytes, dataUrl } = visionTestImage();
+  const sniffed = sniffImageMime(bytes);
+
+  // What we sent, reported alongside whatever comes back, so a failure arrives
+  // already diagnosed instead of starting another round of guessing.
+  const sent = {
+    bytes: bytes.length,
+    mime: sniffed,
+    head: bytes.subarray(0, 8).toString("hex"),
+  };
+
   const result = await kimiJsonResult<{ colour: string }>({
     purpose: "admin.test_vision",
     system:
       "You are being checked for image support. Answer with the single dominant colour of the image, in English, lower case.",
     user: "What colour is this image?",
     // The data URI, exactly as every real feature now sends one.
-    images: [`data:image/png;base64,${RED_SQUARE_PNG}`],
+    images: [dataUrl],
     schema: {
       type: "object",
       required: ["colour"],
@@ -67,7 +73,8 @@ export async function POST() {
     return NextResponse.json({
       ok: false,
       model: kimiModel(),
-      error: redactSecrets(result.error ?? "The call did not come back."),
+      sent,
+      error: `${redactSecrets(result.error ?? "The call did not come back.")} — we sent ${sent.bytes} bytes, sniffed as ${sent.mime ?? "not an image"}, starting ${sent.head}.`,
     });
   }
 
@@ -79,6 +86,7 @@ export async function POST() {
     model: kimiModel(),
     ms: result.ms,
     saw: result.answer.colour,
+    sent,
     // Answering with the wrong colour is its own diagnosis: the request went
     // through and something came back, but the image did not arrive intact.
     error: sawIt
