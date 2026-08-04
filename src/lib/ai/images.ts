@@ -71,62 +71,106 @@ export async function signedImageUrl(path: string | null | undefined): Promise<s
  */
 const MAX_BYTES = 6 * 1024 * 1024;
 
-const MIME_BY_EXTENSION: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-  gif: "image/gif",
-};
-
 /**
- * The image itself, as a data URI — which is the only form Moonshot accepts.
+ * What the bytes actually are, regardless of what anything claims.
  *
- * **This is the bug that made every vision feature in this product a no-op.**
- * Receipts, payment proofs, menu boards, business screenshots and the pharmacy
- * duty poster all handed Kimi a signed Supabase HTTPS URL, and Moonshot's own
- * documentation is explicit that *public image URLs are not supported — use
- * base64 or an `ms://` file id*. Five features, shipped across three rounds,
- * none of which could ever have returned anything.
+ * `imageDataUrl` used to take the MIME from Supabase's blob type, falling back
+ * to the file extension. Both are **metadata**, and both can disagree with the
+ * bytes: a rename, a wrong `Content-Type` on upload, or a storage client
+ * returning `application/octet-stream` all produce a data URI that says one
+ * format over the bytes of another — which is precisely
+ * *"invalid or unsupported image format"*.
  *
- * It survived because the only call ever proved end to end was `admin.test`,
- * which sends no image at all. A check that does not exercise the thing it
- * vouches for is worse than no check: it goes green and buys false confidence.
- * There is now a *Test vision* button beside it for exactly that reason.
- *
- * The allow-list above still does all the work it did before — this function is
- * the single gate, and a prescription or a rider's ID is refused here as firmly
- * as it ever was. What changed is only how the bytes travel.
+ * A magic number cannot be got wrong by any of those.
  */
-export async function imageDataUrl(path: string | null | undefined): Promise<string | null> {
-  if (!path) return null;
+export function sniffImageMime(bytes: Buffer): string | null {
+  if (bytes.length < 12) return null;
+
+  if (
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+    bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (
+    bytes.toString("ascii", 0, 4) === "RIFF" &&
+    bytes.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  if (bytes.toString("ascii", 0, 4) === "GIF8") return "image/gif";
+
+  return null;
+}
+
+export interface ImagePayload {
+  /** The data URI, or null when there is nothing safe to send. */
+  dataUrl: string | null;
+  /** Why not, in words a person can act on. Null when it worked. */
+  problem: string | null;
+  bytes: number;
+  /** Sniffed from the bytes, never from a filename. */
+  mime: string | null;
+}
+
+export async function readImage(path: string | null | undefined): Promise<ImagePayload> {
+  const nothing = (problem: string): ImagePayload => ({ dataUrl: null, problem, bytes: 0, mime: null });
+
+  if (!path) return nothing("No file was given.");
 
   const slash = path.indexOf("/");
-  if (slash <= 0) return null;
+  if (slash <= 0) return nothing("That file path is malformed.");
 
   const bucket = path.slice(0, slash);
   const key = path.slice(slash + 1);
-  if (!key || !MAY_BE_READ.has(bucket)) return null;
+  if (!key) return nothing("That file path is malformed.");
+  if (!MAY_BE_READ.has(bucket)) {
+    // The allow-list, unchanged and still the whole security boundary.
+    // Prescriptions and rider ID are refused here as firmly as they ever were.
+    return nothing("That kind of file is never shown to a model.");
+  }
 
   try {
     const admin = createAdminClient();
     const { data, error } = await admin.storage.from(bucket).download(key);
-    if (error || !data) return null;
+    if (error || !data) return nothing("Couldn't read that file back from storage.");
 
     const bytes = Buffer.from(await data.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > MAX_BYTES) return null;
+    if (bytes.length === 0) return nothing("That file is empty.");
+    if (bytes.length > MAX_BYTES) {
+      return {
+        dataUrl: null,
+        problem: `That file is ${Math.round(bytes.length / 1024)} KB, which is too large to send.`,
+        bytes: bytes.length,
+        mime: null,
+      };
+    }
 
-    // The blob's own type where storage kept one, the extension otherwise.
-    // Getting this wrong is not cosmetic — the provider reads the MIME from the
-    // data URI and refuses a body that disagrees with its bytes.
-    const extension = key.split(".").pop()?.toLowerCase() ?? "";
-    const mime =
-      data.type && data.type.startsWith("image/")
-        ? data.type
-        : MIME_BY_EXTENSION[extension] ?? "image/jpeg";
+    // Sniffed, not claimed. This is the line that stops a mislabelled upload
+    // reaching the provider as "invalid or unsupported image format".
+    const mime = sniffImageMime(bytes);
+    if (!mime) {
+      return {
+        dataUrl: null,
+        problem: `That file is ${Math.round(bytes.length / 1024)} KB but does not look like a PNG, JPEG, WebP or GIF.`,
+        bytes: bytes.length,
+        mime: null,
+      };
+    }
 
-    return `data:${mime};base64,${bytes.toString("base64")}`;
+    return {
+      dataUrl: `data:${mime};base64,${bytes.toString("base64")}`,
+      problem: null,
+      bytes: bytes.length,
+      mime,
+    };
   } catch {
-    return null;
+    return nothing("Something went wrong reading that file.");
   }
+}
+
+/** The data URI alone, for callers that only need "did it work". */
+export async function imageDataUrl(path: string | null | undefined): Promise<string | null> {
+  return (await readImage(path)).dataUrl;
 }

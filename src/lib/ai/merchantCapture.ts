@@ -1,7 +1,7 @@
 import "server-only";
 
 import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
-import { imageDataUrl } from "@/lib/ai/images";
+import { readImage } from "@/lib/ai/images";
 
 /**
  * Getting a business into the catalogue in fifteen seconds instead of five
@@ -207,19 +207,18 @@ export async function fromScreenshot(photoPath: string | null): Promise<CaptureR
   if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured." };
   if (!photoPath) return { draft: null, error: "No photo was given." };
 
-  const url = await imageDataUrl(photoPath);
-  if (!url) {
-    return {
-      draft: null,
-      error: "Couldn't read that file back from storage — it may be too large, or not an image.",
-    };
+  // Sniffed from the bytes, so a mislabelled upload says what it actually is
+  // rather than becoming "invalid or unsupported image format" at the provider.
+  const image = await readImage(photoPath);
+  if (!image.dataUrl) {
+    return { draft: null, error: image.problem ?? "Couldn't read that file." };
   }
 
   const result = await kimiJsonResult<CaptureAnswer>({
     purpose: "merchant.screenshot",
     system: SCREENSHOT_SYSTEM,
     user: "Read this business page and return its details.",
-    images: [url],
+    images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
   return finish(result);
