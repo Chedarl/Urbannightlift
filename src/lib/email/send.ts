@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { redactSecrets } from "@/lib/redact";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -139,7 +140,10 @@ export async function recordNotification(entry: {
         subject: entry.subject,
         status: entry.status,
         providerId: entry.providerId ?? null,
-        error: entry.error?.slice(0, 500) ?? null,
+        // Provider errors are quoted verbatim on purpose — their exact wording
+        // is what makes a failure diagnosable — so they are scrubbed of anything
+        // credential-shaped first. A Kimi key reached an admin screen this way.
+        error: entry.error ? redactSecrets(entry.error).slice(0, 500) : null,
         entityType: entry.entityType ?? null,
         entityId: entry.entityId ?? null,
       },

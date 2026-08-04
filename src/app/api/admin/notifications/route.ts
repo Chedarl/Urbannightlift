@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { mailConfig, operationsInbox } from "@/lib/email/send";
+import { redactSecrets } from "@/lib/redact";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export async function GET() {
       recipient: r.recipient,
       subject: r.subject,
       status: r.status,
-      error: r.error,
+      error: r.error ? redactSecrets(r.error) : null,
       at: r.createdAt.toISOString(),
     })),
   });

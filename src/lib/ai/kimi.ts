@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { redactSecrets } from "@/lib/redact";
 
 /**
  * The one way this product talks to a model.
@@ -81,8 +82,18 @@ const TIMEOUT_MS = 15_000;
  * removes a trap that is very hard to see from the outside.
  */
 export function kimiKey(): string | null {
-  return process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || null;
+  const raw = process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || "";
+  // Take the first token only.
+  //
+  // A key pasted twice — or six times, which is what actually happened — makes
+  // an `Authorization` value containing spaces, and `Headers.append` rejects it
+  // outright: the request never leaves, and the thrown message quotes the whole
+  // header back. Trimming to the first whitespace-delimited token turns a very
+  // easy paste mistake into a non-event.
+  const first = raw.trim().split(/\s+/)[0];
+  return first || null;
 }
+
 
 export function kimiConfigured(): boolean {
   return Boolean(kimiKey());
@@ -286,7 +297,10 @@ async function record(
         ok: outcome.ok,
         ms: outcome.ms,
         tokens: outcome.tokens ?? null,
-        error: outcome.error?.slice(0, 500) ?? null,
+        // Redacted here rather than at each call site: this is the single
+        // funnel every error passes through on its way to storage, and a
+        // provider message quoted verbatim is exactly how a key got out.
+        error: outcome.error ? redactSecrets(outcome.error).slice(0, 500) : null,
         entityType: req.entityType ?? null,
         entityId: req.entityId ?? null,
       },
