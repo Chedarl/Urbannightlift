@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import { cookies } from "next/headers";
 import { LanguageProvider, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
+import { AssistantSheet } from "@/components/shared/AssistantSheet";
 import { OrganizationSchema } from "@/components/shared/OrganizationSchema";
 import "./globals.css";
 
@@ -76,7 +77,12 @@ export default async function RootLayout({
       <body className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}>
         <OrganizationSchema />
         <ServiceWorkerRegister />
-        <LanguageProvider initialLocale={locale}>{children}</LanguageProvider>
+        <LanguageProvider initialLocale={locale}>
+          {children}
+          {/* One mount for every customer-facing screen, including the public
+              site. It hides itself on the staff apps. */}
+          <AssistantSheet />
+        </LanguageProvider>
       </body>
     </html>
   );
