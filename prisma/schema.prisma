@@ -1445,6 +1445,10 @@ model AiCall {
   ms         Int
   tokens     Int?
   error      String?
+  /// The short commit of the build that made this call. Without it, a failure
+  /// from a bug fixed two deploys ago looks exactly like one happening now —
+  /// which is how three rounds of "the key still is not working" were spent.
+  buildRef   String?
   entityType String?
   entityId   String?
   createdAt  DateTime @default(now())
