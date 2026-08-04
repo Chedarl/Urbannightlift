@@ -42,13 +42,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
   });
   if (!merchant) return NextResponse.json({ error: "No such merchant." }, { status: 404 });
 
-  const items = await readMenuPhoto(photoPath, merchantId);
+  const { data: items, error } = await readMenuPhoto(photoPath, merchantId);
 
-  if (items === null) {
-    return NextResponse.json({
-      items: [],
-      note: "Couldn't read that photo. Try again with more light, or type the prices from the phone call.",
-    });
+  if (!items) {
+    // The reason, not an apology. A generic "couldn't read that photo" has twice
+    // hidden a real cause — a URL the provider does not accept, then an image
+    // that was not an image — while somebody retook a picture that was fine.
+    return NextResponse.json({ items: [], note: error ?? "Nothing came back." });
   }
 
   return NextResponse.json({

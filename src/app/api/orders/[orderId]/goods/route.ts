@@ -193,8 +193,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
   // is not a problem with their order. A disagreement becomes a question for
   // dispatch, never a change to the amount.
   if (receiptUrl) {
+    // Kept fire-and-forget on purpose, and so is its reason: nobody is standing
+    // in front of this, so there is no screen to put a sentence on. The failure
+    // is recorded in `AiCall` and shows on /admin/settings with a date and a
+    // build marker, which is the right home for a failure nobody is waiting on.
     void readReceipt(receiptUrl, orderId)
-      .then((reading) =>
+      .then(({ data: reading }) =>
         reading
           ? prisma.order.update({
               where: { id: orderId },

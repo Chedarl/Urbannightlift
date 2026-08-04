@@ -1,7 +1,8 @@
 import "server-only";
 
-import { kimiJson, kimiConfigured } from "@/lib/ai/kimi";
-import { imageDataUrl } from "@/lib/ai/images";
+import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { readImage } from "@/lib/ai/images";
+import { got, none, type AiRead } from "@/lib/ai/result";
 
 /**
  * Reading the shop receipt the rider photographed.
@@ -79,30 +80,32 @@ Rules:
 export async function readReceipt(
   receiptPath: string | null,
   orderId?: string
-): Promise<ReceiptReading | null> {
-  if (!kimiConfigured() || !receiptPath) return null;
+): Promise<AiRead<ReceiptReading>> {
+  if (!kimiConfigured()) return none("No Kimi key is configured.");
 
-  const url = await imageDataUrl(receiptPath);
-  if (!url) return null;
+  const image = await readImage(receiptPath);
+  if (!image.dataUrl) return none(image.problem ?? "Couldn't read that file.");
 
-  const answer = await kimiJson<Answer>({
+  const result = await kimiJsonResult<Answer>({
     purpose: "receipt.read",
     system: SYSTEM,
     user: "Read this shop receipt and report the final total and the lines you can make out.",
-    images: [url],
+    images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
     entityType: "order",
     entityId: orderId,
   });
-  if (!answer) return null;
+
+  const answer = result.answer;
+  if (!answer) return none(result.error ?? "No answer came back.");
 
   // `readable: false` is the model doing what it was asked — saying it could not
   // read the total rather than inventing one. Treated as no reading at all.
   if (answer.readable === false || !Number.isFinite(answer.totalXaf) || answer.totalXaf <= 0) {
-    return null;
+    return none("Couldn't make the total out on that receipt.");
   }
 
-  return {
+  return got({
     totalXaf: Math.round(answer.totalXaf),
     shopName: answer.shopName?.trim() || null,
     items: (answer.items ?? [])
@@ -115,5 +118,5 @@ export async function readReceipt(
             ? Math.round(i.priceXaf)
             : null,
       })),
-  };
+  });
 }
