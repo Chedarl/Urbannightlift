@@ -42,7 +42,7 @@ jobs:
           RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST "https://api.moonshot.ai/v1/chat/completions" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $KEY" \
-            -d '{"model":"kimi-k3","max_tokens":16,"messages":[{"role":"user","content":"Reply with exactly: OK"}]}')
+            -d '{"model":"kimi-k3","max_tokens":2048,"reasoning_effort":"low","messages":[{"role":"user","content":"Reply with exactly: OK"}]}')
 
           STATUS=$(printf '%s' "$RESPONSE" | tail -n1)
           BODY=$(printf '%s' "$RESPONSE" | sed '$d')
@@ -60,8 +60,13 @@ jobs:
 
           CONTENT=$(printf '%s' "$BODY" | jq -r '.choices[0].message.content // ""')
           if [ -z "$CONTENT" ]; then
-            echo "::error::HTTP 200 but no completion came back — this is what an out-of-credit account looks like."
-            printf '%s\n' "$BODY" | head -c 2000
+            # Do NOT call this a dead key. K3 reasons before it answers, and a
+            # small max_tokens is spent thinking — the call succeeds, is billed,
+            # and returns nothing. That was misdiagnosed here once already.
+            echo "::error::HTTP 200 but the content was empty. The key WORKS and this was billed."
+            echo "The token budget was almost certainly spent on reasoning."
+            echo "Raise max_tokens or lower reasoning_effort."
+            printf '%s\n' "$BODY" | jq -r '"tokens used: \(.usage.total_tokens // 0)"' || true
             exit 1
           fi
 

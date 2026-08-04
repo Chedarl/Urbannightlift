@@ -41,6 +41,30 @@ const DEFAULT_MODEL = "kimi-k3";
 const DEFAULT_BASE = "https://api.moonshot.ai/v1";
 
 /**
+ * How hard the model thinks before answering — and why this is not the default.
+ *
+ * K3 is a reasoning model and its default `reasoning_effort` is **max**. It
+ * spends tokens thinking before it writes a single character of the answer, so
+ * a request with a modest token budget can burn the whole allowance reasoning
+ * and return **empty content while still being billed**. That is precisely how
+ * this looked when it was first tested: no answer, a sub-second-looking
+ * failure, and real consumption on the account. It reads exactly like a dead
+ * key and is nothing of the sort.
+ *
+ * Every call in this product is extraction — read this receipt, pick the
+ * matching place, structure this sentence. None of it benefits from deep
+ * deliberation, and all of it wants to be fast and cheap, because it sits
+ * beside a rider at a counter or a customer typing an address.
+ */
+const DEFAULT_EFFORT = "low";
+
+/**
+ * Generous on purpose. The failure this prevents is silent: too small a budget
+ * on a reasoning model does not error, it returns nothing.
+ */
+const DEFAULT_MAX_TOKENS = 4096;
+
+/**
  * Long enough for a vision call on a photographed receipt, short enough that
  * nobody watches a spinner. Whatever has not answered by now is not going to
  * rescue the request it is attached to.
@@ -128,6 +152,8 @@ export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
       body: JSON.stringify({
         model: kimiModel(),
         temperature: req.temperature ?? 0.1,
+        max_tokens: DEFAULT_MAX_TOKENS,
+        reasoning_effort: process.env.KIMI_REASONING_EFFORT || DEFAULT_EFFORT,
         messages: [
           { role: "system", content: req.system },
           { role: "user", content },
@@ -163,7 +189,16 @@ export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
 
     const text = data?.choices?.[0]?.message?.content;
     if (!text) {
-      await record(req, { ok: false, ms, error: "Kimi returned an empty answer." });
+      // Named precisely, because the obvious reading of this is wrong. An empty
+      // completion from a reasoning model usually means the token budget went
+      // on thinking — the call succeeded and was billed. It is not a bad key.
+      await record(req, {
+        ok: false,
+        ms,
+        tokens: data?.usage?.total_tokens,
+        error:
+          "Kimi answered but the content was empty — usually the token budget was spent on reasoning. Lower KIMI_REASONING_EFFORT or raise max_tokens. The call was still billed.",
+      });
       return null;
     }
 
