@@ -5,6 +5,7 @@ import { SHOPPING_SERVICES, orderMoney } from "@/lib/orders/goodsMoney";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { visibilityWhere } from "@/lib/orders/filters";
 import { DashboardStats } from "@/components/admin/DashboardStats";
+import { checkReceipt } from "@/lib/orders/receiptCheck";
 
 export const dynamic = "force-dynamic";
 
@@ -143,6 +144,15 @@ export default async function AdminDashboardPage() {
             orderStatus: { in: GOODS_DUE_STATUSES },
             goodsActualXaf: null,
           },
+          // The receipt photo was read and does not agree with what the rider
+          // typed. Pulled in broadly here — whether the gap is big enough to
+          // matter is decided by `checkReceipt` below, so the tolerance lives in
+          // one place rather than being restated as a Prisma filter.
+          {
+            goodsActualXaf: { not: null },
+            goodsReceiptReadXaf: { not: null },
+            orderStatus: { notIn: CLOSED_OUT },
+          },
         ],
       },
       orderBy: { createdAt: "asc" },
@@ -167,6 +177,7 @@ export default async function AdminDashboardPage() {
         goodsCapXaf: true,
         goodsActualXaf: true,
         goodsRecordedAt: true,
+        goodsReceiptReadXaf: true,
         overCapApprovedXaf: true,
         overCapApprovedAt: true,
         customer: { select: { fullName: true } },
@@ -192,11 +203,16 @@ export default async function AdminDashboardPage() {
     const overCapWaiting = o.overCapApprovedAt == null && money.needsCustomerApproval;
     const goodsNotRecorded =
       money.shopping && o.goodsActualXaf == null && GOODS_DUE_STATUSES.includes(o.orderStatus);
+    // Two readings of one receipt disagreeing. Not an accusation — far more
+    // often a missing zero — but it is the only signal that the amount a
+    // customer is about to be charged may be wrong.
+    const receipt = checkReceipt(o.goodsActualXaf, o.goodsReceiptReadXaf);
 
     let kind: string;
     // Money already spent and refused outranks everything: nobody else can move it.
     if (overCapDeclined) kind = "OVER_CAP_DECLINED";
     else if (overCapWaiting) kind = "OVER_CAP_WAITING";
+    else if (receipt.needsLook) kind = "RECEIPT_MISMATCH";
     else if (goodsNotRecorded) kind = "GOODS_NOT_RECORDED";
     else if (o.quoteSentAt && !o.customerNotifiedAt) kind = "CUSTOMER_NOT_TOLD";
     else if (o.paymentStatus === "SUBMITTED_UNVERIFIED") kind = "PAYMENT_UNVERIFIED";

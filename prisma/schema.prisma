@@ -800,6 +800,15 @@ model Order {
   goodsReceiptUrl       String?
   goodsRecordedAt       DateTime?
   goodsRecordedById     String?
+  /// What a second reading of the receipt photo made the total out to be.
+  ///
+  /// Never used to charge anybody and never written into goodsActualXaf. It
+  /// exists so a disagreement with what the rider typed can be raised as a
+  /// question — which protects the rider from an accusation at least as much as
+  /// it protects the customer from an error. Null means it was not checked, and
+  /// that is deliberately not the same as agreeing.
+  goodsReceiptReadXaf   Int?
+  goodsReceiptReadAt    DateTime?
   /// Set when the customer agreed to a spend above their cap. Without this an
   /// over-cap amount is not collectable.
   overCapApprovedXaf    Int?

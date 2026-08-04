@@ -6,6 +6,7 @@ import { orderMoney, isShoppingService } from "@/lib/orders/goodsMoney";
 import { loadRiderFloat } from "@/lib/riders/floatAccount";
 import { canCoverPurchase } from "@/lib/riders/float";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
+import { readReceipt } from "@/lib/ai/receipt";
 
 export const dynamic = "force-dynamic";
 
@@ -184,6 +185,24 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
       order.orderCode,
       `The shop charged ${amountXaf.toLocaleString("fr-FR")} XAF — ${money.overCapByXaf.toLocaleString("fr-FR")} over your cap. Please approve.`
     ).catch(() => {});
+  }
+
+  // A second reading of the same piece of paper, after the rider is already
+  // done. Deliberately not awaited into the response: the rider is standing at
+  // a counter and must never wait on a model, and a receipt that cannot be read
+  // is not a problem with their order. A disagreement becomes a question for
+  // dispatch, never a change to the amount.
+  if (receiptUrl) {
+    void readReceipt(receiptUrl, orderId)
+      .then((reading) =>
+        reading
+          ? prisma.order.update({
+              where: { id: orderId },
+              data: { goodsReceiptReadXaf: reading.totalXaf, goodsReceiptReadAt: new Date() },
+            })
+          : null
+      )
+      .catch(() => {});
   }
 
   return NextResponse.json({

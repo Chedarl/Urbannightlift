@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { OrderDetail } from "@/components/admin/OrderDetail";
+import { GoodsMoneyPanel } from "@/components/admin/GoodsMoneyPanel";
 import { loadWorkflow } from "@/lib/orders/workflowGuard";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +108,19 @@ export default async function AdminOrderPage({
 
 
   return (
-    <OrderDetail
+    <div className="flex flex-col gap-5">
+      {/* The shopping money had no screen at all: a rider recorded what the shop
+          charged and dispatch could not see the figure or the receipt photo. */}
+      <GoodsMoneyPanel
+        serviceType={order.serviceType}
+        goodsCapXaf={order.goodsCapXaf}
+        goodsActualXaf={order.goodsActualXaf}
+        goodsReceiptUrl={order.goodsReceiptUrl}
+        goodsReceiptReadXaf={order.goodsReceiptReadXaf}
+        deliveryFeeXaf={order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf}
+        overCapApprovedXaf={order.overCapApprovedXaf}
+      />
+      <OrderDetail
       order={{
         id: order.id,
         orderCode: order.orderCode,
@@ -219,7 +232,8 @@ export default async function AdminOrderPage({
         proof: w.proof,
         blockedBy: w.blockedBy,
       }))}
-      isOwner={viewer?.role === "OWNER"}
-    />
+        isOwner={viewer?.role === "OWNER"}
+      />
+    </div>
   );
 }
