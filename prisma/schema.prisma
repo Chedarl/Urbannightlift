@@ -694,6 +694,12 @@ model MerchantProduct {
   priceXaf       Int?
   unit           String?
   photoUrl       String?
+  /// What the board groups it under — BEIGNETS, POULET, GRILLADES. This is what
+  /// turns a price list into something browsable rather than a wall of rows.
+  category       String?
+  /// One short line, so the grid reads like a menu instead of a stock take.
+  description    String?
+  descriptionFr  String?
   available      Boolean  @default(true)
   popularityRank Int      @default(0)
   /// Where the price came from: typed by staff, or drafted from the merchant's

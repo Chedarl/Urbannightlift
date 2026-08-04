@@ -497,6 +497,9 @@ async function ensureStorageBuckets() {
     { name: "delivery-proofs", public: false, types: IMAGE_TYPES, sizeMb: 5 },
     // The shop receipt behind a shopping order. Private evidence.
     { name: "goods-receipts", public: false, types: IMAGE_TYPES, sizeMb: 5 },
+    // A photographed price board. Private: it is a working document, and the
+    // published version is the reviewed rows, not the snapshot.
+    { name: "merchant-menus", public: false, types: IMAGE_TYPES, sizeMb: 8 },
     { name: "merchant-logos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
     { name: "rider-documents", public: false, types: [...IMAGE_TYPES, "application/pdf"], sizeMb: 10 },
     { name: "rider-photos", public: true, types: IMAGE_TYPES, sizeMb: 5 },

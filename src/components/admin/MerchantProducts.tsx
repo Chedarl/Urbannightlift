@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/shared/Button";
+import { MenuPhotoImport } from "@/components/admin/MenuPhotoImport";
 import { formatXaf } from "@/lib/utils";
 
 /**
@@ -155,6 +156,19 @@ export function MerchantProducts({
         <Button size="sm" variant="outline" onClick={addOne} disabled={busy || pending || name.trim().length < 2}>
           <Plus className="h-3.5 w-3.5" /> Add
         </Button>
+      </div>
+
+      {/*
+        Typing is the fallback, not the plan. Almost no merchant here has a
+        website to read, so the photograph is the route that actually fills a
+        catalogue — you are standing in front of their board with the owner.
+      */}
+      <div className="mt-2">
+        <MenuPhotoImport
+          merchantId={merchantId}
+          merchantName={merchantName}
+          onSaved={() => startTransition(() => router.refresh())}
+        />
       </div>
 
       {note && <p className="mt-2 text-[11px] text-mist-400">{note}</p>}

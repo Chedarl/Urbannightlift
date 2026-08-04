@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
     // opened by anybody at all — the strongest trust device in the shopping
     // flow existed as a file and as nothing else.
     "goods-receipts",
+    "merchant-menus",
   ];
   if (!PRIVATE_BUCKETS.includes(bucket) || !key) {
     return NextResponse.json({ error: "Bad path" }, { status: 400 });
