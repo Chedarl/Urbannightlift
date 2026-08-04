@@ -86,6 +86,7 @@ export function LocationPicker({
   const [zones, setZones] = useState<ZoneData[]>([]);
   const [active, setActive] = useState<"pickup" | "delivery">("pickup");
   const [fly, setFly] = useState<[number, number] | null>(null);
+  const [satellite, setSatellite] = useState(false);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -166,8 +167,22 @@ export function LocationPicker({
       </div>
 
       <div className="relative overflow-hidden rounded-2xl border border-ink-700" style={{ height: 260 }}>
+        {/*
+          Satellite matters more here than anywhere else in the product. Most of
+          Yaoundé has no street numbers and much of it no named street, so a
+          street map is often the worse picture — people find their own gate by
+          recognising their roof, their compound wall and the yard next door.
+          Included on the same free MapTiler plan as the streets.
+        */}
+        <button
+          type="button"
+          onClick={() => setSatellite((v) => !v)}
+          className="absolute right-2 top-2 z-[500] rounded-lg border border-ink-600 bg-ink-950/80 px-2 py-1 text-[11px] font-medium text-mist-200 backdrop-blur"
+        >
+          {satellite ? (locale === "fr" ? "Plan" : "Map") : "Satellite"}
+        </button>
         <MapContainer center={YAOUNDE} zoom={12} className="h-full w-full" scrollWheelZoom={false}>
-          <BaseTiles />
+          <BaseTiles satellite={satellite} />
           <ClickHandler onClick={place} />
           <Recenter point={fly} />
           {pickup && (

@@ -5,6 +5,7 @@ import { scoreMatch, normalizeTokens } from "@/lib/locations/normalize";
 import { nearestZone } from "@/lib/orders/pricing";
 import { findVerifiedPlace } from "@/lib/locations/verifiedPlaces";
 import { geocodeText } from "@/lib/maps/google";
+import { geocodeMapTiler } from "@/lib/maps/geocode";
 import { aiMatchPlace, type AiPlace } from "@/lib/locations/aiResolve";
 
 /**
@@ -21,7 +22,8 @@ import { aiMatchPlace, type AiPlace } from "@/lib/locations/aiResolve";
  *      string matcher cannot ("derrière la station Total à Rond-Point Express"),
  *      then
  *   4. Google Geocoding, bounded to Yaoundé, then
- *   5. OpenStreetMap Nominatim, if there is no Google key configured.
+ *   5. MapTiler Geocoding on the same key that draws our tiles, then
+ *   6. OpenStreetMap Nominatim, as the floor.
  *
  * The order is the point and has not changed: our own delivered places and our
  * own catalogue beat any third party, because they encode where a rider has
@@ -30,14 +32,14 @@ import { aiMatchPlace, type AiPlace } from "@/lib/locations/aiResolve";
  * questions our own records could not. The model step is the same idea pointed
  * back at our own data — it may only choose among places we already hold, so it
  * can never invent a location, and it hands back the place words even when it
- * matches nothing, which makes the two external lookups far better queries than
+ * matches nothing, which makes the three external lookups far better queries than
  * the customer's whole sentence was.
  *
  * No customer data leaves the server beyond the place name itself. Every attempt
  * is logged, so the value of the paid step is measurable rather than assumed.
  */
 
-export type GeoSource = "DELIVERED" | "CATALOGUE" | "AI" | "GOOGLE" | "OSM";
+export type GeoSource = "DELIVERED" | "CATALOGUE" | "AI" | "GOOGLE" | "MAPTILER" | "OSM";
 
 export interface ResolvedAddress {
   latitude: number;
@@ -179,6 +181,31 @@ async function matchGoogle(text: string): Promise<ResolvedAddress | null> {
   };
 }
 
+/**
+ * MapTiler, bounded to Yaoundé — the geocoder on the key we already have.
+ *
+ * Ahead of Nominatim because it is better data on a plan that costs nothing and
+ * needs no card, and behind Google because if a Google key ever works it is
+ * still the best of the three. Confidence sits between the two for the same
+ * reason: worth acting on, never worth trusting over a place we have delivered
+ * to ourselves.
+ */
+async function matchMapTiler(text: string): Promise<ResolvedAddress | null> {
+  const hit = await geocodeMapTiler(text).catch(() => null);
+  if (!hit) return null;
+  return {
+    latitude: hit.latitude,
+    longitude: hit.longitude,
+    source: "MAPTILER",
+    // Their relevance, damped. A confident geocode of the wrong kind of address
+    // is the failure mode here — this city's addresses are landmarks, and a
+    // geocoder answering one crisply is often answering a different question.
+    confidence: Math.min(0.7, 0.35 + hit.relevance * 0.35),
+    matchedName: hit.displayName,
+    zoneId: null,
+  };
+}
+
 /** OpenStreetMap, bounded to Yaoundé. Free; failures are non-fatal by design. */
 async function matchNominatim(text: string): Promise<ResolvedAddress | null> {
   const query = meaningfulTokens(text).join(" ") || text;
@@ -269,8 +296,11 @@ export async function resolveAddress(
     [place?.landmark, place?.area].filter(Boolean).join(", ") || trimmed;
 
   if (!resolved) resolved = await matchGoogle(externalQuery);
-  // Only when there is no Google key. Keeping it means turning Google off
-  // degrades geocoding rather than breaking order creation.
+  // The geocoder on the tile key we already hold — free, no card, and better
+  // data than the last resort below it.
+  if (!resolved) resolved = await matchMapTiler(externalQuery);
+  // Kept as the floor. Turning every other provider off degrades geocoding
+  // rather than breaking order creation, which is the property that matters.
   if (!resolved) resolved = await matchNominatim(externalQuery);
 
   if (resolved && !resolved.zoneId) {

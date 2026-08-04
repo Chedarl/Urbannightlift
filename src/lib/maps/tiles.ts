@@ -42,6 +42,14 @@ export interface TileConfig {
   attribution: string;
   provider: TileProvider;
   /**
+   * The same ground seen from above, where the provider has it.
+   *
+   * Public, unlike `reason` — it is a tile URL like the one beside it, and the
+   * customer picking their gate is exactly who needs it. Absent on CARTO and on
+   * Google, so every consumer must treat it as optional.
+   */
+  satelliteUrl?: string;
+  /**
    * Why we are not on the provider we would prefer, in the provider's own words
    * where they gave any.
    *
