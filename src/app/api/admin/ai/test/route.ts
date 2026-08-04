@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
-import { kimiJson, kimiConfigured, kimiModel } from "@/lib/ai/kimi";
+import { kimiJsonResult, kimiConfigured, kimiModel, kimiKeySource, kimiBaseUrl } from "@/lib/ai/kimi";
+import { redactSecrets } from "@/lib/redact";
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +32,10 @@ export async function POST() {
     });
   }
 
-  const started = Date.now();
   // Deliberately trivial. This tests the key and the round trip, not the model:
   // anything cleverer would make a failure ambiguous between "the key is dead"
   // and "it answered something we did not expect".
-  const answer = await kimiJson<{ ok: boolean; city: string }>({
+  const result = await kimiJsonResult<{ ok: boolean; city: string }>({
     purpose: "admin.test",
     system:
       "You are being checked for connectivity. Answer with ok set to true and city set to the city Urban Night Lift delivers in, which is Yaoundé.",
@@ -47,22 +47,34 @@ export async function POST() {
     },
   });
 
-  if (!answer) {
+  const { variable, fingerprint } = kimiKeySource();
+
+  if (!result.answer) {
     return NextResponse.json({
       ok: false,
       model: kimiModel(),
-      // The detail is in the AiCall row this attempt just wrote, which the panel
-      // is already showing underneath — so the reason is one line away rather
-      // than duplicated here and left to drift.
-      error:
-        "The call did not come back. The reason is in the failures list below — most often an invalid key, or an account with no credit on it.",
+      keyVariable: variable,
+      keyFingerprint: fingerprint,
+      baseUrl: kimiBaseUrl(),
+      // The provider's own sentence, about **this** press.
+      //
+      // This used to say "the reason is in the failures list below" and point at
+      // an undated list — so the one button built to answer the question
+      // returned a forwarding address, and three rounds of "the key is still not
+      // working" went past on it. `Incorrect API key provided` means one of four
+      // things: revoked, mistyped, from another account, or issued on
+      // api.moonshot.cn and being sent to api.moonshot.ai. That is why the
+      // variable name and the endpoint travel with the message.
+      error: redactSecrets(result.error ?? "The call did not come back."),
     });
   }
 
   return NextResponse.json({
     ok: true,
     model: kimiModel(),
-    ms: Date.now() - started,
-    answered: answer.city,
+    keyVariable: variable,
+    keyFingerprint: fingerprint,
+    ms: result.ms,
+    answered: result.answer.city,
   });
 }

@@ -35,7 +35,12 @@ jobs:
             echo "'Test the key' on /admin/settings instead."
             exit 1
           fi
-          echo "A key is present (${#KEY} characters). Calling the API…"
+          # Print the last four characters so this key can be compared with the
+          # one the live site is using — the AI panel on /admin/settings now
+          # shows the same four. Two stores, two keys, and no way to tell they
+          # differ was the whole problem: an old key here 401s exactly like a
+          # revoked one, and looks like proof the new key is bad.
+          echo "A key is present (${#KEY} characters, ending ${KEY: -4}). Calling the API…"
 
           # -w writes the status on its own last line, so the body and the code
           # are both available without a second request.

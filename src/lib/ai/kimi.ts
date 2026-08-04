@@ -81,19 +81,73 @@ const TIMEOUT_MS = 15_000;
  * while a GitHub secret sat there working. Accepting both costs one line and
  * removes a trap that is very hard to see from the outside.
  */
+/** The only two names a key is read from. Anything else is invisible here. */
+export const KEY_VARIABLES = ["KIMI_API_KEY", "MOONSHOT_API_KEY"] as const;
+
 export function kimiKey(): string | null {
-  const raw = process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY || "";
-  // Take the first token only.
-  //
-  // A key pasted twice — or six times, which is what actually happened — makes
-  // an `Authorization` value containing spaces, and `Headers.append` rejects it
-  // outright: the request never leaves, and the thrown message quotes the whole
-  // header back. Trimming to the first whitespace-delimited token turns a very
-  // easy paste mistake into a non-event.
-  const first = raw.trim().split(/\s+/)[0];
-  return first || null;
+  return kimiKeySource().key;
 }
 
+/**
+ * Which variable the key came from, and the last four characters of it.
+ *
+ * Added because "the key is still not working" has now cost three rounds, and
+ * on the third the owner said the key is set *"in both but with different
+ * names"*. That single sentence is very likely the whole bug: a key saved under
+ * a third name is invisible to this function, the old one keeps being sent, and
+ * every screen in the product still says a key is configured — because
+ * `kimiConfigured()` only ever asked whether *a* key exists, never **which**.
+ *
+ * So the panel now names the variable and shows four characters. Four is what
+ * Stripe and AWS show for the same reason: it is enough to recognise a key you
+ * are holding and useless to anybody who is not.
+ */
+export function kimiKeySource(): {
+  key: string | null;
+  variable: (typeof KEY_VARIABLES)[number] | null;
+  fingerprint: string | null;
+} {
+  for (const variable of KEY_VARIABLES) {
+    const raw = process.env[variable] || "";
+    // Take the first token only.
+    //
+    // A key pasted twice — or six times, which is what actually happened —
+    // makes an `Authorization` value containing spaces, and `Headers.append`
+    // rejects it outright: the request never leaves, and the thrown message
+    // quotes the whole header back. Trimming to the first whitespace-delimited
+    // token turns a very easy paste mistake into a non-event.
+    const key = raw.trim().split(/\s+/)[0];
+    if (key) return { key, variable, fingerprint: key.slice(-4) };
+  }
+  return { key: null, variable: null, fingerprint: null };
+}
+
+/**
+ * Config that is *meant* to carry a name rather than a key. Listing these keeps
+ * the warning below from crying wolf about the settings that are working fine.
+ */
+const KNOWN_SETTINGS = new Set(["KIMI_MODEL", "KIMI_BASE_URL", "KIMI_REASONING_EFFORT"]);
+
+/**
+ * Variables that look like a Kimi key but under a name nothing reads.
+ *
+ * **Names only, never values.** This is the sentence that would have ended the
+ * current round on day one: *"MOONSHOT_KEY is set, but this app only reads
+ * KIMI_API_KEY or MOONSHOT_API_KEY."* A variable nobody reads is otherwise
+ * completely silent — it looks, from every screen and every log, exactly like
+ * not having set it at all.
+ */
+export function unreadKeyVariables(): string[] {
+  return Object.keys(process.env)
+    .filter(
+      (name) =>
+        /kimi|moonshot/i.test(name) &&
+        !KNOWN_SETTINGS.has(name) &&
+        !(KEY_VARIABLES as readonly string[]).includes(name) &&
+        (process.env[name] ?? "").trim().length > 0
+    )
+    .sort();
+}
 
 export function kimiConfigured(): boolean {
   return Boolean(kimiKey());
@@ -101,6 +155,43 @@ export function kimiConfigured(): boolean {
 
 export function kimiModel(): string {
   return process.env.KIMI_MODEL || DEFAULT_MODEL;
+}
+
+/**
+ * Which endpoint we are calling — and this is not decoration.
+ *
+ * Moonshot runs **two** of them: `api.moonshot.ai` (international, billed in
+ * USD) and `api.moonshot.cn` (China). A key issued on one is rejected by the
+ * other with `Incorrect API key provided` — the identical message you get for a
+ * revoked key, a typo, or a key from somebody else's account. Four different
+ * problems, one sentence, so the endpoint has to be on screen next to the key
+ * or the message cannot be acted on.
+ */
+export function kimiBaseUrl(): string {
+  return (process.env.KIMI_BASE_URL || DEFAULT_BASE).replace(/\/+$/, "");
+}
+
+/** The build this call came from, so an old failure cannot pose as a new one. */
+function buildRef(): string | null {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA;
+  return sha ? sha.slice(0, 7) : null;
+}
+
+/**
+ * Optional fields we send that a model is entitled to refuse.
+ *
+ * `temperature` already cost a full round trip through the owner's inbox: K3
+ * accepts only 1, refused every call outright, and the feature looked dead. The
+ * others are the same shape of risk, still armed. Rather than wait to discover
+ * each one from a screenshot, a 400 that names one of these gets **one** retry
+ * without it — and the retry is recorded, so a working feature never silently
+ * hides the fact that a parameter had to be dropped.
+ */
+const DROPPABLE = ["temperature", "reasoning_effort", "response_format"] as const;
+
+export function droppableField(message: string, sent: string[]): string | null {
+  const lower = message.toLowerCase();
+  return sent.find((f) => (DROPPABLE as readonly string[]).includes(f) && lower.includes(f)) ?? null;
 }
 
 /** A JSON Schema object describing the answer we will accept. */
@@ -135,15 +226,37 @@ interface ChatResponse {
  * unreliability spread through its own logic.
  */
 export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
-  const key = kimiKey();
+  return (await kimiJsonResult<T>(req)).answer;
+}
+
+export interface KimiResult<T> {
+  answer: T | null;
+  /** Why it failed, in the provider's own words where there are any. */
+  error: string | null;
+  ms: number;
+}
+
+/**
+ * The same call, with the reason kept instead of thrown away.
+ *
+ * `kimiJson` returning a bare `null` is right for every feature — a caller
+ * should not have to think about *why* the model was unavailable. But it made
+ * the one screen built to answer "why is this failing" unable to do so: the
+ * test button could only say *"the reason is in the failures list below"* and
+ * point at an undated list. Three rounds of "the key still is not working" went
+ * past on that. So the reason is now available to anything that asks for it,
+ * and `kimiJson` stays exactly as simple as it was.
+ */
+export async function kimiJsonResult<T>(req: KimiRequest): Promise<KimiResult<T>> {
+  const { key, variable } = kimiKeySource();
   if (!key) {
     // Not an error. The product is expected to run without a model configured,
     // and it is logged so the gap is visible rather than assumed.
-    await record(req, { ok: false, ms: 0, error: "No KIMI_API_KEY or MOONSHOT_API_KEY is set" });
-    return null;
+    const error = "No KIMI_API_KEY or MOONSHOT_API_KEY is set";
+    await record(req, { ok: false, ms: 0, error });
+    return { answer: null, error, ms: 0 };
   }
 
-  const base = (process.env.KIMI_BASE_URL || DEFAULT_BASE).replace(/\/+$/, "");
   const started = Date.now();
 
   const content: unknown[] = [{ type: "text", text: req.user }];
@@ -151,101 +264,122 @@ export async function kimiJson<T>(req: KimiRequest): Promise<T | null> {
     content.push({ type: "image_url", image_url: { url } });
   }
 
+  // Built as an object rather than inline, so a field the provider rejects can
+  // be removed and the call retried once. No `temperature`: K3 accepts only 1
+  // and refuses anything else outright, which is what the live key returned the
+  // moment it was finally accepted.
+  const body: Record<string, unknown> = {
+    model: kimiModel(),
+    max_tokens: DEFAULT_MAX_TOKENS,
+    reasoning_effort: process.env.KIMI_REASONING_EFFORT || DEFAULT_EFFORT,
+    messages: [
+      { role: "system", content: req.system },
+      { role: "user", content },
+    ],
+    // Deliberately not `strict: true`. Strict mode requires every property to
+    // be listed in `required` and `additionalProperties: false` throughout —
+    // which would mean no optional fields and a provider-side 400 for any
+    // schema that has one. Since the answer is validated against the same
+    // schema on arrival either way, the looser form buys the same safety
+    // without a class of rejection that would show up as "the feature silently
+    // does nothing".
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "answer", schema: req.schema },
+    },
+  };
+
+  let dropped: string | null = null;
+
   try {
-    const res = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: kimiModel(),
-        // No `temperature`. K3 is a reasoning model and accepts only 1 —
-        // anything else is refused outright with *"invalid temperature: only 1
-        // is allowed for this model"*, which is exactly what the live key
-        // returned once it was finally accepted. Sending the value it demands
-        // would be the same as not sending it, so the field is simply gone: one
-        // fewer parameter that can be wrong, and repeatability is already
-        // handled properly by `response_format` constraining the shape and by
-        // `matchesSchema` checking it on arrival.
-        max_tokens: DEFAULT_MAX_TOKENS,
-        reasoning_effort: process.env.KIMI_REASONING_EFFORT || DEFAULT_EFFORT,
-        messages: [
-          { role: "system", content: req.system },
-          { role: "user", content },
-        ],
-        // Deliberately not `strict: true`. Strict mode requires every property
-        // to be listed in `required` and `additionalProperties: false`
-        // throughout — which would mean no optional fields and a provider-side
-        // 400 for any schema that has one. Since the answer is validated
-        // against the same schema on arrival either way, the looser form buys
-        // the same safety without a class of rejection that would show up as
-        // "the feature silently does nothing".
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "answer", schema: req.schema },
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch(`${kimiBaseUrl()}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
         },
-      }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-
-    const data = (await res.json().catch(() => null)) as ChatResponse | null;
-    const ms = Date.now() - started;
-
-    if (!res.ok) {
-      // Their message distinguishes a bad key from a withdrawn model from a
-      // spent balance, and those need three different fixes.
-      await record(req, {
-        ok: false,
-        ms,
-        error: data?.error?.message ?? `Kimi refused the call (HTTP ${res.status}).`,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       });
-      return null;
-    }
 
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) {
-      // Named precisely, because the obvious reading of this is wrong. An empty
-      // completion from a reasoning model usually means the token budget went
-      // on thinking — the call succeeded and was billed. It is not a bad key.
+      const data = (await res.json().catch(() => null)) as ChatResponse | null;
+      const ms = Date.now() - started;
+
+      if (!res.ok) {
+        const provider = data?.error?.message ?? `Kimi refused the call (HTTP ${res.status}).`;
+
+        // A 400 naming a parameter we sent is our request being wrong, not the
+        // key. Drop that field and try once more rather than reporting a dead
+        // feature — exactly the failure `temperature` caused.
+        const field = res.status === 400 ? droppableField(provider, Object.keys(body)) : null;
+        if (field && attempt === 0) {
+          delete body[field];
+          dropped = field;
+          continue;
+        }
+
+        // Their wording distinguishes a bad key from a withdrawn model from a
+        // spent balance, and those need three different fixes. The endpoint is
+        // named alongside it because `Incorrect API key provided` is also what
+        // a valid .cn key gets from the .ai endpoint.
+        const error = `${provider} (${variable}, ${kimiBaseUrl()})`;
+        await record(req, { ok: false, ms, error });
+        return { answer: null, error, ms };
+      }
+
+      const text = data?.choices?.[0]?.message?.content;
+      if (!text) {
+        // Named precisely, because the obvious reading of this is wrong. An
+        // empty completion from a reasoning model usually means the token
+        // budget went on thinking — the call succeeded and was billed. It is
+        // not a bad key.
+        const error =
+          "Kimi answered but the content was empty — usually the token budget was spent on reasoning. Lower KIMI_REASONING_EFFORT or raise max_tokens. The call was still billed.";
+        await record(req, { ok: false, ms, tokens: data?.usage?.total_tokens, error });
+        return { answer: null, error, ms };
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        const error = "Kimi returned something that is not JSON.";
+        await record(req, { ok: false, ms, error });
+        return { answer: null, error, ms };
+      }
+
+      // Schema-constrained output is a request, not a guarantee. Checked again
+      // on arrival, because the alternative is a malformed object reaching a
+      // screen that shows somebody money.
+      if (!matchesSchema(parsed, req.schema)) {
+        const error = "Kimi's answer did not match the requested shape.";
+        await record(req, { ok: false, ms, error });
+        return { answer: null, error, ms };
+      }
+
       await record(req, {
-        ok: false,
+        ok: true,
         ms,
         tokens: data?.usage?.total_tokens,
-        error:
-          "Kimi answered but the content was empty — usually the token budget was spent on reasoning. Lower KIMI_REASONING_EFFORT or raise max_tokens. The call was still billed.",
+        // A success that only happened because a parameter was removed is still
+        // worth knowing about — silently working around a provider change is
+        // how the next surprise gets buried.
+        note: dropped ? `answered after dropping ${dropped}` : undefined,
       });
-      return null;
+      return { answer: parsed as T, error: null, ms };
     }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      await record(req, { ok: false, ms, error: "Kimi returned something that is not JSON." });
-      return null;
-    }
-
-    // Schema-constrained output is a request, not a guarantee. Checked again on
-    // arrival, because the alternative is a malformed object reaching a screen
-    // that shows somebody money.
-    if (!matchesSchema(parsed, req.schema)) {
-      await record(req, { ok: false, ms, error: "Kimi's answer did not match the requested shape." });
-      return null;
-    }
-
-    await record(req, { ok: true, ms, tokens: data?.usage?.total_tokens });
-    return parsed as T;
+    // Unreachable: the loop returns on every path.
+    return { answer: null, error: "No answer.", ms: Date.now() - started };
   } catch (e) {
     const message = e instanceof Error ? e.message : "unknown error";
-    await record(req, {
-      ok: false,
-      ms: Date.now() - started,
-      // A timeout is by far the most common failure and reads as nonsense
-      // otherwise ("The operation was aborted").
-      error: /abort|timeout/i.test(message) ? `No answer within ${TIMEOUT_MS / 1000}s.` : message,
-    });
-    return null;
+    // A timeout is by far the most common failure and reads as nonsense
+    // otherwise ("The operation was aborted").
+    const error = /abort|timeout/i.test(message) ? `No answer within ${TIMEOUT_MS / 1000}s.` : message;
+    const ms = Date.now() - started;
+    await record(req, { ok: false, ms, error });
+    return { answer: null, error, ms };
   }
 }
 
@@ -292,7 +426,7 @@ export function matchesSchema(value: unknown, schema: JsonSchema): boolean {
 
 async function record(
   req: KimiRequest,
-  outcome: { ok: boolean; ms: number; tokens?: number; error?: string }
+  outcome: { ok: boolean; ms: number; tokens?: number; error?: string; note?: string }
 ): Promise<void> {
   try {
     await prisma.aiCall.create({
@@ -302,10 +436,18 @@ async function record(
         ok: outcome.ok,
         ms: outcome.ms,
         tokens: outcome.tokens ?? null,
+        // Which build made the call. Without this a failure from a fixed bug is
+        // indistinguishable on screen from one happening right now, which is
+        // precisely how the last three rounds were spent.
+        buildRef: buildRef(),
         // Redacted here rather than at each call site: this is the single
         // funnel every error passes through on its way to storage, and a
         // provider message quoted verbatim is exactly how a key got out.
-        error: outcome.error ? redactSecrets(outcome.error).slice(0, 500) : null,
+        error: outcome.error
+          ? redactSecrets(outcome.error).slice(0, 500)
+          : outcome.note
+            ? redactSecrets(outcome.note).slice(0, 500)
+            : null,
         entityType: req.entityType ?? null,
         entityId: req.entityId ?? null,
       },

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
-import { kimiConfigured, kimiModel } from "@/lib/ai/kimi";
+import { kimiConfigured, kimiModel, kimiKeySource, kimiBaseUrl, unreadKeyVariables } from "@/lib/ai/kimi";
 import { redactSecrets } from "@/lib/redact";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,7 @@ export async function GET() {
 
   const since = new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-  const [byPurpose, totals, recentFailures] = await Promise.all([
+  const [byPurpose, totals, latestPerPurpose, recentFailures] = await Promise.all([
     prisma.aiCall.groupBy({
       by: ["purpose", "ok"],
       where: { createdAt: { gte: since } },
@@ -44,13 +44,27 @@ export async function GET() {
       _count: { _all: true },
       _sum: { tokens: true },
     }),
+    // The most recent call per feature. The week's totals cannot answer "is it
+    // working *now*", and a purpose that failed six times before a fix and
+    // succeeded once after it was still being reported as "failing every time".
+    prisma.aiCall.findMany({
+      where: { createdAt: { gte: since } },
+      distinct: ["purpose"],
+      orderBy: { createdAt: "desc" },
+      select: { purpose: true, ok: true },
+    }),
     prisma.aiCall.findMany({
       where: { ok: false, createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: 5,
-      select: { purpose: true, error: true, createdAt: true },
+      select: { purpose: true, error: true, createdAt: true, buildRef: true },
     }),
   ]);
+
+  const { variable, fingerprint } = kimiKeySource();
+  const build = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null;
+
+  const latest = new Map(latestPerPurpose.map((r) => [r.purpose, r.ok]));
 
   // Fold the ok/failed rows of each purpose into one line per feature.
   const purposes = new Map<string, { ok: number; failed: number; ms: number; tokens: number }>();
@@ -71,6 +85,21 @@ export async function GET() {
 
   return NextResponse.json({
     configured: kimiConfigured(),
+    // Which variable the key came from, and four characters of it. The owner
+    // said the key is set "in both but with different names" — and a key under
+    // a name nothing reads is completely silent: every screen still says a key
+    // is configured, because until now nothing ever asked *which*. Four
+    // characters is what Stripe and AWS show; enough to recognise a key you are
+    // holding, useless to anyone who is not.
+    keyVariable: variable,
+    keyFingerprint: fingerprint,
+    // Named because `Incorrect API key provided` is also what a perfectly valid
+    // api.moonshot.cn key gets from api.moonshot.ai. Same sentence, different
+    // fix, and no way to tell them apart without seeing the endpoint.
+    baseUrl: kimiBaseUrl(),
+    // Names only, never values.
+    unreadVariables: unreadKeyVariables(),
+    build,
     // Spending money on request is held to the same bar as every other
     // privileged action here.
     canTest: user.role === "OWNER",
@@ -79,7 +108,14 @@ export async function GET() {
     calls: totals._count._all,
     tokens: totals._sum.tokens ?? 0,
     purposes: [...purposes.entries()]
-      .map(([purpose, v]) => ({ purpose, ...v }))
+      .map(([purpose, v]) => ({
+        purpose,
+        ...v,
+        // Whether the *last* attempt worked. This is what the headline reads,
+        // because a fixed feature must stop being reported as broken the moment
+        // it works — not seven days later when the failures age out.
+        latestOk: latest.get(purpose) ?? false,
+      }))
       .sort((a, b) => b.ok + b.failed - (a.ok + a.failed)),
     failures: recentFailures.map((f) => ({
       purpose: f.purpose,
@@ -87,6 +123,10 @@ export async function GET() {
       // still hold a key, and a screen must not be the thing that shows it.
       error: f.error ? redactSecrets(f.error) : null,
       at: f.createdAt.toISOString(),
+      buildRef: f.buildRef,
+      // The single most useful bit on the screen: whether this failure could
+      // still be happening, or belongs to a build that is no longer running.
+      stale: Boolean(build && f.buildRef && f.buildRef !== build),
     })),
   });
 }
