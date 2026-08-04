@@ -23,7 +23,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * like that gets broken.
  */
 
-const MAY_BE_READ = new Set(["goods-receipts", "order-screenshots", "merchant-menus"]);
+const MAY_BE_READ = new Set([
+  "goods-receipts",
+  "order-screenshots",
+  "merchant-menus",
+  // Screenshots of a business's own page and photographs of the pharmacie de
+  // garde poster. Staff-uploaded, never a customer document.
+  "merchant-captures",
+]);
 
 const TTL_SECONDS = 5 * 60;
 

@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     // flow existed as a file and as nothing else.
     "goods-receipts",
     "merchant-menus",
+    "merchant-captures",
   ];
   if (!PRIVATE_BUCKETS.includes(bucket) || !key) {
     return NextResponse.json({ error: "Bad path" }, { status: 400 });

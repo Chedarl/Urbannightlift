@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, Trash2, Plus } from "lucide-react";
 
 import { Button } from "@/components/shared/Button";
+import { DutyPosterImport } from "@/components/admin/DutyPosterImport";
 
 /**
  * This week's pharmacie de garde.
@@ -88,9 +89,13 @@ export function PharmacyDutyRoster({
         searches for a pharmacy. Only verified pharmacies can be listed.
       </p>
 
+      {/* The whole roster from one photograph, before the row-at-a-time form.
+          Typing this out weekly is why it goes stale. */}
+      <DutyPosterImport />
+
       <div className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
         <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-mist-200">
-          <CalendarDays className="h-4 w-4 text-teal-300" /> Add this week&apos;s duty
+          <CalendarDays className="h-4 w-4 text-teal-300" /> Add this week&apos;s duty by hand
         </p>
         {pharmacies.length === 0 ? (
           <p className="text-xs text-mist-500">

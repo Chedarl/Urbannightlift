@@ -500,6 +500,7 @@ async function ensureStorageBuckets() {
     // A photographed price board. Private: it is a working document, and the
     // published version is the reviewed rows, not the snapshot.
     { name: "merchant-menus", public: false, types: IMAGE_TYPES, sizeMb: 8 },
+    { name: "merchant-captures", public: false, types: IMAGE_TYPES, sizeMb: 8 },
     { name: "merchant-logos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
     { name: "rider-documents", public: false, types: [...IMAGE_TYPES, "application/pdf"], sizeMb: 10 },
     { name: "rider-photos", public: true, types: IMAGE_TYPES, sizeMb: 5 },
