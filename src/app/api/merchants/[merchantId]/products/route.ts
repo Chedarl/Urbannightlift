@@ -76,6 +76,47 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
   return NextResponse.json({ product }, { status: 201 });
 }
 
+/**
+ * PATCH — staff: clear an item for customers to browse, or take it back off.
+ *
+ * Only meaningful for a pharmacy. Dispensing prescription medicine is
+ * controlled, so a pharmacy's price list is not published the way a menu is —
+ * each item is cleared individually by a person, and `otcApproved` defaults to
+ * false so forgetting to press this hides an item rather than exposing one.
+ * Audited, because "who said this was over-the-counter" is a question that could
+ * one day need an answer.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ merchantId: string }> }) {
+  const { merchantId } = await params;
+  const user = await getSessionUser();
+  if (!user || !ADMIN_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const productId = typeof body.productId === "string" ? body.productId : "";
+  const otcApproved = body.otcApproved === true;
+  if (!productId) return NextResponse.json({ error: "No product given" }, { status: 400 });
+
+  // Scoped to the merchant in the path, so a stray id cannot flip somebody
+  // else's product onto a browsing page.
+  const updated = await prisma.merchantProduct.updateMany({
+    where: { id: productId, merchantId },
+    data: { otcApproved },
+  });
+  if (updated.count === 0) return NextResponse.json({ error: "No such product" }, { status: 404 });
+
+  await recordAudit({
+    actor: { id: user.id, fullName: user.fullName, role: user.role },
+    action: otcApproved ? "merchant.product_otc_cleared" : "merchant.product_otc_withdrawn",
+    entityType: "merchant",
+    entityId: merchantId,
+    entityLabel: productId,
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
 /** DELETE — staff: remove a product (?productId=). */
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ merchantId: string }> }) {
   const { merchantId } = await params;

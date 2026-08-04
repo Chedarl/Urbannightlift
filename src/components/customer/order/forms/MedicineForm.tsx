@@ -16,6 +16,7 @@ import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
+import { PharmacyTonight } from "@/components/customer/pharmacy/PharmacyTonight";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -29,6 +30,7 @@ import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
+import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
 
 const ACCENT = "#2dd4bf";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -130,6 +132,63 @@ export function MedicineForm() {
     setValue("merchantId", m.id);
     setValue("serviceDetails.pharmacy" as never, m.merchantName as never);
     applySel("pickup", loc);
+  }
+
+  /**
+   * The same selection, made by tapping the "open tonight" list instead of
+   * typing a name into the search box. It has to land in exactly the same state
+   * — merchantId, pharmacy name, pickup pin — or the two ways of choosing a
+   * pharmacy would produce two different orders.
+   */
+  function pickBrowsed(p: BrowsePharmacy, loc: SelectedLocation | null) {
+    setMerchant({
+      id: p.id,
+      merchantName: p.name,
+      category: "PHARMACY",
+      subcategory: null,
+      neighbourhood: p.neighbourhood,
+      address: p.address,
+      landmark: p.landmark,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      zoneId: p.zoneId,
+      openingHours: null,
+      openNow: p.openNow,
+      open24h: p.open24h,
+      onDutyTonight: p.onDutyTonight,
+      phone: p.phone,
+      logoUrl: p.logoUrl,
+      socialUrl: null,
+      socialPlatform: null,
+      productCount: p.shelf.length,
+      distanceKm: null,
+    });
+    setPharmacyName(p.name);
+    setValue("merchantId", p.id);
+    setValue("serviceDetails.pharmacy" as never, p.name as never);
+    // Verified but never pinned: the location field below appears again and
+    // asks, rather than sending a rider to a name.
+    if (loc) applySel("pickup", loc);
+  }
+
+  /**
+   * A shelf item tapped. It fills a row in the medicine list the customer
+   * already has — it does not open a cart, and it does not price the order.
+   * The pharmacy's till decides the amount and the rider photographs the
+   * receipt, the same as every other shopping service here.
+   */
+  function addShelfItem(it: ShelfItem) {
+    const name = (fr && it.nameFr ? it.nameFr : it.name).slice(0, 80);
+    const rows = meds;
+    if (rows.some((m) => m?.name?.trim().toLowerCase() === name.toLowerCase())) return;
+
+    const blank = rows.findIndex((m) => !m?.name?.trim());
+    if (blank >= 0) {
+      setValue(`serviceDetails.meds.${blank}.name` as never, name as never, { shouldValidate: true });
+      setValue(`serviceDetails.meds.${blank}.dosage` as never, (it.unit ?? "") as never);
+    } else {
+      append({ name, dosage: it.unit ?? "", qty: 1 } as never);
+    }
   }
 
   /** Not catalogued — keep the name and ask where it is. */
@@ -272,6 +331,17 @@ export function MedicineForm() {
             <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Jean Claude" : "e.g. Jean Claude"} data-error={missing.includes(fr ? "Nom du patient" : "Patient full name") ? "true" : undefined} {...register("fullName")} />
           </div>
         </div>
+
+        {/* Who is actually open, before we ask anyone to type a name. Renders
+            nothing until pharmacies are verified, which is what an empty
+            catalogue should look like. */}
+        <PharmacyTonight
+          fr={fr}
+          accent={ACCENT}
+          selectedId={merchant?.id ?? null}
+          onPick={pickBrowsed}
+          onAddItem={addShelfItem}
+        />
 
         {/* Patient phone + pharmacy name */}
         <div className="grid gap-4 sm:grid-cols-2">

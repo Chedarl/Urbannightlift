@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Clock, MapPin, Phone, Search, Store, X } from "lucide-react";
 
-import { nearestZone, type ZoneTier } from "@/lib/orders/pricing";
-import { encodePlusCode } from "@/lib/locations/plusCode";
-import { tierToStatus, type SelectedLocation } from "@/lib/locations/types";
+import { merchantToLocation, type ZoneData } from "@/lib/locations/fromMerchant";
+import { type SelectedLocation } from "@/lib/locations/types";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { MerchantCategory } from "@prisma/client";
 
@@ -22,15 +21,6 @@ import type { MerchantCategory } from "@prisma/client";
  * favourite spot, so "not listed" stays one tap away and keeps the old
  * free-text behaviour intact.
  */
-
-interface ZoneData {
-  id: string;
-  zoneName: string;
-  tier: ZoneTier;
-  feeXaf: number;
-  centroidLat: number | null;
-  centroidLng: number | null;
-}
 
 export function MerchantField({
   category,
@@ -102,25 +92,7 @@ export function MerchantField({
       setOpen(false);
       return;
     }
-    const z = nearestZone(m.latitude, m.longitude, zones);
-    const location: SelectedLocation = {
-      primaryName: m.merchantName,
-      neighbourhood: m.neighbourhood ?? "Yaoundé",
-      arrondissement: "YAOUNDE_PERIPHERY",
-      latitude: m.latitude,
-      longitude: m.longitude,
-      plusCode: encodePlusCode(m.latitude, m.longitude) || null,
-      landmark: m.landmark ?? m.address ?? null,
-      directions: null,
-      contactAtLocation: m.phone,
-      zoneId: z?.id ?? null,
-      zoneName: z?.zoneName ?? null,
-      tier: z?.tier ?? null,
-      feeXaf: z?.feeXaf ?? null,
-      serviceStatus: tierToStatus(z?.tier ?? null),
-      source: "merchant",
-    };
-    onPick(m, location);
+    onPick(m, merchantToLocation({ ...m, latitude: m.latitude, longitude: m.longitude }, zones));
     setOpen(false);
     setQuery("");
   }

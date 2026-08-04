@@ -51,7 +51,7 @@ export default async function MerchantsPage({
         products: {
           where: { available: true },
           orderBy: [{ popularityRank: "desc" }, { name: "asc" }],
-          select: { id: true, name: true, priceXaf: true },
+          select: { id: true, name: true, priceXaf: true, otcApproved: true },
         },
       },
       // A business that filled in its own page answered us, which is the best
