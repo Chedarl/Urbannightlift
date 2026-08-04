@@ -22,7 +22,7 @@ import { useTiles, CARTO } from "@/lib/maps/useTiles";
  */
 const FAILURES_BEFORE_FALLBACK = 4;
 
-export function BaseTiles({ fr = false }: { fr?: boolean }) {
+export function BaseTiles({ fr = false, satellite = false }: { fr?: boolean; satellite?: boolean }) {
   const config = useTiles(fr);
   const [rejected, setRejected] = useState(false);
   const failures = useRef(0);
@@ -32,7 +32,15 @@ export function BaseTiles({ fr = false }: { fr?: boolean }) {
   // this point. Left alone that renders an *empty grid*, which is worse than
   // OpenStreetMap because the map looks broken rather than plain. So the client
   // makes its own last call and falls back too.
-  const active = rejected ? CARTO : config;
+  const base = rejected ? CARTO : config;
+
+  // Satellite is a view of the same provider, not a different provider, so it
+  // shares the fallback above: if the streets are being refused, the imagery
+  // will be too, and both land on CARTO rather than an empty grid.
+  const active =
+    satellite && !rejected && base.satelliteUrl
+      ? { ...base, url: base.satelliteUrl }
+      : base;
 
   return (
     <TileLayer

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Camera, ShieldAlert, AlertTriangle, Check, Navigation } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { PlusCodeLine } from "@/components/shared/PlusCodeLine";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { formatSlot } from "@/lib/orders/timeSlots";
 import { RecordPurchase } from "@/components/rider/RecordPurchase";
@@ -303,6 +304,9 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
           lng={order.pickupLng}
           text={order.pickupLocation}
         />
+        {/* Ten characters that name a 3x3m square. When the gate cannot be
+            found, this is what gets read down the phone. */}
+        <PlusCodeLine lat={order.pickupLat} lng={order.pickupLng} />
         <hr className="my-3 border-ink-700" />
         <p className="text-xs text-mist-500">{t("rider.order.delivery")}</p>
         <p className="font-medium">{order.deliveryLocation}</p>
@@ -313,6 +317,7 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
           lng={order.deliveryLng}
           text={order.deliveryLocation}
         />
+        <PlusCodeLine lat={order.deliveryLat} lng={order.deliveryLng} />
       </section>
 
       <section className={card}>

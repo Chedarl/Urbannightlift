@@ -20,6 +20,8 @@ export interface TileConfig {
   url: string;
   attribution: string;
   provider: TileProvider;
+  /** Present only on MapTiler. Absent means the toggle does not render. */
+  satelliteUrl?: string;
 }
 
 export const CARTO: TileConfig = {

@@ -55,6 +55,8 @@ export function maptilerStyle(): string {
 export interface MapTilerConfig {
   url: string;
   attribution: string;
+  /** The same area from above. Null on any provider that has no satellite. */
+  satelliteUrl?: string;
 }
 
 /**
@@ -76,6 +78,11 @@ export function maptilerConfig(): MapTilerConfig | null {
 
   return {
     url: `https://api.maptiler.com/maps/${encodeURIComponent(style)}/{z}/{x}/{y}@2x.png?key=${encodeURIComponent(key)}`,
+    // Yaoundé has few named streets and fewer street numbers, so a street map
+    // is often the *worse* picture: people recognise their own roof, their
+    // compound wall and the shape of the yard next door. Included on the same
+    // free plan as the streets, so it costs nothing to offer both.
+    satelliteUrl: `https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=${encodeURIComponent(key)}`,
     // Required by MapTiler's terms, and the OpenStreetMap credit under it is
     // required by ODbL. Both must stay visible.
     attribution:
