@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Shield, Clock, Radio, Check, MoonStar } from "lucide-react";
 import { Logo } from "@/components/shared/Logo";
+import { useTranslation } from "@/lib/i18n";
 
 const WatchMap = dynamic(() => import("@/components/customer/WatchMap").then((m) => m.WatchMap), { ssr: false });
 
@@ -20,6 +21,11 @@ const WatchMap = dynamic(() => import("@/components/customer/WatchMap").then((m)
  * delivery code, no phone number, no street address, no name, no price. The
  * destination is deliberately rounded to about a hundred metres — enough to
  * watch the rider converge, not enough to publish where somebody lives.
+ *
+ * Every line of it was English until now, which made it the worst instance of a
+ * problem the dictionary could not explain: 565 keys, complete on both sides,
+ * and a page that never asked it for anything. In a city that reads French this
+ * is the page a customer hands to somebody worried about them.
  */
 
 interface Watch {
@@ -38,16 +44,18 @@ interface Watch {
 
 const POLL_MS = 10_000;
 
-const STATUS_LINE: Record<string, string> = {
-  received: "Their order has been received.",
-  confirmed: "Their order is confirmed.",
-  pickup: "The rider is collecting the order.",
-  onTheWay: "The rider is on the way to them.",
-  delivered: "Delivered.",
-  cancelled: "This delivery was stopped.",
+const STATUS_LINE: Record<string, { en: string; fr: string }> = {
+  received: { en: "Their order has been received.", fr: "Leur commande a été reçue." },
+  confirmed: { en: "Their order is confirmed.", fr: "Leur commande est confirmée." },
+  pickup: { en: "The rider is collecting the order.", fr: "Le livreur récupère la commande." },
+  onTheWay: { en: "The rider is on the way to them.", fr: "Le livreur est en route vers eux." },
+  delivered: { en: "Delivered.", fr: "Livré." },
+  cancelled: { en: "This delivery was stopped.", fr: "Cette livraison a été arrêtée." },
 };
 
 export function WatchDelivery({ token }: { token: string }) {
+  const { locale } = useTranslation();
+  const fr = locale === "fr";
   const [data, setData] = useState<Watch | null>(null);
   const [dead, setDead] = useState(false);
   const [, setTick] = useState(0);
@@ -81,10 +89,11 @@ export function WatchDelivery({ token }: { token: string }) {
 
   if (dead) {
     return (
-      <Frame>
+      <Frame fr={fr}>
         <p className="text-sm text-mist-300">
-          This link has expired. Watch links stop working an hour after the delivery finishes, so they cannot keep
-          following somebody around after the night is over.
+          {fr
+            ? "Ce lien a expiré. Les liens de suivi cessent de fonctionner une heure après la fin de la livraison, pour qu'ils ne puissent pas continuer à suivre quelqu'un une fois la nuit terminée."
+            : "This link has expired. Watch links stop working an hour after the delivery finishes, so they cannot keep following somebody around after the night is over."}
         </p>
       </Frame>
     );
@@ -92,26 +101,36 @@ export function WatchDelivery({ token }: { token: string }) {
 
   if (!data) {
     return (
-      <Frame>
-        <p className="text-sm text-mist-400">Loading…</p>
+      <Frame fr={fr}>
+        <p className="text-sm text-mist-400">{fr ? "Chargement…" : "Loading…"}</p>
       </Frame>
     );
   }
 
   if (data.over) {
     return (
-      <Frame>
+      <Frame fr={fr}>
         <div className="flex flex-col items-center gap-3 py-6 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-safe/15">
             <Check className="h-7 w-7 text-safe" />
           </span>
           <h1 className="font-display text-xl font-bold text-mist-100">
-            {data.arrived ? "They got their delivery." : "This delivery is over."}
+            {data.arrived
+              ? fr
+                ? "Ils ont reçu leur livraison."
+                : "They got their delivery."
+              : fr
+                ? "Cette livraison est terminée."
+                : "This delivery is over."}
           </h1>
           <p className="text-sm text-mist-400">
             {data.arrived
-              ? "The goods are in their hands. You can stop watching."
-              : "Nothing more to follow here."}
+              ? fr
+                ? "Ils ont les articles en main. Vous pouvez arrêter de suivre."
+                : "The goods are in their hands. You can stop watching."
+              : fr
+                ? "Il n'y a plus rien à suivre ici."
+                : "Nothing more to follow here."}
           </p>
         </div>
       </Frame>
@@ -121,30 +140,50 @@ export function WatchDelivery({ token }: { token: string }) {
   const fixAge = data.rider?.at ? Math.floor((Date.now() - new Date(data.rider.at).getTime()) / 60_000) : null;
   const stale = fixAge != null && fixAge >= 3;
 
+  const line = STATUS_LINE[data.statusKey ?? ""];
+
   return (
-    <Frame>
+    <Frame fr={fr}>
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="font-display text-xl font-bold text-mist-100">
-            {data.riderFirstName ? `${data.riderFirstName} is bringing their delivery.` : "Their delivery is on its way."}
+            {data.riderFirstName
+              ? fr
+                ? `${data.riderFirstName} apporte leur livraison.`
+                : `${data.riderFirstName} is bringing their delivery.`
+              : fr
+                ? "Leur livraison est en route."
+                : "Their delivery is on its way."}
           </h1>
           <p className="mt-1 text-sm text-mist-400">
-            {STATUS_LINE[data.statusKey ?? ""] ?? "Following their delivery."}
+            {line
+              ? fr
+                ? line.fr
+                : line.en
+              : fr
+                ? "Suivi de leur livraison."
+                : "Following their delivery."}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {data.etaMinutes != null && (
             <Chip icon={<Clock className="h-3.5 w-3.5" />} tone="gold">
-              About {data.etaMinutes} min away
+              {fr ? `À environ ${data.etaMinutes} min` : `About ${data.etaMinutes} min away`}
             </Chip>
           )}
           <Chip icon={<Radio className="h-3.5 w-3.5" />} tone={stale ? "muted" : "safe"}>
             {data.rider
               ? fixAge && fixAge > 0
-                ? `Position ${fixAge} min ago`
-                : "Position live"
-              : "Waiting for their position"}
+                ? fr
+                  ? `Position il y a ${fixAge} min`
+                  : `Position ${fixAge} min ago`
+                : fr
+                  ? "Position en direct"
+                  : "Position live"
+              : fr
+                ? "En attente de leur position"
+                : "Waiting for their position"}
           </Chip>
           {data.vehicleRef && <Chip tone="muted">{data.vehicleRef}</Chip>}
         </div>
@@ -154,9 +193,9 @@ export function WatchDelivery({ token }: { token: string }) {
         <p className="flex items-start gap-2 rounded-xl border border-violet-500/30 bg-violet-950/20 p-3 text-xs leading-relaxed text-mist-400">
           <Shield className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
           <span>
-            You are watching a delivery, not a person&apos;s details. This page never shows their name, their phone
-            number, their address or their delivery code — the destination is deliberately approximate. It stops
-            working an hour after the delivery finishes.
+            {fr
+              ? "Vous suivez une livraison, pas les informations d'une personne. Cette page n'affiche jamais leur nom, leur numéro, leur adresse ni leur code de livraison — la destination est volontairement approximative. Elle cesse de fonctionner une heure après la fin de la livraison."
+              : "You are watching a delivery, not a person's details. This page never shows their name, their phone number, their address or their delivery code — the destination is deliberately approximate. It stops working an hour after the delivery finishes."}
           </span>
         </p>
       </div>
@@ -164,18 +203,18 @@ export function WatchDelivery({ token }: { token: string }) {
   );
 }
 
-function Frame({ children }: { children: React.ReactNode }) {
+function Frame({ children, fr }: { children: React.ReactNode; fr: boolean }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <Logo />
         <span className="flex items-center gap-1.5 text-[11px] font-medium text-violet-300">
-          <MoonStar className="h-3.5 w-3.5" /> Night watch
+          <MoonStar className="h-3.5 w-3.5" /> {fr ? "Veille de nuit" : "Night watch"}
         </span>
       </div>
       {children}
       <p className="mt-auto pt-6 text-center text-[11px] text-mist-600">
-        Urban Night Lift · Yaoundé · 6 PM – 4 AM
+        {fr ? "Urban Night Lift · Yaoundé · 18h – 4h" : "Urban Night Lift · Yaoundé · 6 PM – 4 AM"}
       </p>
     </main>
   );

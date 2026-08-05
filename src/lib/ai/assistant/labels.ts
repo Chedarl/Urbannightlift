@@ -43,6 +43,3 @@ const FR: Record<ServiceType, string> = {
 export function serviceLabels(fr: boolean): Record<ServiceType, string> {
   return fr ? FR : EN;
 }
-
-/** @deprecated use serviceLabels(fr) — kept so nothing breaks mid-refactor. */
-export const SERVICE_LABELS = EN;
