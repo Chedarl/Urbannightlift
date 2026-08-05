@@ -32,6 +32,9 @@ interface Turn {
   from: "you" | "unl";
   text: string;
   actions?: Action[];
+  followUps?: string[];
+  /** Still arriving. Renders with a caret so the wait reads as writing. */
+  streaming?: boolean;
 }
 
 /**
@@ -104,36 +107,90 @@ export function AssistantSheet() {
     // server ignores it entirely for a signed-in customer and reads their own
     // rows instead, so this can never put words in our mouth.
     const history = turns.map((t) => ({ role: t.from, text: t.text }));
-    setTurns((prev) => [...prev, { from: "you", text: asked }]);
+    setTurns((prev) => [...prev, { from: "you", text: asked }, { from: "unl", text: "", streaming: true }]);
     setQuestion("");
     setBusy(true);
+
+    /** Replace the answer being written, wherever it ended up in the list. */
+    function patch(update: Partial<Turn>) {
+      setTurns((prev) => {
+        const next = [...prev];
+        for (let i = next.length - 1; i >= 0; i--) {
+          if (next[i].from === "unl" && next[i].streaming) {
+            next[i] = { ...next[i], ...update };
+            break;
+          }
+        }
+        return next;
+      });
+    }
+
     try {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: asked, fr, history }),
       });
-      const data = await res.json();
-      setTurns((prev) => [
-        ...prev,
-        {
-          from: "unl",
-          text:
-            data.reply ??
-            (fr ? "Je n'ai pas pu répondre." : "I couldn't answer that."),
+
+      // The not-configured and rate-limited replies are plain JSON — there is
+      // nothing to stream when the answer is a fixed sentence.
+      if (!res.body || !res.headers.get("content-type")?.includes("event-stream")) {
+        const data = await res.json().catch(() => ({}));
+        patch({
+          text: data.reply ?? (fr ? "Je n'ai pas pu répondre." : "I couldn't answer that."),
           actions: Array.isArray(data.actions) ? data.actions : [],
-        },
-      ]);
+          streaming: false,
+        });
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let pending = "";
+      let shown = "";
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        pending += decoder.decode(value, { stream: true });
+        // Events are blank-line separated; a chunk can end mid-event, so the
+        // tail is carried over rather than parsed.
+        const events = pending.split("\n\n");
+        pending = events.pop() ?? "";
+
+        for (const raw of events) {
+          const line = raw.split("\n").find((l) => l.startsWith("data:"));
+          if (!line) continue;
+          let payload: { text?: string; reply?: string; actions?: Action[]; followUps?: string[] };
+          try {
+            payload = JSON.parse(line.slice(5).trim());
+          } catch {
+            continue;
+          }
+
+          if (raw.includes("event: delta") && typeof payload.text === "string") {
+            shown += payload.text;
+            patch({ text: shown });
+          } else if (raw.includes("event: done")) {
+            patch({
+              text: payload.reply ?? shown,
+              actions: payload.actions ?? [],
+              followUps: payload.followUps ?? [],
+              streaming: false,
+            });
+          }
+        }
+      }
+
+      // A stream that ended without a done event still leaves what was written.
+      patch({ streaming: false });
     } catch {
-      setTurns((prev) => [
-        ...prev,
-        {
-          from: "unl",
-          text: fr
-            ? "Je n'ai pas pu joindre le serveur. Réessayez dans un instant."
-            : "I couldn't reach the server. Try again in a moment.",
-        },
-      ]);
+      patch({
+        text: fr
+          ? "Je n'ai pas pu joindre le serveur. Réessayez dans un instant."
+          : "I couldn't reach the server. Try again in a moment.",
+        streaming: false,
+      });
     } finally {
       setBusy(false);
     }
@@ -215,6 +272,11 @@ export function AssistantSheet() {
                 }`}
               >
                 {turn.text}
+                {/* A caret while the words are still arriving. The wait now
+                    reads as writing rather than as a stalled request. */}
+                {turn.streaming && (
+                  <span className="ml-0.5 inline-block h-3.5 w-[2px] animate-pulse bg-violet-300 align-middle" />
+                )}
               </div>
 
               {/*
@@ -237,10 +299,37 @@ export function AssistantSheet() {
                   ))}
                 </div>
               )}
+
+              {/*
+                What they might ask next, in their words. A chat that answers
+                and stops is a search box; these are what carry a conversation
+                for somebody who does not know what else we can tell them.
+                Deliberately drawn unlike the action buttons — one of these asks
+                a question, the other takes you somewhere.
+              */}
+              {!turn.streaming && turn.followUps && turn.followUps.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {turn.followUps.map((q, j) => (
+                    <button
+                      key={j}
+                      type="button"
+                      onClick={() => ask(q)}
+                      disabled={busy}
+                      className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1 text-[11px] text-mist-400 hover:border-violet-500 hover:text-mist-200 disabled:opacity-50"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 
-          {busy && (
+          {/*
+            Only until the first word lands. Once text is arriving the text is
+            the progress, and a spinner beside it is noise.
+          */}
+          {busy && !turns.some((t) => t.streaming && t.text.length > 0) && (
             <p className="flex items-center gap-2 self-start text-xs text-mist-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {fr ? "Je vérifie nos informations…" : "Checking our information…"}

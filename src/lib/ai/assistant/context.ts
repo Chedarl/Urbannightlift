@@ -118,6 +118,10 @@ the service types below), OPEN_CASE (to reach a person), SHOW_OPEN_NOW.
 Give each a short button label in the language you are answering in. You are
 suggesting a button, not doing anything — the customer taps it.
 
+Also give two or three followUps: short questions THEY might ask next, in their
+words, in the language you are answering in. Only things you could actually
+answer from what is below.
+
 WHAT IS TRUE RIGHT NOW
 Hours: ${facts.hoursText}. We are ${facts.openNow ? "open" : "closed"} at this moment.
 Services on tonight: ${facts.services.map((s) => `${s.label} (${s.type})`).join(", ") || "none"}.
@@ -178,12 +182,35 @@ export const ANSWER_SCHEMA = {
         },
       },
     },
+    followUps: { type: "array", items: { type: "string" } },
   },
 } as const;
 
 export interface AssistantAnswer {
   reply: string;
   actions?: unknown;
+  /**
+   * Two or three things they might ask next.
+   *
+   * A chat that answers and stops is a search box. The chips are what make it
+   * a conversation for somebody who does not know what else we can tell them —
+   * and they cost nothing, because the model is already in the sentence.
+   */
+  followUps?: unknown;
+}
+
+/** At most three, short, and never anything but text on a button. */
+export function acceptFollowUps(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw) {
+    const text = typeof item === "string" ? item.trim().slice(0, 60) : "";
+    if (text.length < 4) continue;
+    if (out.some((o) => o.toLowerCase() === text.toLowerCase())) continue;
+    out.push(text);
+    if (out.length === 3) break;
+  }
+  return out;
 }
 
 /** What the caller sends back to the browser. */
