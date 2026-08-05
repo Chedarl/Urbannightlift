@@ -42,7 +42,10 @@ interface Draft {
   nightOpen: boolean | null;
   open24h: boolean | null;
   socialUrl: string | null;
+  website: string | null;
   products: { name: string; priceXaf: number | null }[];
+  /** What the model says it could read. Shown, not saved. */
+  sawText?: string | null;
 }
 
 const CATEGORIES = ["FOOD", "PHARMACY", "GROCERY", "GENERAL_STORE", "OTHER"];
@@ -62,6 +65,8 @@ export function MerchantCapture() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** What the last failed read managed to see. The end of guessing. */
+  const [lastSaw, setLastSaw] = useState<string | null>(null);
 
   function edit(index: number, patch: Partial<Draft>) {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
@@ -80,11 +85,13 @@ export function MerchantCapture() {
     });
     const data = await res.json();
     if (data.draft) {
-      setDrafts((prev) => [...prev, data.draft]);
+      setDrafts((prev) => [...prev, { ...data.draft, sawText: data.sawText ?? null }]);
       return null;
     }
-    // The provider's own sentence. This used to be a generic apology while the
-    // real cause sat in a log on a different screen.
+    // The provider's own sentence, and what it managed to read. A failure with
+    // a full transcription and a failure with an empty one are different
+    // problems, and they used to look identical.
+    setLastSaw(data.sawText ?? null);
     return data.note ?? data.error ?? "Nothing came back.";
   }
 
@@ -92,6 +99,7 @@ export function MerchantCapture() {
     setBusy(true);
     setError(null);
     setNote(null);
+    setLastSaw(null);
     try {
       const failed = await read({ thread });
       if (failed) setNote(failed);
@@ -107,6 +115,7 @@ export function MerchantCapture() {
   async function onPick(files: File[]) {
     setError(null);
     setNote(null);
+    setLastSaw(null);
     setBusy(true);
     setProgress({ done: 0, total: files.length });
 
@@ -180,6 +189,7 @@ export function MerchantCapture() {
           nightOpen: draft.nightOpen === true,
           open24h: draft.open24h === true,
           socialUrl: draft.socialUrl,
+          website: draft.website,
         }),
       });
       const data = await res.json();
@@ -255,6 +265,24 @@ export function MerchantCapture() {
       {error && <p className="mt-2 text-xs text-restricted">{error}</p>}
       {note && <p className="mt-2 text-xs leading-relaxed text-mist-400">{note}</p>}
 
+      {/*
+        What it could actually read, on a capture that produced nothing.
+        A full transcription here means the picture was fine and the page was
+        not a business page. An empty one means retake the photograph. Those
+        need opposite responses and used to look identical on screen, which is
+        where several rounds of this went.
+      */}
+      {lastSaw && (
+        <details className="mt-1">
+          <summary className="cursor-pointer text-[11px] text-mist-500 hover:text-mist-300">
+            What Kimi could read
+          </summary>
+          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-[10px] leading-relaxed text-mist-400">
+            {lastSaw}
+          </pre>
+        </details>
+      )}
+
       {drafts.map((draft, index) => {
         const missing = missingForMerchant(draft);
         return (
@@ -320,9 +348,26 @@ export function MerchantCapture() {
             <input
               value={draft.address ?? ""}
               onChange={(e) => edit(index, { address: e.target.value || null })}
-              placeholder="Where it is — street, landmark"
+              placeholder="Where it is — street or landmark (optional)"
               className={field}
             />
+
+            <div className="flex gap-2">
+              <input
+                value={draft.socialUrl ?? ""}
+                onChange={(e) => edit(index, { socialUrl: e.target.value || null })}
+                placeholder="Their Instagram / Facebook"
+                className={field}
+              />
+              {/* Their own site, which is what makes the menu-draft tool usable
+                  on this business later — and what the owner asked for. */}
+              <input
+                value={draft.website ?? ""}
+                onChange={(e) => edit(index, { website: e.target.value || null })}
+                placeholder="Their website"
+                className={field}
+              />
+            </div>
 
             <div className="flex gap-2">
               <input
@@ -381,6 +426,18 @@ export function MerchantCapture() {
             */}
             {missing.length > 0 && (
               <p className="text-[11px] text-caution">{describeMissing(missing)}</p>
+            )}
+
+            {/* Check a field against the page rather than against memory. */}
+            {draft.sawText && (
+              <details>
+                <summary className="cursor-pointer text-[11px] text-mist-500 hover:text-mist-300">
+                  What Kimi read off this picture
+                </summary>
+                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-[10px] leading-relaxed text-mist-400">
+                  {draft.sawText}
+                </pre>
+              </details>
             )}
 
             <Button

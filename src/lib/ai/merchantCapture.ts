@@ -50,6 +50,8 @@ export interface MerchantDraft {
   nightOpen: boolean | null;
   open24h: boolean | null;
   socialUrl: string | null;
+  /** Their own site, if the page links one. Makes the menu-draft tool usable. */
+  website: string | null;
   /** Anything priced that was visible. Fed into the products editor, not saved. */
   products: { name: string; priceXaf: number | null }[];
 }
@@ -58,6 +60,18 @@ export interface CaptureAnswer {
   readable?: boolean;
   /** What the picture actually is. The field that stops a menu becoming a shop. */
   looksLike?: string;
+  /**
+   * Everything legible in the picture, before any of it becomes a field.
+   *
+   * Two jobs. Models fill structured fields markedly better when they read the
+   * image out first — the extraction stops being a guess about layout and
+   * becomes a lookup over text they have already written. And it is the
+   * diagnostic that ends the guessing: "the photo was unreadable" and "it read
+   * the whole page and filled nothing" need opposite fixes and were
+   * indistinguishable on screen.
+   */
+  sawText?: string;
+  website?: string | null;
   merchantName?: string | null;
   category?: string | null;
   subcategory?: string | null;
@@ -77,6 +91,8 @@ const SCHEMA = {
   properties: {
     readable: { type: "boolean" },
     looksLike: { type: "string" },
+    sawText: { type: "string" },
+    website: { type: "string" },
     merchantName: { type: "string" },
     category: { type: "string" },
     subcategory: { type: "string" },
@@ -119,25 +135,40 @@ Rules:
   after 8pm; open24h only if it says 24h or "24/24". Leave both out if unstated —
   do not infer late opening from a business type.
 - prices are in XAF (FCFA). Return plain integers with no separators. Never
-  estimate a price that is not written down.`;
+  estimate a price that is not written down.
+- website: their own site or ordering page, including a "link in bio". Not their
+  Instagram or Facebook URL — that goes in socialUrl.`;
 
 const SCREENSHOT_SYSTEM = `${RULES}
 
-You are reading a screenshot of a business's own social media page or website.
-Take the name, contact details, location and hours from what is on screen.
+You are reading a screenshot of a business's own page — Instagram, Facebook,
+TikTok, WhatsApp Business, or their website. It was taken on a phone, so expect
+a status bar, app chrome, and a layout that may be cropped.
 
-FIRST, say what the picture actually is, in looksLike:
-- "business_page" — a profile, a shop front page, a website header: something
-  that identifies WHO a business is.
-- "menu" — a menu, a price board, a list of dishes or products with prices.
+STEP 1 — sawText. Write out EVERY piece of text you can read in the picture,
+including the handle, the bio, the highlight labels, the buttons, anything
+overlaid on the images, and any phone number or link however small. Do not
+summarise and do not tidy it; copy it. Nothing else you do matters as much,
+because everything below is read out of this.
+
+STEP 2 — looksLike, one of:
+- "business_page" — a profile, a shop front, a website header: anything that
+  identifies WHO a business is.
+- "menu" — a menu, a price board, a list of dishes or products with prices, and
+  nothing identifying the business itself.
 - "receipt" — a till receipt or an invoice.
-- "other" — anything else.
+- "other" — you genuinely cannot tell.
+A menu is not a business and a menu's heading is not a business's name. If it is
+plainly a menu or a receipt, return sawText and looksLike and NOTHING else.
+If you are unsure, say "other" and still fill in whatever you can — a photograph
+of a shop front with a name and a number on the awning is a perfectly good
+capture, and throwing it away helps nobody.
 
-This matters more than the rest. A menu is not a business, and a menu's heading
-is not a business's name. If looksLike is anything but "business_page", return
-looksLike and NOTHING else — no merchantName, no phone, no address. Somebody
-photographing a menu wants their prices read, and inventing a shop out of it
-puts a business in the catalogue that nobody has ever confirmed exists.`;
+STEP 3 — fill the fields from sawText. A Cameroonian business page usually
+carries the name in the display name, the trade in the bio, a 6XX XX XX XX
+number in the bio or a call button, the quartier as a word rather than an
+address, and hours as something like "18h - 02h". Take what is there and leave
+the rest out.`;
 
 const THREAD_SYSTEM = `${RULES}
 
@@ -190,6 +221,7 @@ export function shapeDraft(answer: CaptureAnswer): MerchantDraft | null {
     nightOpen: typeof answer.nightOpen === "boolean" ? answer.nightOpen : null,
     open24h: typeof answer.open24h === "boolean" ? answer.open24h : null,
     socialUrl: clean(answer.socialUrl, 200),
+    website: clean(answer.website, 200),
     products: (answer.products ?? [])
       .map((p) => ({
         name: clean(p?.name, 80) ?? "",
@@ -215,28 +247,53 @@ export function shapeDraft(answer: CaptureAnswer): MerchantDraft | null {
 export interface CaptureResult {
   draft: MerchantDraft | null;
   error: string | null;
+  /**
+   * What the model says it could read in the picture.
+   *
+   * Returned whether or not a draft came out, because the two failures it tells
+   * apart need opposite fixes: a blank `sawText` means the photograph is the
+   * problem, and a full one beside empty fields means the extraction is. Every
+   * round of this so far has been spent guessing between them.
+   */
+  sawText: string | null;
 }
 
 /** A screenshot of a business's own page, read into a draft. */
 export async function fromScreenshot(photoPath: string | null): Promise<CaptureResult> {
-  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured." };
-  if (!photoPath) return { draft: null, error: "No photo was given." };
+  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured.", sawText: null };
+  if (!photoPath) return { draft: null, error: "No photo was given.", sawText: null };
 
   // Sniffed from the bytes, so a mislabelled upload says what it actually is
   // rather than becoming "invalid or unsupported image format" at the provider.
   const image = await readImage(photoPath);
   if (!image.dataUrl) {
-    return { draft: null, error: image.problem ?? "Couldn't read that file." };
+    return { draft: null, error: image.problem ?? "Couldn't read that file.", sawText: null };
   }
 
   const result = await kimiJsonResult<CaptureAnswer>({
     purpose: "merchant.screenshot",
     system: SCREENSHOT_SYSTEM,
-    user: "Read this business page and return its details.",
+    user: "Read this business page. Transcribe everything legible first, then fill in what you can.",
     images: [image.dataUrl],
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
-  return finish(result);
+
+  const first = finish(result);
+  // One retry, and only in the case that is worth one: it clearly read the
+  // picture and produced no name anyway. Anything else — an unreadable file, a
+  // menu, a provider error — is answered, not repeated.
+  if (!first.draft && (first.sawText ?? "").length > 40 && !isWrongTool(result.answer)) {
+    const retry = await kimiJsonResult<CaptureAnswer>({
+      purpose: "merchant.screenshot",
+      system: SCREENSHOT_SYSTEM,
+      user: `You read this from the picture:\n\n"""${first.sawText}"""\n\nThat text names a business. Give the merchantName, and whatever phone number, quartier, hours and links are in it.`,
+      images: [image.dataUrl],
+      schema: SCHEMA as unknown as Record<string, unknown>,
+    });
+    const second = finish(retry);
+    if (second.draft) return { ...second, sawText: second.sawText ?? first.sawText };
+  }
+  return first;
 }
 
 /**
@@ -247,10 +304,10 @@ export async function fromScreenshot(photoPath: string | null): Promise<CaptureR
  * the thread is never stored.
  */
 export async function fromThread(text: string): Promise<CaptureResult> {
-  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured." };
+  if (!kimiConfigured()) return { draft: null, error: "No Kimi key is configured.", sawText: null };
   const body = text.trim().slice(0, 6000);
   if (body.length < 20) {
-    return { draft: null, error: "That is too short to find any business details in." };
+    return { draft: null, error: "That is too short to find any business details in.", sawText: null };
   }
 
   const result = await kimiJsonResult<CaptureAnswer>({
@@ -269,30 +326,62 @@ export async function fromThread(text: string): Promise<CaptureResult> {
  * make the page out — and is reported as such rather than as a failure, because
  * the two need different responses from the person holding the phone.
  */
-/** What each kind of picture is, and where it should have gone instead. */
-const WRONG_TOOL: Record<string, string> = {
+/**
+ * The two pictures that must never become a business, and where they belong.
+ *
+ * `other` is deliberately **not** here. It was, and that was a mistake: a
+ * screenshot the model is merely unsure about — a shop front, an unusual profile
+ * layout, a cropped page — came back "other" and the entire capture was thrown
+ * away with a message telling the owner to photograph the profile they had just
+ * photographed. The check that stops a menu becoming a restaurant is worth
+ * keeping; the one that discarded good captures is not.
+ */
+export const WRONG_TOOL: Record<string, string> = {
   menu: "That is a menu or a price list, not a business page. It would have become a restaurant nobody has confirmed exists. Save the business first, then open its row and use \u201cPhotograph their menu\u201d to read the prices onto it.",
   receipt: "That is a receipt. Receipts are read automatically on the order the rider recorded them against — there is nothing to do here.",
-  other: "That does not look like a business page. Capture the profile or the shop front — the part with the name and the phone number.",
 };
 
+/** Whether this answer is a picture we deliberately refuse rather than a failure. */
+function isWrongTool(answer: CaptureAnswer | null): boolean {
+  const kind = answer?.looksLike?.trim().toLowerCase();
+  return Boolean(kind && kind in WRONG_TOOL);
+}
+
+/**
+ * One place where a model answer becomes a draft or a sentence.
+ *
+ * `readable: false` is the model doing the right thing — saying it could not
+ * make the page out — and is reported as such rather than as a failure, because
+ * the two need different responses from the person holding the phone.
+ */
 function finish(result: { answer: CaptureAnswer | null; error: string | null }): CaptureResult {
-  if (!result.answer) return { draft: null, error: result.error ?? "No answer came back." };
-  if (result.answer.readable === false) {
-    return { draft: null, error: "Couldn't make out a business page in that. Try a clearer capture." };
+  const sawText = result.answer?.sawText?.trim().slice(0, 2000) || null;
+  if (!result.answer) return { draft: null, error: result.error ?? "No answer came back.", sawText: null };
+
+  const kind = result.answer.looksLike?.trim().toLowerCase();
+  if (kind && WRONG_TOOL[kind]) {
+    return { draft: null, error: WRONG_TOOL[kind], sawText };
   }
 
-  // The check that stops every photograph becoming a new restaurant. A menu
-  // photographed into this panel used to produce a merchant named after the
-  // menu's heading — a business in the catalogue that nobody had confirmed and
-  // that a rider could be sent to.
-  const kind = result.answer.looksLike?.trim().toLowerCase();
-  if (kind && kind !== "business_page" && WRONG_TOOL[kind]) {
-    return { draft: null, error: WRONG_TOOL[kind] };
+  if (result.answer.readable === false) {
+    return {
+      draft: null,
+      error: "Couldn't make out a business page in that. Try a clearer capture.",
+      sawText,
+    };
   }
+
   const draft = shapeDraft(result.answer);
   return {
     draft,
-    error: draft ? null : "Read it, but found no business name — so there is nothing to save yet.",
+    // Says which half failed, rather than a shrug. If it transcribed the page
+    // and still found no name, the picture was fine and the page was not a
+    // business page; if it saw nothing, the photograph is the thing to retake.
+    error: draft
+      ? null
+      : sawText
+        ? "Read the picture, but found no business name in it — check what it saw below."
+        : "Couldn't read anything in that picture. Try a clearer, closer capture.",
+    sawText,
   };
 }

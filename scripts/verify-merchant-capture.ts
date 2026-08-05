@@ -20,7 +20,7 @@
  *
  * Run: npx tsx scripts/verify-merchant-capture.ts
  */
-import { shapeDraft, type CaptureAnswer } from "../src/lib/ai/merchantCapture";
+import { shapeDraft, WRONG_TOOL, type CaptureAnswer } from "../src/lib/ai/merchantCapture";
 import { shapeDutyRows } from "../src/lib/ai/dutyPoster";
 
 let failures = 0;
@@ -106,6 +106,35 @@ check(
   "a business page is still classified as one",
   shapeDraft({ looksLike: "business_page", merchantName: "Chez Maman Josephine" })!.merchantName ===
     "Chez Maman Josephine"
+);
+
+console.log("\nBut only a menu and a receipt are refused");
+// "other" used to be refused too, and that threw away good captures: a shop
+// front, a cropped profile, an unusual layout all come back "other", and the
+// owner was told to photograph the profile they had just photographed.
+check(
+  "menu and receipt are the whole refusal list",
+  JSON.stringify(Object.keys(WRONG_TOOL).sort()) === JSON.stringify(["menu", "receipt"]),
+  "an uncertain classification must not cost a capture that is perfectly usable"
+);
+check("and each names where it should have gone", Object.values(WRONG_TOOL).every((m) => m.length > 40));
+
+console.log("\nThe site is picked up too, which is what makes the menu tool usable");
+check(
+  "a website survives",
+  shapeDraft({ merchantName: "Dolcezza", website: "https://dolcezza.cm" })!.website === "https://dolcezza.cm"
+);
+check("a missing one is null", shapeDraft({ merchantName: "X Snack" })!.website === null);
+check(
+  "and it is kept separate from the social page",
+  (() => {
+    const d = shapeDraft({
+      merchantName: "X",
+      website: "https://x.cm",
+      socialUrl: "https://instagram.com/x",
+    })!;
+    return d.website === "https://x.cm" && d.socialUrl === "https://instagram.com/x";
+  })()
 );
 
 console.log("\nThe duty roster is stricter — a wrong row sends somebody out at 2 AM");
