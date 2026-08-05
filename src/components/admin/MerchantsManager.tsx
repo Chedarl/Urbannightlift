@@ -13,6 +13,7 @@ import { normalizePhone, cn } from "@/lib/utils";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantProducts";
 import { AvailabilityPing } from "@/components/admin/AvailabilityPing";
+import { DangerDelete } from "@/components/admin/DangerDelete";
 import { MerchantListImport } from "@/components/admin/MerchantListImport";
 import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
@@ -84,6 +85,7 @@ export function MerchantsManager({
   total,
   liveCount,
   queueCount,
+  canDelete = false,
 }: {
   merchants: MerchantItem[];
   onDuty: DutyRow[];
@@ -95,6 +97,8 @@ export function MerchantsManager({
   total: number;
   liveCount: number;
   queueCount: number;
+  /** Owner, while rehearsing. The endpoint checks it again. */
+  canDelete?: boolean;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -441,6 +445,18 @@ export function MerchantsManager({
                   checkedAt={m.availabilityCheckedAt}
                   itemCount={m.products.length}
                 />
+              )}
+
+              {/* Trial cleanup only. Gone the moment test mode goes off. */}
+              {canDelete && (
+                <div className="mt-2">
+                  <DangerDelete
+                    url={`/api/merchants/${m.id}?hard=1`}
+                    name={m.merchantName}
+                    what="business"
+                    counts={[{ label: "priced item", n: m.products.length }]}
+                  />
+                </div>
               )}
 
               {/* Prices only matter once a merchant is real to customers. */}

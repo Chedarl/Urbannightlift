@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { formatXaf } from "@/lib/utils";
+import { getSessionUser } from "@/lib/auth/session";
+import { getOperatingSettings } from "@/lib/settings";
+import { DangerDelete } from "@/components/admin/DangerDelete";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ customerId: string }>;
 }) {
   const { customerId } = await params;
+  const [user, settings] = await Promise.all([getSessionUser(), getOperatingSettings()]);
   const customer = await prisma.customer.findUnique({
     where: { id: customerId },
     include: {
@@ -35,6 +39,10 @@ export default async function CustomerDetailPage({
     0
   );
   const delivered = customer.orders.filter((o) => o.orderStatus === "DELIVERED").length;
+
+  // Only the owner, only while rehearsing. The endpoint checks both again — a
+  // hidden button is not a permission, it is a tidier screen.
+  const canDelete = user?.role === "OWNER" && settings.testMode;
 
   return (
     <div className="flex flex-col gap-4">
@@ -69,6 +77,18 @@ export default async function CustomerDetailPage({
 
         {customer.notes && (
           <p className="mt-3 rounded-xl bg-ink-800 p-3 text-xs text-mist-300">{customer.notes}</p>
+        )}
+
+        {/* Trial cleanup only. Disappears the moment test mode goes off. */}
+        {canDelete && (
+          <div className="mt-4 border-t border-ink-700 pt-3">
+            <DangerDelete
+              url={`/api/admin/crm/${customer.id}`}
+              name={customer.fullName}
+              what="customer"
+              counts={[{ label: "order", n: customer.orders.length }]}
+            />
+          </div>
         )}
       </section>
 
