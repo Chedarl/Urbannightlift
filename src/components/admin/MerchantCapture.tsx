@@ -6,6 +6,7 @@ import { Camera, ClipboardPaste, Loader2, Check, X, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/shared/Button";
 import { downscaleImage } from "@/lib/uploads/downscale";
+import { missingForMerchant, isSaveableMerchant, describeMissing } from "@/lib/merchants/complete";
 
 /**
  * A business into the catalogue in fifteen seconds — several at a time.
@@ -45,7 +46,6 @@ interface Draft {
 }
 
 const CATEGORIES = ["FOOD", "PHARMACY", "GROCERY", "GENERAL_STORE", "OTHER"];
-const REQUIRED: (keyof Draft)[] = ["merchantName", "category", "whatsappNumber", "address"];
 
 const field =
   "w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-mist-100 placeholder:text-mist-600 focus:border-violet-500 focus:outline-none";
@@ -158,7 +158,7 @@ export function MerchantCapture() {
 
   async function save(index: number) {
     const draft = drafts[index];
-    if (REQUIRED.some((k) => !draft[k])) return;
+    if (!isSaveableMerchant(draft)) return;
     setSavingIndex(index);
     setError(null);
     try {
@@ -256,7 +256,7 @@ export function MerchantCapture() {
       {note && <p className="mt-2 text-xs leading-relaxed text-mist-400">{note}</p>}
 
       {drafts.map((draft, index) => {
-        const missing = REQUIRED.filter((k) => !draft[k]);
+        const missing = missingForMerchant(draft);
         return (
           <div
             key={index}
@@ -374,10 +374,13 @@ export function MerchantCapture() {
               </p>
             )}
 
+            {/*
+              The same sentence the endpoint would return. A street address is
+              no longer among them: a quartier or a pin is enough, which is what
+              a business's own Instagram page actually gives you.
+            */}
             {missing.length > 0 && (
-              <p className="text-[11px] text-caution">
-                Still needed before this can save: {missing.join(", ")}.
-              </p>
+              <p className="text-[11px] text-caution">{describeMissing(missing)}</p>
             )}
 
             <Button

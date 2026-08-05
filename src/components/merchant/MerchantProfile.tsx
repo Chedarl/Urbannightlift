@@ -11,7 +11,7 @@ import type { MerchantCategory } from "@prisma/client";
 interface ShopFields {
   merchantName: string;
   category: MerchantCategory;
-  address: string;
+  address: string | null;
   landmark: string | null;
   phone: string | null;
   whatsappNumber: string;
@@ -91,7 +91,8 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
           {fr ? "Adresse" : "Address"}
           <input
             className={`${input} mt-1.5`}
-            value={form.address}
+            value={form.address ?? ""}
+            placeholder={fr ? "Facultatif" : "Optional"}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
           />
         </label>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { buildSearchKey } from "@/lib/locations/normalize";
+import { missingForMerchant, describeMissing } from "@/lib/merchants/complete";
 
 /**
  * GET /api/merchants — public: verified merchants for the pickup picker.
@@ -64,8 +65,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json().catch(() => ({}));
-  if (!body.merchantName || !body.category || !body.whatsappNumber || !body.address) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  // One rule, shared with the panels, so a disabled button and a 400 can never
+  // mean different things. It used to demand a street address — which Yaoundé
+  // businesses do not have — and that is why the catalogue could not be filled.
+  const missing = missingForMerchant(body);
+  if (missing.length > 0) {
+    return NextResponse.json({ error: describeMissing(missing), missing }, { status: 400 });
   }
   const data: Record<string, unknown> = {};
   for (const k of MERCHANT_FIELDS) if (k in body) data[k] = body[k];

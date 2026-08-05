@@ -112,7 +112,11 @@ export async function intakeMerchant(input: MerchantIntake): Promise<IntakeResul
     category: input.category,
     whatsappNumber: whatsapp,
     phone: input.phone?.trim() ? normalizePhone(input.phone) : null,
-    address: input.address?.trim() || [input.neighbourhood, "Yaoundé"].filter(Boolean).join(", "),
+    // Null rather than invented. This used to fall back to the quartier plus
+    // "Yaoundé" — and, for a merchant who gave no quartier either, to the
+    // literal address "Yaoundé", which is not an address and would have been
+    // read as one by a rider. It only existed because the column was NOT NULL.
+    address: input.address?.trim() || null,
     neighbourhood: input.neighbourhood?.trim() || null,
     landmark: input.landmark?.trim() || null,
     latitude: input.latitude ?? null,

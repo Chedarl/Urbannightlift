@@ -42,7 +42,7 @@ export interface BrowsePharmacy {
   id: string;
   name: string;
   neighbourhood: string | null;
-  address: string;
+  address: string | null;
   landmark: string | null;
   latitude: number | null;
   longitude: number | null;
