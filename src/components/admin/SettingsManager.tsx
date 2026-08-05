@@ -8,6 +8,7 @@ import { OperatingModeControls } from "@/components/admin/OperatingModeControls"
 import { MapsStatus } from "@/components/admin/MapsStatus";
 import { MailStatus } from "@/components/admin/MailStatus";
 import { AiStatus } from "@/components/admin/AiStatus";
+import { StaffAssistant } from "@/components/admin/StaffAssistant";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -146,6 +147,11 @@ export function SettingsManager({
       {/* Third readout, same reason as the other two — except this one shipped
           with the first line of AI code instead of after the incident. */}
       <AiStatus />
+      {/* And the thing the panel above only ever measured: somewhere to actually
+          use it. The customer assistant is hidden on /admin on purpose — it is
+          grounded in one customer's own orders — so this is the staff one, on
+          the console's own rows. */}
+      <StaffAssistant />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain
