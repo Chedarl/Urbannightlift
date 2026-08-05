@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES, getSessionUser } from "@/lib/auth/session";
 import { readCustomer, goodwillProblem } from "@/lib/customers/health";
 import { recordAudit } from "@/lib/audit";
+import { getOperatingSettings } from "@/lib/settings";
+import { mayHardDelete, hardDeleteCustomer } from "@/lib/admin/hardDelete";
 
 export const dynamic = "force-dynamic";
 
@@ -290,4 +292,50 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ cu
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}
+
+/**
+ * DELETE — remove a customer and everything that pointed at them.
+ *
+ * There has never been a way to delete a customer, which is fine in production
+ * and wrong during a rehearsal: a trial fills the list with accounts made to
+ * test a form, and they were permanent.
+ *
+ * **This destroys data and cannot be undone** — their orders, payments, proofs
+ * and cases go with them, by the owner's explicit choice. Everything that makes
+ * that safe is therefore on the way in: OWNER only, test mode only, and the
+ * customer's own name typed to confirm. The audit row is written before the
+ * deletion, because a record that vanishes with what it describes is not one.
+ */
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ customerId: string }> }) {
+  const { customerId } = await params;
+  const user = await getSessionUser();
+  const settings = await getOperatingSettings();
+
+  const refusal = mayHardDelete(user, settings.testMode);
+  if (refusal) {
+    return NextResponse.json({ error: refusal }, { status: refusal === "Unauthorized" ? 401 : 403 });
+  }
+
+  const existing = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { fullName: true },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const body = await req.json().catch(() => ({}));
+  if (String(body.confirmName ?? "").trim().toLowerCase() !== existing.fullName.trim().toLowerCase()) {
+    return NextResponse.json(
+      { error: `Type their name exactly — "${existing.fullName}" — to delete them.` },
+      { status: 400 }
+    );
+  }
+
+  const result = await hardDeleteCustomer(customerId, {
+    id: user!.id,
+    fullName: user!.fullName,
+    role: user!.role,
+  });
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 404 });
+  return NextResponse.json({ ok: true, deleted: true, removed: result.removed });
 }

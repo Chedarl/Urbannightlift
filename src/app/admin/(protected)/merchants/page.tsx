@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/auth/session";
+import { getOperatingSettings } from "@/lib/settings";
 import { MerchantsManager } from "@/components/admin/MerchantsManager";
 import { WelcomeQueue } from "@/components/admin/WelcomeQueue";
 import { normalizeLoose } from "@/lib/locations/normalize";
@@ -44,6 +46,10 @@ export default async function MerchantsPage({
   };
 
   const now = new Date();
+  const [user, settings] = await Promise.all([getSessionUser(), getOperatingSettings()]);
+  // Only the owner, only while rehearsing. Checked again at the endpoint.
+  const canDelete = user?.role === "OWNER" && settings.testMode;
+
   const [merchants, total, counts, onDuty, pharmacies] = await Promise.all([
     prisma.merchant.findMany({
       where,
@@ -91,6 +97,7 @@ export default async function MerchantsPage({
           do with that. Renders nothing when nobody is waiting. */}
       <WelcomeQueue kind="merchant" />
       <MerchantsManager
+        canDelete={canDelete}
         merchants={merchants.map((m) => ({
           id: m.id,
           merchantName: m.merchantName,
