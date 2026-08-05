@@ -16,8 +16,11 @@ import { Logo } from "@/components/shared/Logo";
  *  - **Two ways to answer, both one gesture.** Tap the dishes that ran out, or
  *    type a sentence — "plus de poisson braisé" — and let it be read. Kitchens
  *    differ and neither should be the only way.
- *  - **French first.** Most kitchens here answer in French, and this page exists
- *    to be answered rather than admired.
+ *  - **French first, but not French only.** Most kitchens here answer in
+ *    French, so that is the default — but Cameroon is bilingual and an
+ *    anglophone owner opening a French-only page is the same failure the
+ *    customer app was pulled up on. It follows the browser and falls back to
+ *    French, because there is no account here to carry a language preference.
  *  - **It says thank you and stops.** There is nothing else to do here, and
  *    anything more would be us taking their time for our benefit.
  *
@@ -34,6 +37,13 @@ interface Item {
 }
 
 export function MerchantAvailability({ token }: { token: string }) {
+  // No session, no cookie, no account — the browser's own language is the only
+  // signal there is. French unless it plainly says otherwise.
+  const [fr, setFr] = useState(true);
+  useEffect(() => {
+    setFr(!/^en\b/i.test(navigator.language || ""));
+  }, []);
+
   const [items, setItems] = useState<Item[] | null>(null);
   const [merchantName, setMerchantName] = useState("");
   const [dead, setDead] = useState(false);
@@ -69,13 +79,13 @@ export function MerchantAvailability({ token }: { token: string }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setDone(data.error ?? "Ça n'a pas marché. Réessayez.");
+        setDone(data.error ?? (fr ? "Ça n'a pas marché. Réessayez." : "That didn't work. Try again."));
         return;
       }
       setUnmatched(data.unmatched ?? []);
-      setDone("Merci ! C'est à jour.");
+      setDone(fr ? "Merci ! C'est à jour." : "Thank you! It's updated.");
     } catch {
-      setDone("Connexion impossible. Réessayez.");
+      setDone(fr ? "Connexion impossible. Réessayez." : "Couldn't connect. Try again.");
     } finally {
       setBusy(false);
     }
@@ -83,10 +93,11 @@ export function MerchantAvailability({ token }: { token: string }) {
 
   if (dead) {
     return (
-      <Frame>
+      <Frame fr={fr}>
         <p className="text-sm leading-relaxed text-mist-300">
-          Ce lien a expiré. Nous vous en enverrons un autre ce soir — ou répondez simplement à notre
-          message WhatsApp.
+          {fr
+            ? "Ce lien a expiré. Nous vous en enverrons un autre ce soir — ou répondez simplement à notre message WhatsApp."
+            : "This link has expired. We'll send another tonight — or just reply to our WhatsApp message."}
         </p>
       </Frame>
     );
@@ -94,19 +105,22 @@ export function MerchantAvailability({ token }: { token: string }) {
 
   if (done) {
     return (
-      <Frame>
+      <Frame fr={fr}>
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-safe/15">
             <Check className="h-7 w-7 text-safe" />
           </span>
           <h1 className="font-display text-xl font-bold text-mist-100">{done}</h1>
           <p className="text-sm text-mist-400">
-            Vos clients voient maintenant ce que vous avez vraiment.
+            {fr
+              ? "Vos clients voient maintenant ce que vous avez vraiment."
+              : "Your customers now see what you actually have."}
           </p>
           {unmatched.length > 0 && (
             <p className="mt-2 rounded-xl border border-caution/40 bg-caution/10 p-3 text-xs leading-relaxed text-caution">
-              Nous n&apos;avons pas trouvé « {unmatched.join(" », « ")} » dans votre liste. Dites-le
-              nous sur WhatsApp et nous l&apos;ajoutons.
+              {fr
+                ? `Nous n'avons pas trouvé « ${unmatched.join(" », « ")} » dans votre liste. Dites-le nous sur WhatsApp et nous l'ajoutons.`
+                : `We couldn't find "${unmatched.join('", "')}" on your list. Tell us on WhatsApp and we'll add it.`}
             </p>
           )}
         </div>
@@ -116,22 +130,32 @@ export function MerchantAvailability({ token }: { token: string }) {
 
   if (!items) {
     return (
-      <Frame>
-        <p className="text-sm text-mist-400">Chargement…</p>
+      <Frame fr={fr}>
+        <p className="text-sm text-mist-400">{fr ? "Chargement…" : "Loading…"}</p>
       </Frame>
     );
   }
 
   return (
-    <Frame>
+    <Frame fr={fr}>
       <div className="flex flex-col gap-5">
         <div>
           <h1 className="font-display text-xl font-bold text-mist-100">
-            {merchantName || "Votre restaurant"} — qu&apos;avez-vous ce soir ?
+            {merchantName || (fr ? "Votre restaurant" : "Your restaurant")} —{" "}
+            {fr ? "qu'avez-vous ce soir ?" : "what have you got tonight?"}
           </h1>
           <p className="mt-1 text-sm leading-relaxed text-mist-400">
-            Touchez ce qui est <strong>fini</strong>. Ce qui reste allumé, vos clients peuvent le
-            commander.
+            {fr ? (
+              <>
+                Touchez ce qui est <strong>fini</strong>. Ce qui reste allumé, vos clients peuvent le
+                commander.
+              </>
+            ) : (
+              <>
+                Tap whatever has <strong>run out</strong>. Anything still lit, your customers can
+                order.
+              </>
+            )}
           </p>
         </div>
 
@@ -156,9 +180,9 @@ export function MerchantAvailability({ token }: { token: string }) {
                     : "border-safe/40 bg-safe/10 text-mist-100"
                 }`}
               >
-                <span>{item.nameFr || item.name}</span>
+                <span>{(fr && item.nameFr) || item.name}</span>
                 <span className={`text-xs font-semibold ${off ? "text-mist-600" : "text-safe"}`}>
-                  {off ? "Fini" : "Disponible"}
+                  {off ? (fr ? "Fini" : "Sold out") : fr ? "Disponible" : "Available"}
                 </span>
               </button>
             );
@@ -172,17 +196,21 @@ export function MerchantAvailability({ token }: { token: string }) {
           className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          Envoyer
+          {fr ? "Envoyer" : "Send"}
         </button>
 
         {/* The other way, for whoever would rather type than tap. */}
         <div className="rounded-xl border border-ink-700 bg-ink-900 p-3">
-          <p className="text-xs text-mist-400">Ou écrivez-le simplement :</p>
+          <p className="text-xs text-mist-400">
+            {fr ? "Ou écrivez-le simplement :" : "Or just write it:"}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             <input
               value={reply}
               onChange={(e) => setReply(e.target.value)}
-              placeholder="« on a tout » · « plus de poisson braisé »"
+              placeholder={
+                fr ? "« on a tout » · « plus de poisson braisé »" : '"we have everything" · "no more fish"'
+              }
               className="w-full bg-transparent text-sm text-mist-100 placeholder:text-mist-600 focus:outline-none"
             />
             <button
@@ -190,7 +218,7 @@ export function MerchantAvailability({ token }: { token: string }) {
               disabled={busy || reply.trim().length < 2}
               onClick={() => send({ replyText: reply })}
               className="shrink-0 text-violet-300 disabled:opacity-40"
-              aria-label="Envoyer"
+              aria-label={fr ? "Envoyer" : "Send"}
             >
               <Send className="h-4 w-4" />
             </button>
@@ -201,18 +229,18 @@ export function MerchantAvailability({ token }: { token: string }) {
   );
 }
 
-function Frame({ children }: { children: React.ReactNode }) {
+function Frame({ children, fr }: { children: React.ReactNode; fr: boolean }) {
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <Logo />
         <span className="flex items-center gap-1.5 text-[11px] font-medium text-violet-300">
-          <MoonStar className="h-3.5 w-3.5" /> Ce soir
+          <MoonStar className="h-3.5 w-3.5" /> {fr ? "Ce soir" : "Tonight"}
         </span>
       </div>
       {children}
       <p className="mt-auto pt-6 text-center text-[11px] text-mist-600">
-        Urban Night Lift · Yaoundé · 18h – 4h
+        {fr ? "Urban Night Lift · Yaoundé · 18h – 4h" : "Urban Night Lift · Yaoundé · 6 PM – 4 AM"}
       </p>
     </main>
   );

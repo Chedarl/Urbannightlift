@@ -4,12 +4,14 @@ import { getCustomerId } from "@/lib/auth/customer";
 import { getOperatingSettings } from "@/lib/settings";
 import { yaoundeHour } from "@/lib/orders/tonight";
 import { isNightHour } from "@/lib/pharmacy/tonight";
-import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { kimiStream, kimiConfigured } from "@/lib/ai/kimi";
 import { acceptActions } from "@/lib/ai/assistant/actions";
+import { partialReply, sse } from "@/lib/ai/partial";
 import {
   systemPrompt,
   ANSWER_SCHEMA,
   feeText,
+  acceptFollowUps,
   type AssistantAnswer,
   type AssistantFacts,
 } from "@/lib/ai/assistant/context";
@@ -29,12 +31,16 @@ export const runtime = "nodejs";
  * order data at all — not filtered, absent — because the owner chose to put this
  * on the public site and a filter is something that eventually gets got round.
  *
- * **Not streamed, deliberately.** The plan said stream, and for a plain chat it
- * would be right: the key answers a trivial question in about five seconds. But
- * this answer is structured — a reply *plus* a set of proposed buttons — and
- * streaming that means either showing a customer raw JSON or parsing half-formed
- * JSON as it arrives. Both are worse than a spinner that says what it is doing.
- * The wait is named on screen instead.
+ * **Streamed, without giving up the schema.** This did not stream for a real
+ * reason: the answer is structured — a reply *plus* proposed buttons — and that
+ * structure is what makes the buttons safe. But a spinner for five to eight
+ * seconds reads as broken however honest it is, and "it does not work like other
+ * chat systems" was the fair verdict.
+ *
+ * So the JSON is streamed and `partialReply` pulls the growing `reply` string
+ * out of it as it arrives. The words appear as they are written; the whole
+ * object still lands at the end and every guard runs on it, unchanged. Nothing
+ * about who may press what moved to the browser.
  */
 
 /** Cost control on the open door. Counted against the calls we already log. */
@@ -211,56 +217,119 @@ export async function POST(req: NextRequest) {
     history,
   };
 
-  const result = await kimiJsonResult<AssistantAnswer>({
-    purpose: signedIn ? "assistant.customer" : "assistant.public",
-    system: systemPrompt(facts),
-    user: question,
-    schema: ANSWER_SCHEMA as unknown as Record<string, unknown>,
+  /*
+   * Streamed, at last, and the reason it was not is worth keeping in view.
+   *
+   * The answer is a JSON object — a reply plus proposed buttons — and that shape
+   * is what makes the buttons safe: each one is checked against what this asker
+   * actually owns before it is drawn. So streaming could not mean giving up the
+   * schema. It means pulling the growing `reply` string out of the incomplete
+   * JSON as it arrives (`partialReply`), sending that, and running every guard
+   * unchanged on the whole object at the end.
+   *
+   * The words appear as they are written. Nothing about who may press what
+   * moved to the browser.
+   */
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let buffer = "";
+      let shown = "";
+
+      const result = await kimiStream(
+        {
+          purpose: signedIn ? "assistant.customer" : "assistant.public",
+          system: systemPrompt(facts),
+          user: question,
+          schema: ANSWER_SCHEMA as unknown as Record<string, unknown>,
+        },
+        {
+          onDelta(text) {
+            buffer += text;
+            const next = partialReply(buffer);
+            // Only ever the new characters, so the browser appends rather than
+            // re-rendering a growing string on every token.
+            if (next.length > shown.length) {
+              controller.enqueue(encoder.encode(sse("delta", { text: next.slice(shown.length) })));
+              shown = next;
+            }
+          },
+        }
+      );
+
+      if (!result.answer) {
+        controller.enqueue(
+          encoder.encode(
+            sse("done", {
+              reply: fr
+                ? "Je n'ai pas pu répondre à l'instant. La page d'aide contient l'essentiel, et une personne lit chaque message."
+                : "I couldn't answer just then. The help page covers most things, and a person reads every message sent from it.",
+              actions: [],
+              followUps: [],
+            })
+          )
+        );
+        controller.close();
+        return;
+      }
+
+      let answer: AssistantAnswer | null = null;
+      try {
+        answer = JSON.parse(result.answer) as AssistantAnswer;
+      } catch {
+        // The stream finished with something that is not an object. Whatever
+        // was shown on screen is what they get; no buttons, because there is
+        // nothing to check them against.
+        controller.enqueue(
+          encoder.encode(sse("done", { reply: shown, actions: [], followUps: [] }))
+        );
+        controller.close();
+        return;
+      }
+
+      const reply = (answer.reply ?? shown).slice(0, 1200);
+
+      // Unchanged: checked against a scope built from the session, so an order
+      // code the model invented — or one belonging to somebody else — never
+      // becomes a button.
+      const actions = acceptActions(answer.actions, {
+        orderCodes: facts.orders.map((o) => o.orderCode),
+        addressIds: facts.places.map((p) => p.id),
+        services: facts.services.map((s) => s.type),
+        signedIn,
+      });
+
+      controller.enqueue(
+        encoder.encode(sse("done", { reply, actions, followUps: acceptFollowUps(answer.followUps) }))
+      );
+      controller.close();
+
+      // Remember it, for a signed-in customer only, after the answer is on its
+      // way. Failing to write must never cost them the answer they are already
+      // reading.
+      if (customerId) {
+        await prisma
+          .$transaction([
+            prisma.assistantTurn.createMany({
+              data: [
+                { customerId, role: "you", text: question },
+                { customerId, role: "unl", text: reply },
+              ],
+            }),
+            prisma.assistantTurn.deleteMany({
+              where: { customerId, createdAt: { lt: retentionCutoff() } },
+            }),
+          ])
+          .catch(() => {});
+      }
+    },
   });
 
-  if (!result.answer) {
-    // Degrades to the honest thing rather than an error: a person reads the
-    // help form, and saying so is a better answer than a spinner that stops.
-    return NextResponse.json({
-      reply: fr
-        ? "Je n'ai pas pu répondre à l'instant. La page d'aide contient l'essentiel, et une personne lit chaque message."
-        : "I couldn't answer just then. The help page covers most things, and a person reads every message sent from it.",
-      actions: [],
-    });
-  }
-
-  const reply = result.answer.reply.slice(0, 1200);
-
-  // Remember it, for a signed-in customer only. Failing to write must never
-  // cost them the answer they are already looking at, so this is awaited but
-  // swallowed — a conversation that forgets one exchange is a small loss; an
-  // error page instead of an answer is not.
-  if (customerId) {
-    await prisma
-      .$transaction([
-        prisma.assistantTurn.createMany({
-          data: [
-            { customerId, role: "you", text: question },
-            { customerId, role: "unl", text: reply },
-          ],
-        }),
-        // Retention happens on the way past rather than in a job nobody runs.
-        prisma.assistantTurn.deleteMany({
-          where: { customerId, createdAt: { lt: retentionCutoff() } },
-        }),
-      ])
-      .catch(() => {});
-  }
-
-  return NextResponse.json({
-    reply,
-    // Checked against a scope built from the session — an order code the model
-    // invented, or one belonging to somebody else, never becomes a button.
-    actions: acceptActions(result.answer.actions, {
-      orderCodes: facts.orders.map((o) => o.orderCode),
-      addressIds: facts.places.map((p) => p.id),
-      services: facts.services.map((s) => s.type),
-      signedIn,
-    }),
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
 }

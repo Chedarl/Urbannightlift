@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { redactSecrets } from "@/lib/redact";
+import { streamDelta } from "@/lib/ai/partial";
 
 /**
  * The one way this product talks to a model.
@@ -463,5 +464,103 @@ async function record(
   } catch {
     // A lost log line must never take down the request it was describing —
     // the same rule the email log has followed since it was written.
+  }
+}
+
+/**
+ * The same call, streamed.
+ *
+ * A grounded answer takes five to eight seconds on this key, and a spinner for
+ * that long reads as broken however honest it is. Streaming does not change
+ * what the model may say or what the caller may do with it: the request is
+ * identical — same system prompt, same `json_schema`, same model — and the
+ * answer is still one JSON object. The only difference is that the caller can
+ * watch it being written.
+ *
+ * The complete text is handed back at the end so the caller parses and validates
+ * exactly as `kimiJsonResult` does. **No guardrail moves to the browser**; the
+ * partial text is for reading, and the whole object is still what decides which
+ * buttons exist.
+ *
+ * Errors are reported through `onError` rather than thrown, because by the time
+ * one arrives the response has usually started and there is nothing to throw to.
+ */
+export async function kimiStream(
+  req: KimiRequest,
+  handlers: { onDelta: (text: string) => void }
+): Promise<KimiResult<string>> {
+  const { key, variable } = kimiKeySource();
+  if (!key) {
+    return { answer: null, error: "No KIMI_API_KEY or MOONSHOT_API_KEY is set", ms: 0 };
+  }
+
+  const started = Date.now();
+  const body: Record<string, unknown> = {
+    model: kimiModel(),
+    max_tokens: DEFAULT_MAX_TOKENS,
+    reasoning_effort: process.env.KIMI_REASONING_EFFORT || DEFAULT_EFFORT,
+    stream: true,
+    messages: [
+      { role: "system", content: req.system },
+      { role: "user", content: [{ type: "text", text: req.user }] },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "answer", schema: req.schema },
+    },
+  };
+
+  try {
+    const res = await fetch(`${kimiBaseUrl()}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TEXT_TIMEOUT_MS),
+    });
+
+    if (!res.ok || !res.body) {
+      const data = (await res.json().catch(() => null)) as ChatResponse | null;
+      const error = `${data?.error?.message ?? `Kimi refused the call (HTTP ${res.status}).`} (${variable}, ${kimiBaseUrl()})`;
+      await record(req, { ok: false, ms: Date.now() - started, error });
+      return { answer: null, error, ms: Date.now() - started };
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let whole = "";
+    // Chunks split anywhere, including mid-line, so the tail is carried over.
+    let pending = "";
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      pending += decoder.decode(value, { stream: true });
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) {
+        const delta = streamDelta(line);
+        if (delta) {
+          whole += delta;
+          handlers.onDelta(delta);
+        }
+      }
+    }
+
+    const ms = Date.now() - started;
+    if (!whole) {
+      const error =
+        "Kimi answered but the content was empty — usually the token budget was spent on reasoning.";
+      await record(req, { ok: false, ms, error });
+      return { answer: null, error, ms };
+    }
+
+    await record(req, { ok: true, ms });
+    return { answer: whole, error: null, ms };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown error";
+    const error = /abort|timeout/i.test(message) ? `No answer within ${TEXT_TIMEOUT_MS / 1000}s.` : message;
+    const ms = Date.now() - started;
+    await record(req, { ok: false, ms, error });
+    return { answer: null, error, ms };
   }
 }
