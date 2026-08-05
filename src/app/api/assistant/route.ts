@@ -13,7 +13,7 @@ import {
   type AssistantAnswer,
   type AssistantFacts,
 } from "@/lib/ai/assistant/context";
-import { SERVICE_LABELS } from "@/lib/ai/assistant/labels";
+import { serviceLabels } from "@/lib/ai/assistant/labels";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,16 +39,21 @@ const PUBLIC_HOURLY_LIMIT = 20;
 const SIGNED_IN_HOURLY_LIMIT = 60;
 
 export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const question = typeof body.question === "string" ? body.question.trim().slice(0, 600) : "";
+  const fr = body.fr === true;
+
+  // Read the language before answering anything. This reply used to be English
+  // only, so a French speaker asking a French question got an English refusal.
   if (!kimiConfigured()) {
     return NextResponse.json({
-      reply: "The assistant is not switched on right now. The help page has the answers, and a person reads every message sent from it.",
+      reply: fr
+        ? "L'assistant n'est pas activé pour le moment. La page d'aide contient l'essentiel, et une personne lit chaque message qui en part."
+        : "The assistant is not switched on right now. The help page has the answers, and a person reads every message sent from it.",
       actions: [],
     });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const question = typeof body.question === "string" ? body.question.trim().slice(0, 600) : "";
-  const fr = body.fr === true;
   if (question.length < 2) {
     return NextResponse.json({ error: "Ask a question." }, { status: 400 });
   }
@@ -120,9 +125,10 @@ export async function POST(req: NextRequest) {
       : Promise.resolve(null),
   ]);
 
+  const labels = serviceLabels(fr);
   const services = settings.enabledServices.map((type) => ({
     type,
-    label: SERVICE_LABELS[type] ?? type,
+    label: labels[type] ?? type,
   }));
 
   const facts: AssistantFacts = {
@@ -135,7 +141,7 @@ export async function POST(req: NextRequest) {
     fees: zones.map((z) => ({ zone: z.zoneName, feeText: feeText(z.feeXaf) })),
     orders: orders.map((o) => ({
       orderCode: o.orderCode,
-      service: SERVICE_LABELS[o.serviceType] ?? o.serviceType,
+      service: labels[o.serviceType] ?? o.serviceType,
       status: o.orderStatus.toLowerCase().replace(/_/g, " "),
       placedAt: o.createdAt.toISOString().slice(0, 10),
       // Pre-formatted by us. The model is told to quote, never to calculate.

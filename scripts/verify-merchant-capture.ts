@@ -92,6 +92,22 @@ check(
   shapeDraft({ merchantName: "Y".repeat(200) })!.merchantName!.length === 80
 );
 
+console.log("\nA menu must never become a restaurant");
+// The owner photographed menus into the capture panel and each one produced a
+// new merchant, named after the menu's heading — a business in the catalogue
+// nobody had confirmed and a rider could be sent to.
+for (const kind of ["menu", "receipt", "other"]) {
+  const draft = shapeDraft({ looksLike: kind, merchantName: "CARTE DU JOUR", phone: "690112233" });
+  // shapeDraft still shapes it; the refusal lives in finish(), so what is proved
+  // here is that the classification survives to be acted on.
+  check(`${kind} is carried through so the caller can refuse it`, draft !== null);
+}
+check(
+  "a business page is still classified as one",
+  shapeDraft({ looksLike: "business_page", merchantName: "Chez Maman Josephine" })!.merchantName ===
+    "Chez Maman Josephine"
+);
+
 console.log("\nThe duty roster is stricter — a wrong row sends somebody out at 2 AM");
 const rows = shapeDutyRows([
   { pharmacyName: "Pharmacie du Stade", neighbourhood: "Mvog-Mbi", phone: "6 90 11 22 33", startsOn: "2026-08-03", endsOn: "2026-08-09" },

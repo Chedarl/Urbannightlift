@@ -56,6 +56,8 @@ export interface MerchantDraft {
 
 export interface CaptureAnswer {
   readable?: boolean;
+  /** What the picture actually is. The field that stops a menu becoming a shop. */
+  looksLike?: string;
   merchantName?: string | null;
   category?: string | null;
   subcategory?: string | null;
@@ -74,6 +76,7 @@ const SCHEMA = {
   type: "object",
   properties: {
     readable: { type: "boolean" },
+    looksLike: { type: "string" },
     merchantName: { type: "string" },
     category: { type: "string" },
     subcategory: { type: "string" },
@@ -121,8 +124,20 @@ Rules:
 const SCREENSHOT_SYSTEM = `${RULES}
 
 You are reading a screenshot of a business's own social media page or website.
-Take the name, contact details, location and hours from what is on screen. If
-the image is not a business page at all, set readable to false.`;
+Take the name, contact details, location and hours from what is on screen.
+
+FIRST, say what the picture actually is, in looksLike:
+- "business_page" — a profile, a shop front page, a website header: something
+  that identifies WHO a business is.
+- "menu" — a menu, a price board, a list of dishes or products with prices.
+- "receipt" — a till receipt or an invoice.
+- "other" — anything else.
+
+This matters more than the rest. A menu is not a business, and a menu's heading
+is not a business's name. If looksLike is anything but "business_page", return
+looksLike and NOTHING else — no merchantName, no phone, no address. Somebody
+photographing a menu wants their prices read, and inventing a shop out of it
+puts a business in the catalogue that nobody has ever confirmed exists.`;
 
 const THREAD_SYSTEM = `${RULES}
 
@@ -254,10 +269,26 @@ export async function fromThread(text: string): Promise<CaptureResult> {
  * make the page out — and is reported as such rather than as a failure, because
  * the two need different responses from the person holding the phone.
  */
+/** What each kind of picture is, and where it should have gone instead. */
+const WRONG_TOOL: Record<string, string> = {
+  menu: "That is a menu or a price list, not a business page. It would have become a restaurant nobody has confirmed exists. Save the business first, then open its row and use \u201cPhotograph their menu\u201d to read the prices onto it.",
+  receipt: "That is a receipt. Receipts are read automatically on the order the rider recorded them against — there is nothing to do here.",
+  other: "That does not look like a business page. Capture the profile or the shop front — the part with the name and the phone number.",
+};
+
 function finish(result: { answer: CaptureAnswer | null; error: string | null }): CaptureResult {
   if (!result.answer) return { draft: null, error: result.error ?? "No answer came back." };
   if (result.answer.readable === false) {
     return { draft: null, error: "Couldn't make out a business page in that. Try a clearer capture." };
+  }
+
+  // The check that stops every photograph becoming a new restaurant. A menu
+  // photographed into this panel used to produce a merchant named after the
+  // menu's heading — a business in the catalogue that nobody had confirmed and
+  // that a rider could be sent to.
+  const kind = result.answer.looksLike?.trim().toLowerCase();
+  if (kind && kind !== "business_page" && WRONG_TOOL[kind]) {
+    return { draft: null, error: WRONG_TOOL[kind] };
   }
   const draft = shapeDraft(result.answer);
   return {
