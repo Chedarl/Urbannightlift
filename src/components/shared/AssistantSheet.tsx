@@ -44,6 +44,17 @@ interface Turn {
  */
 const STAFF_PREFIXES = ["/admin", "/rider", "/merchant"];
 
+/**
+ * And where it is simply in the way.
+ *
+ * The order flow already has a sticky price-and-continue bar pinned to the
+ * bottom of the screen, and the bottom nav under that. A third floating button
+ * on top of both is clutter at exactly the moment somebody is trying to finish
+ * an order — which is what the plan said ("deliberately not on the order form")
+ * before this got mounted at the root and applied to everything.
+ */
+const BUSY_PREFIXES = ["/order"];
+
 export function AssistantSheet() {
   const pathname = usePathname();
   const { locale } = useTranslation();
@@ -100,7 +111,11 @@ export function AssistantSheet() {
     ? ["Vous livrez à quelle heure ?", "Combien coûte la livraison ?", "Qu'est-ce qui est ouvert ?"]
     : ["What hours do you deliver?", "How much is delivery?", "What's open right now?"];
 
-  if (STAFF_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
+  const path = pathname ?? "";
+  if (STAFF_PREFIXES.some((p) => path.startsWith(p))) return null;
+  // Still reachable on the confirmation screen, which is where "where is my
+  // rider" actually gets asked — only the form itself is left alone.
+  if (BUSY_PREFIXES.some((p) => path.startsWith(p)) && !path.includes("/confirmation")) return null;
 
   if (!open) {
     return (
