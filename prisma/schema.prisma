@@ -196,11 +196,11 @@ model User {
   /// The most company cash this rider may hold at once, for buying a customer's
   /// shopping. 0 means no float, and that is the default: handing a rider
   /// company money is a decision with a name on it.
-  floatLimitXaf   Int      @default(0)
-  floatSuspended  Boolean  @default(false)
-  floatGrantedAt  DateTime?
+  floatLimitXaf        Int                @default(0)
+  floatSuspended       Boolean            @default(false)
+  floatGrantedAt       DateTime?
   floatGrantedByUserId String?
-  riderFloatLedger RiderFloatLedger[]
+  riderFloatLedger     RiderFloatLedger[]
 
   photoUrl   String?
   /// The bike a customer can recognise from a window: "Yamaha rouge — CE 4521 AB".
@@ -218,8 +218,8 @@ model User {
   idVerifiedAt   DateTime?
   idVerifiedById String?
 
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignedOrders Order[] @relation("RiderOrders")
 }
@@ -230,7 +230,7 @@ model User {
 /// must never hold one before a human has looked at their ID. Approving an
 /// application is what creates the account.
 model RiderApplication {
-  id             String                 @id @default(cuid())
+  id             String   @id @default(cuid())
   /// The Urban Night Lift account this application was filed from.
   ///
   /// Applying now requires signing up first, so a stranger cannot push ID card
@@ -243,7 +243,7 @@ model RiderApplication {
   email          String?
   /// Where they live, so dispatch can judge which zones they can actually serve.
   neighbourhood  String?
-  zonePreference String[]               @default([])
+  zonePreference String[] @default([])
 
   /// Same privacy rule as `User` above — private bucket, staff eyes only.
   idCardNumber   String?
@@ -253,8 +253,8 @@ model RiderApplication {
 
   vehicleType     String? // MOTORCYCLE | SCOOTER | BICYCLE | CAR
   vehicleRef      String?
-  hasLicence      Boolean                @default(false)
-  ownsVehicle     Boolean                @default(true)
+  hasLicence      Boolean @default(false)
+  ownsVehicle     Boolean @default(true)
   /// Which nights they can work, in their own words — this is a night-only
   /// operation and availability is the thing that decides whether they are useful.
   availability    String?
@@ -307,13 +307,13 @@ model Customer {
   /// customer telling a friend: one-to-one, no obligations, no relationship
   /// with us. A brand ambassador represents us in public under a brief. The two
   /// were tangled together and are now different things entirely.
-  referralCode        String?  @unique
+  referralCode         String?   @unique
   /// Who referred THIS customer, set once on their first order with a code and
   /// never moved — a referral belongs to whoever actually made it.
   referredByCustomerId String?
   referredByCodeAt     DateTime?
   /// Unspent reward, in XAF, applied to their next order automatically.
-  referralCreditXaf    Int      @default(0)
+  referralCreditXaf    Int       @default(0)
 
   /// Set on their first order with a code, and never moved afterwards — a
   /// customer belongs to whoever actually brought them.
@@ -324,7 +324,7 @@ model Customer {
   /// Set by staff, read by staff. Drives the customer-service screen: VIP, at
   /// risk, do not serve. Deliberately free-form strings rather than an enum —
   /// the vocabulary of a support desk changes faster than a migration does.
-  tags      String[] @default([])
+  tags          String[]  @default([])
   /// Why somebody is on the do-not-serve list. Never shown to the customer.
   blockedAt     DateTime?
   blockedReason String?
@@ -336,11 +336,12 @@ model Customer {
   /// welcome never sent is the first impression we did not make.
   welcomeSentAt DateTime?
 
-  orders    Order[]
-  payments  Payment[]
-  addresses CustomerAddress[]
-  cases     SupportRequest[]
-  staffNotes CustomerNote[]
+  orders         Order[]
+  payments       Payment[]
+  addresses      CustomerAddress[]
+  cases          SupportRequest[]
+  staffNotes     CustomerNote[]
+  assistantTurns AssistantTurn[]
 
   @@index([whatsappNumber])
   @@index([referredByAmbassadorId])
@@ -418,12 +419,12 @@ model Ambassador {
   /// Ambassadors are not staff and must never receive a staff account, so this
   /// mirrors the customer PIN path rather than Supabase auth.
   pinHash        String?
-  pinAttempts    Int              @default(0)
+  pinAttempts    Int       @default(0)
   pinLockedUntil DateTime?
   lastLoginAt    DateTime?
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   customers Customer[]
   orders    Order[]
@@ -598,13 +599,13 @@ model Merchant {
   /// How much delivery fee we will carry for this merchant before they settle.
   /// 0 means no float, and that is the default: a float is us lending money, so
   /// it is only ever granted by a person, never earned automatically.
-  floatLimitXaf         Int       @default(0)
+  floatLimitXaf        Int       @default(0)
   /// Pauses new float charges without closing the account. A suspended merchant
   /// can still settle what they owe.
-  floatSuspended        Boolean   @default(false)
-  floatGrantedAt        DateTime?
+  floatSuspended       Boolean   @default(false)
+  floatGrantedAt       DateTime?
   /// Who granted or last changed the limit. Lending decisions need a name on them.
-  floatGrantedByUserId  String?
+  floatGrantedByUserId String?
 
   /// The merchant's own login, so a shop can change its prices and close its
   /// kitchen without phoning the owner. Set = they have claimed the account;
@@ -613,17 +614,17 @@ model Merchant {
   /// Same shape as `Customer`: WhatsApp number + a short PIN, no SMS, with an
   /// attempt lockout because a business phone number is public. This is an
   /// Urban Night Lift PIN and nothing else — never a MoMo or Orange PIN.
-  pinHash          String?
-  pinAttempts      Int              @default(0)
-  pinLockedUntil   DateTime?
-  lastLoginAt      DateTime?
+  pinHash        String?
+  pinAttempts    Int       @default(0)
+  pinLockedUntil DateTime?
+  lastLoginAt    DateTime?
 
   /// When somebody sent this business its welcome card. Same queue logic as
   /// `Customer.welcomeSentAt`.
-  welcomeSentAt    DateTime?
+  welcomeSentAt DateTime?
 
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   orders      Order[]
   products    MerchantProduct[]
@@ -643,19 +644,19 @@ model Merchant {
 /// outward — money a business owes us has to be reconstructable line by line,
 /// not inferred from a counter somebody might have edited.
 model MerchantFloatLedger {
-  id         String   @id @default(cuid())
-  merchantId String
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  merchantId   String
+  merchant     Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   /// The delivery whose fee we carried. Null for settlements and adjustments.
-  orderId    String?
-  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderId      String?
+  order        Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   /// Positive = we carried it and they owe us. Negative = they paid it down.
-  amountXaf  Int
-  type       String // CHARGE | SETTLEMENT | ADJUSTMENT
-  note       String?
+  amountXaf    Int
+  type         String // CHARGE | SETTLEMENT | ADJUSTMENT
+  note         String?
   /// Who recorded it. Null only for a system-generated charge at checkout.
   recordedById String?
-  createdAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   /// One charge per order — a retried request can never double-charge a float.
   @@unique([orderId, type])
@@ -669,15 +670,15 @@ model MerchantFloatLedger {
 /// it turns cash into a receivable the delivery collects — so only cash handed
 /// back does.
 model RiderFloatLedger {
-  id        String   @id @default(cuid())
-  riderId   String
-  rider     User     @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  riderId      String
+  rider        User     @relation(fields: [riderId], references: [id], onDelete: Cascade)
   /// Positive = we handed them cash. Negative = they handed it back.
-  amountXaf Int
-  type      String // TOPUP | RETURN | ADJUSTMENT
-  note      String?
+  amountXaf    Int
+  type         String // TOPUP | RETURN | ADJUSTMENT
+  note         String?
   recordedById String?
-  createdAt DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@index([riderId, createdAt])
 }
@@ -804,15 +805,15 @@ model Order {
   ///
   /// The ceiling the customer agreed to at checkout. Required on shopping
   /// services, so the over-cap guard is always armed.
-  goodsCapXaf           Int?
+  goodsCapXaf          Int?
   /// What the receipt actually said. Null until the rider records it — before
   /// that the total is a ceiling and must be shown as one, never as a price.
-  goodsActualXaf        Int?
+  goodsActualXaf       Int?
   /// Photo of the shop's receipt. Private evidence: it proves we charged what we
   /// were charged, and it is never embedded in a shareable PDF.
-  goodsReceiptUrl       String?
-  goodsRecordedAt       DateTime?
-  goodsRecordedById     String?
+  goodsReceiptUrl      String?
+  goodsRecordedAt      DateTime?
+  goodsRecordedById    String?
   /// What a second reading of the receipt photo made the total out to be.
   ///
   /// Never used to charge anybody and never written into goodsActualXaf. It
@@ -820,30 +821,30 @@ model Order {
   /// question — which protects the rider from an accusation at least as much as
   /// it protects the customer from an error. Null means it was not checked, and
   /// that is deliberately not the same as agreeing.
-  goodsReceiptReadXaf   Int?
-  goodsReceiptReadAt    DateTime?
+  goodsReceiptReadXaf  Int?
+  goodsReceiptReadAt   DateTime?
   /// Set when the customer agreed to a spend above their cap. Without this an
   /// over-cap amount is not collectable.
-  overCapApprovedXaf    Int?
-  overCapApprovedAt     DateTime?
+  overCapApprovedXaf   Int?
+  overCapApprovedAt    DateTime?
   /// What the rider laid out, from the company float. Comes off what they owe at
   /// settlement, so shopping never leaves a rider out of pocket.
-  goodsAdvancedXaf      Int?
-  paymentMethod           PaymentMethod
-  paymentStatus           PaymentStatus         @default(PENDING)
-  orderStatus             OrderStatus           @default(NEW_REQUEST)
-  assignedRiderId         String?
-  assignedRider           User?                 @relation("RiderOrders", fields: [assignedRiderId], references: [id])
-  riskFlag                Boolean               @default(false)
-  highValueFlag           Boolean               @default(false)
-  rejectionReason         String?
-  adminNotes              String?
-  customerVisibleNotes    String?
-  screenshotUrl           String? // Supabase Storage path (optional customer upload)
-  otpCode                 String? // delivery OTP shown to customer once rider is assigned
-  riderLat                Float? // last known live rider position
-  riderLng                Float?
-  riderLocationAt         DateTime?
+  goodsAdvancedXaf     Int?
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus @default(PENDING)
+  orderStatus          OrderStatus   @default(NEW_REQUEST)
+  assignedRiderId      String?
+  assignedRider        User?         @relation("RiderOrders", fields: [assignedRiderId], references: [id])
+  riskFlag             Boolean       @default(false)
+  highValueFlag        Boolean       @default(false)
+  rejectionReason      String?
+  adminNotes           String?
+  customerVisibleNotes String?
+  screenshotUrl        String? // Supabase Storage path (optional customer upload)
+  otpCode              String? // delivery OTP shown to customer once rider is assigned
+  riderLat             Float? // last known live rider position
+  riderLng             Float?
+  riderLocationAt      DateTime?
 
   /// ── Quote handshake ──
   /// Dispatch approving an order sends a priced quote; no rider may be
@@ -912,9 +913,9 @@ model Order {
   /// delivery you have not received yet is asking somebody to guess. One to
   /// five stars, an optional comment, and a timestamp so it can only be given
   /// once. This is the only measure of whether a night actually went well.
-  ratingStars           Int?
-  ratingComment         String?
-  ratedAt               DateTime?
+  ratingStars   Int?
+  ratingComment String?
+  ratedAt       DateTime?
 
   /// ── Did the customer actually hear from us? ──
   /// Push is opt-in and many customers never enable it, so dispatch needs to
@@ -936,13 +937,13 @@ model Order {
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
 
-  statusHistory     OrderStatusHistory[]
-  payments          Payment[]
-  deliveryProofs    DeliveryProof[]
-  incidents         Incident[]
-  failures          DeliveryFailure[]
-  cases             SupportRequest[]
-  ambassadorLedgers AmbassadorLedger[]
+  statusHistory        OrderStatusHistory[]
+  payments             Payment[]
+  deliveryProofs       DeliveryProof[]
+  incidents            Incident[]
+  failures             DeliveryFailure[]
+  cases                SupportRequest[]
+  ambassadorLedgers    AmbassadorLedger[]
   merchantFloatEntries MerchantFloatLedger[]
 
   @@index([orderStatus])
@@ -1341,39 +1342,38 @@ model OperatingSettings {
 
   /// Where operational email goes. Not hardcoded, because the address a
   /// business reads changes long before its code does.
-  notificationEmail            String?
+  notificationEmail String?
   /// An email for every single order. On from day one, when every order
   /// matters and there are few of them. At thirty orders a night an inbox
   /// like that stops being read, which is why it can be switched off without
   /// losing the nightly summary below.
-  emailOnEveryOrder            Boolean       @default(true)
+  emailOnEveryOrder Boolean @default(true)
   /// One email after the night closes: what came in, what was earned, what is
   /// still waiting. This is the one worth keeping forever.
-  dailySummaryEmail            Boolean       @default(true)
+  dailySummaryEmail Boolean @default(true)
 
   /// Customer referrals. The person whose code was used earns this share of
   /// the delivery fee as credit against their next order.
-  referralRewardPercent        Int           @default(5)
+  referralRewardPercent     Int     @default(5)
   /// What the friend using the code gets off their first order. Zero by
   /// default: the owner asked for the reward to go to the code's owner. A
   /// scheme that gives the friend nothing gives them no reason to type the
   /// code, so this is here to be raised without a deploy when that shows.
-  referralFriendDiscountXaf    Int           @default(0)
-  referralsEnabled             Boolean       @default(true)
+  referralFriendDiscountXaf Int     @default(0)
+  referralsEnabled          Boolean @default(true)
 
   /// The brand ambassador programme, off until it is rebuilt as marketing
   /// rather than a second referral scheme wearing its name.
-  ambassadorProgrammeEnabled   Boolean       @default(false)
-  zoneNoticeEn                 String?
-  zoneNoticeFr                 String?
-  mtnMerchantCode              String? // customer-facing MTN MoMo merchant number
-  mtnUssdTemplate              String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
-  orangeMerchantCode           String? // customer-facing Orange Money merchant number
-  orangeUssdTemplate           String?
-  updatedByUserId              String?
-  updatedAt                    DateTime      @updatedAt
+  ambassadorProgrammeEnabled Boolean  @default(false)
+  zoneNoticeEn               String?
+  zoneNoticeFr               String?
+  mtnMerchantCode            String? // customer-facing MTN MoMo merchant number
+  mtnUssdTemplate            String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
+  orangeMerchantCode         String? // customer-facing Orange Money merchant number
+  orangeUssdTemplate         String?
+  updatedByUserId            String?
+  updatedAt                  DateTime @updatedAt
 }
-
 
 /// Every operational message we sent, and whether it arrived.
 ///
@@ -1383,25 +1383,24 @@ model OperatingSettings {
 /// ambassador ledger: rows are written and never edited, so the record of
 /// what was sent cannot drift from what happened.
 model NotificationLog {
-  id          String   @id @default(cuid())
-  channel     String // EMAIL | PUSH
-  event       String // order.created, rider.applied, ambassador.applied…
-  recipient   String
-  subject     String?
-  status      String // SENT | FAILED
+  id         String   @id @default(cuid())
+  channel    String // EMAIL | PUSH
+  event      String // order.created, rider.applied, ambassador.applied…
+  recipient  String
+  subject    String?
+  status     String // SENT | FAILED
   /// The provider's own id, so a message can be traced in their dashboard.
-  providerId  String?
-  error       String?
+  providerId String?
+  error      String?
   /// What the message was about, so an order's whole trail can be pulled up.
-  entityType  String?
-  entityId    String?
-  createdAt   DateTime @default(now())
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
 
   @@index([event, createdAt])
   @@index([entityType, entityId])
   @@index([status])
 }
-
 
 /// Every referral reward earned and every one spent.
 ///
@@ -1421,10 +1420,10 @@ model ReferralLedger {
   note       String?
   createdAt  DateTime @default(now())
 
-  @@index([customerId, createdAt])
   /// One reward per order per type — the guard against paying twice if a
   /// delivery is marked complete more than once.
   @@unique([orderId, type])
+  @@index([customerId, createdAt])
 }
 
 /// Every call this product makes to a model, and what it cost.
@@ -1455,4 +1454,34 @@ model AiCall {
 
   @@index([purpose, createdAt])
   @@index([ok, createdAt])
+}
+
+/// One side of a conversation with the assistant.
+///
+/// The assistant had no memory at all: the sheet kept the turns on screen and
+/// sent only the latest question, so every question was treated as the first
+/// one and "and how much to Bastos?" reached a model that had never heard of
+/// Bastos. That is not a chat, it is a search box that answers in sentences.
+///
+/// Stored per customer rather than per session, because the owner chose that it
+/// should pick up where it left off — somebody who asked about a delivery last
+/// night can carry on tonight.
+///
+/// **Signed-in customers only.** A signed-out visitor's follow-ups travel in
+/// their own request and nothing is written down: giving a stranger on a
+/// landing page a server-side conversation record is a tracking surface, not a
+/// feature. Rows are trimmed to the last few turns and deleted after 30 days,
+/// which is stated on the privacy page.
+model AssistantTurn {
+  id         String   @id @default(cuid())
+  customerId String
+  /// "you" for the customer, "unl" for the answer.
+  role       String
+  text       String
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([createdAt])
 }

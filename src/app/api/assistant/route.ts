@@ -16,6 +16,7 @@ import {
 import { serviceLabels } from "@/lib/ai/assistant/labels";
 import { customerStatusDictKey } from "@/lib/orders/statusLabels";
 import { translate } from "@/lib/i18n";
+import { shapeTurns, retentionCutoff, MAX_TURNS, type Turn } from "@/lib/ai/assistant/memory";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,6 +40,29 @@ export const runtime = "nodejs";
 /** Cost control on the open door. Counted against the calls we already log. */
 const PUBLIC_HOURLY_LIMIT = 20;
 const SIGNED_IN_HOURLY_LIMIT = 60;
+
+/**
+ * GET — the conversation as it stood when they last closed the sheet.
+ *
+ * Without this, "it remembers" would be true and invisible: the model would
+ * follow on from something the customer could no longer see, which reads as the
+ * assistant knowing things it should not. The screen and the prompt have to be
+ * looking at the same conversation.
+ *
+ * Signed out, this is always empty — nothing is stored for a visitor.
+ */
+export async function GET() {
+  const customerId = await getCustomerId();
+  if (!customerId) return NextResponse.json({ turns: [] });
+
+  const rows = await prisma.assistantTurn.findMany({
+    where: { customerId, createdAt: { gte: retentionCutoff() } },
+    orderBy: { createdAt: "desc" },
+    take: MAX_TURNS,
+    select: { role: true, text: true },
+  });
+  return NextResponse.json({ turns: rows.reverse() });
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
@@ -84,7 +108,7 @@ export async function POST(req: NextRequest) {
   const hour = yaoundeHour();
   const openNow = isNightHour(hour, settings.operatingStartHour, settings.operatingEndHour);
 
-  const [zones, openMerchants, orders, places, customer] = await Promise.all([
+  const [zones, openMerchants, orders, places, customer, stored] = await Promise.all([
     prisma.zone.findMany({
       where: { active: true },
       select: { zoneName: true, feeXaf: true },
@@ -125,7 +149,26 @@ export async function POST(req: NextRequest) {
     customerId
       ? prisma.customer.findUnique({ where: { id: customerId }, select: { fullName: true } })
       : Promise.resolve(null),
+    // The conversation so far — stored for a signed-in customer, so it picks up
+    // where it left off. Ordered newest first and reversed below, because that
+    // is the cheap end of the index when only the tail is wanted.
+    customerId
+      ? prisma.assistantTurn.findMany({
+          where: { customerId, createdAt: { gte: retentionCutoff() } },
+          orderBy: { createdAt: "desc" },
+          take: MAX_TURNS,
+          select: { role: true, text: true },
+        })
+      : Promise.resolve([]),
   ]);
+
+  // A signed-out visitor has nothing stored, so their follow-ups arrive from
+  // their own browser — untrusted, and shaped as such. A signed-in customer's
+  // history comes from the database and the browser's copy is ignored, so
+  // nothing a caller sends can put words in our mouth.
+  const history: Turn[] = customerId
+    ? stored.reverse().map((t) => ({ role: t.role === "unl" ? "unl" : "you", text: t.text }))
+    : shapeTurns(body.history);
 
   const labels = serviceLabels(fr);
   const services = settings.enabledServices.map((type) => ({
@@ -165,6 +208,7 @@ export async function POST(req: NextRequest) {
     openMerchants: openMerchants
       .filter((m) => m.open24h || (openNow && m.nightOpen))
       .map((m) => ({ name: m.merchantName, category: m.category, neighbourhood: m.neighbourhood })),
+    history,
   };
 
   const result = await kimiJsonResult<AssistantAnswer>({
@@ -185,8 +229,31 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const reply = result.answer.reply.slice(0, 1200);
+
+  // Remember it, for a signed-in customer only. Failing to write must never
+  // cost them the answer they are already looking at, so this is awaited but
+  // swallowed — a conversation that forgets one exchange is a small loss; an
+  // error page instead of an answer is not.
+  if (customerId) {
+    await prisma
+      .$transaction([
+        prisma.assistantTurn.createMany({
+          data: [
+            { customerId, role: "you", text: question },
+            { customerId, role: "unl", text: reply },
+          ],
+        }),
+        // Retention happens on the way past rather than in a job nobody runs.
+        prisma.assistantTurn.deleteMany({
+          where: { customerId, createdAt: { lt: retentionCutoff() } },
+        }),
+      ])
+      .catch(() => {});
+  }
+
   return NextResponse.json({
-    reply: result.answer.reply.slice(0, 1200),
+    reply,
     // Checked against a scope built from the session — an order code the model
     // invented, or one belonging to somebody else, never becomes a button.
     actions: acceptActions(result.answer.actions, {

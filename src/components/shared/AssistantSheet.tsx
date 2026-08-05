@@ -62,6 +62,7 @@ export function AssistantSheet() {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -69,9 +70,40 @@ export function AssistantSheet() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns, busy]);
 
+  /**
+   * Pick the conversation back up.
+   *
+   * A signed-in customer's turns are stored, so opening the sheet tomorrow
+   * shows what was said tonight. Signed out this returns nothing, which is the
+   * design: there is no account to attach a conversation to, and giving a
+   * stranger a server-side record of what they typed would be tracking rather
+   * than a feature.
+   */
+  useEffect(() => {
+    if (!open || loaded) return;
+    setLoaded(true);
+    fetch("/api/assistant", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: { turns?: { role: string; text: string }[] }) => {
+        const rows = data.turns ?? [];
+        if (rows.length === 0) return;
+        setTurns((prev) =>
+          prev.length > 0 ? prev : rows.map((t) => ({ from: t.role === "unl" ? "unl" : "you", text: t.text }))
+        );
+      })
+      .catch(() => {
+        // A conversation that fails to load is a blank sheet, which is exactly
+        // what it was before this existed. Nothing to say about it.
+      });
+  }, [open, loaded]);
+
   async function ask(text: string) {
     const asked = text.trim();
     if (!asked || busy) return;
+    // Everything before this question, for a visitor with nothing stored. The
+    // server ignores it entirely for a signed-in customer and reads their own
+    // rows instead, so this can never put words in our mouth.
+    const history = turns.map((t) => ({ role: t.from, text: t.text }));
     setTurns((prev) => [...prev, { from: "you", text: asked }]);
     setQuestion("");
     setBusy(true);
@@ -79,7 +111,7 @@ export function AssistantSheet() {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: asked, fr }),
+        body: JSON.stringify({ question: asked, fr, history }),
       });
       const data = await res.json();
       setTurns((prev) => [
