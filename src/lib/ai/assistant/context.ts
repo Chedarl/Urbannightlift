@@ -2,6 +2,7 @@ import "server-only";
 
 import { formatXaf } from "@/lib/utils";
 import type { Action } from "@/lib/ai/assistant/actions";
+import { conversationBlock, type Turn } from "@/lib/ai/assistant/memory";
 
 /**
  * Everything the assistant is allowed to know, assembled by us.
@@ -68,6 +69,14 @@ export interface AssistantFacts {
   places: SavedPlace[];
   /** Businesses trading right now, so "what's open" has a real answer. */
   openMerchants: { name: string; category: string; neighbourhood: string | null }[];
+  /**
+   * What was said before this question, oldest first.
+   *
+   * Without it every question was answered as if it were the first, which is
+   * why "and how much to Bastos?" used to fail. Bounded and fenced by
+   * `memory.ts` before it arrives here.
+   */
+  history: Turn[];
 }
 
 /**
@@ -146,7 +155,9 @@ ${
 Somebody who is not signed in. You have no access to any order, any address or
 any account, and you must not pretend otherwise. If they ask about an order,
 tell them to sign in or use the tracking page with their code and phone number.`
-}`;
+}
+
+${conversationBlock(facts.history)}`;
 }
 
 /** The shape the model must answer in. */

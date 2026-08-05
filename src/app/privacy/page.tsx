@@ -27,7 +27,7 @@ export default function PrivacyPage() {
         <Logo height={30} className="mx-auto" />
         <h1 className="mt-4 font-display text-2xl font-bold">Privacy</h1>
         <p className="mt-1 text-sm text-mist-400">
-          Urban Night Lift — night delivery in Yaoundé, Cameroon. Last updated 29 July 2026.
+          Urban Night Lift — night delivery in Yaoundé, Cameroon. Last updated 5 August 2026.
         </p>
       </div>
 
@@ -91,6 +91,10 @@ export default function PrivacyPage() {
           what="A voice note, if you record one instead of typing"
           why="So our dispatcher can hear what you need. Private to our team, never published."
         />
+        <Row
+          what="What you ask the assistant, if you use it while signed in"
+          why="So it can follow on from what you already said instead of treating every question as the first. Kept for 30 days and then deleted. It is never given your delivery code, and it can see only your own orders — never anyone else's."
+        />
       </Section>
 
       <Section title="Who sees it">
@@ -120,8 +124,9 @@ export default function PrivacyPage() {
         <p className="text-sm leading-relaxed text-mist-300">
           Order records are kept while we are trading, because they are our accounts and your
           receipts. Prescriptions and voice notes are kept only as long as the order they belong to
-          needs them. If you want your account and its saved addresses deleted, email us and we will
-          do it.
+          needs them. Assistant conversations are deleted after 30 days. If you want your account
+          and its saved addresses deleted, email us and we will do it — your assistant conversation
+          goes with it.
         </p>
       </Section>
 
