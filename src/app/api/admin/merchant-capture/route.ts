@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Give a screenshot or paste a conversation." }, { status: 400 });
   }
 
-  const { draft, error } = photoPath
+  const { draft, error, sawText } = photoPath
     ? await fromScreenshot(photoPath)
     : await fromThread(thread);
 
@@ -46,11 +46,16 @@ export async function POST(req: NextRequest) {
     // The provider's own sentence, not a generic apology. The first version of
     // this said "Couldn't read that screenshot" while the real cause — we were
     // handing Moonshot a URL it does not accept — sat unread in a log.
-    return NextResponse.json({ draft: null, note: error ?? "Nothing came back." });
+    //
+    // `sawText` goes back on failure too, and is the point: it separates "the
+    // photograph was unreadable" from "it read the whole page and filled
+    // nothing", which look identical on screen and need opposite fixes.
+    return NextResponse.json({ draft: null, note: error ?? "Nothing came back.", sawText });
   }
 
   return NextResponse.json({
     draft,
+    sawText,
     // Named plainly, because the speed of this is exactly what makes an
     // unchecked field dangerous — at fifteen seconds a business, it is very easy
     // to stop reading.
