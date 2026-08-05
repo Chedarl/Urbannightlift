@@ -1,0 +1,18 @@
+-- A merchant no longer needs a street address.
+--
+-- `POST /api/merchants` required one and this column was NOT NULL, so a
+-- business captured from its own Instagram page — name, phone, quartier and
+-- opening hours all read correctly — could not be saved. The owner's report
+-- was "we are not able to even do a basic setup of the merchants", and this
+-- column was the reason.
+--
+-- The rule was wrong in a way this product should have caught sooner: Yaoundé
+-- does not use street addresses. `resolveAddress`, `VerifiedPlace` and every
+-- order form exist because addresses here are landmarks — and the catalogue
+-- was demanding the one field a social media page can never truthfully give.
+--
+-- What replaces it lives in `src/lib/merchants/complete.ts`: a name, a
+-- category, a WhatsApp number, and at least one of a quartier, a pin or an
+-- address. Nothing is dropped and no row changes; the column simply stops
+-- being mandatory.
+ALTER TABLE "Merchant" ALTER COLUMN "address" DROP NOT NULL;

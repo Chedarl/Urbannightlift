@@ -63,7 +63,7 @@ export interface MerchantOption {
   id: string;
   merchantName: string;
   category: MerchantCategory;
-  address: string;
+  address: string | null;
   landmark: string | null;
   openingHours: string | null;
 }

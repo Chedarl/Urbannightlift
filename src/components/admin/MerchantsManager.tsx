@@ -15,6 +15,7 @@ import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantPr
 import { MerchantListImport } from "@/components/admin/MerchantListImport";
 import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
+import { missingForMerchant, describeMissing } from "@/lib/merchants/complete";
 import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
 
@@ -39,7 +40,7 @@ export interface MerchantItem {
   subcategory: string | null;
   whatsappNumber: string;
   phone: string | null;
-  address: string;
+  address: string | null;
   landmark: string | null;
   neighbourhood: string | null;
   latitude: number | null;
@@ -98,6 +99,9 @@ export function MerchantsManager({
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<Partial<MerchantItem>>(empty);
+  // The same rule the endpoint enforces, so the button and the 400 agree.
+  const missingForCreate = missingForMerchant(form);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [search, setSearch] = useState(query);
   const [inviteCopied, setInviteCopied] = useState(false);
 
@@ -111,11 +115,20 @@ export function MerchantsManager({
   }
 
   async function create() {
-    await fetch("/api/merchants", {
+    setCreateError(null);
+    const res = await fetch("/api/merchants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
+    // The refusal used to be discarded, so a rejected save looked exactly like
+    // a successful one: the form closed, the list did not change, and nothing
+    // said why.
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setCreateError(data.error ?? "That didn't save.");
+      return;
+    }
     setCreating(false);
     setForm(empty);
     startTransition(() => router.refresh());
@@ -237,13 +250,22 @@ export function MerchantsManager({
           </select>
           <input className={inputCls} placeholder={t("admin.merchants.whatsapp")} value={form.whatsappNumber ?? ""} onChange={(e) => setForm({ ...form, whatsappNumber: e.target.value })} />
           <input className={inputCls} placeholder={t("admin.merchants.phone")} value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <input className={inputCls} placeholder={t("admin.merchants.address")} value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          {/* The quartier, which is how a place is actually found here and the
+              field the capture reliably reads. It was missing from this form
+              entirely while a street address was mandatory — exactly backwards
+              for Yaoundé. */}
+          <input className={inputCls} placeholder="Quartier (Biyem-Assi, Bastos…)" value={form.neighbourhood ?? ""} onChange={(e) => setForm({ ...form, neighbourhood: e.target.value })} />
+          <input className={inputCls} placeholder={`${t("admin.merchants.address")} (optional)`} value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           <input className={inputCls} placeholder={t("admin.merchants.landmark")} value={form.landmark ?? ""} onChange={(e) => setForm({ ...form, landmark: e.target.value })} />
           <input className={inputCls} placeholder={t("admin.merchants.hours")} value={form.openingHours ?? ""} onChange={(e) => setForm({ ...form, openingHours: e.target.value })} />
           <input className={inputCls} placeholder={t("admin.merchants.notes")} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <input className={inputCls} inputMode="decimal" placeholder="Latitude (e.g. 3.8480)" value={form.latitude ?? ""} onChange={(e) => setForm({ ...form, latitude: e.target.value === "" ? null : Number(e.target.value) })} />
           <input className={inputCls} inputMode="decimal" placeholder="Longitude (e.g. 11.5021)" value={form.longitude ?? ""} onChange={(e) => setForm({ ...form, longitude: e.target.value === "" ? null : Number(e.target.value) })} />
-          <Button size="sm" className="sm:col-span-2" onClick={create} disabled={pending || !form.merchantName || !form.whatsappNumber || !form.address}>
+          {missingForCreate.length > 0 && (
+            <p className="text-[11px] text-caution sm:col-span-2">{describeMissing(missingForCreate)}</p>
+          )}
+          {createError && <p className="text-[11px] text-restricted sm:col-span-2">{createError}</p>}
+          <Button size="sm" className="sm:col-span-2" onClick={create} disabled={pending || missingForCreate.length > 0}>
             {t("common.save")}
           </Button>
         </div>

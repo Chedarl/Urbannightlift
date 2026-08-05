@@ -556,7 +556,15 @@ model Merchant {
   subcategory      String?
   whatsappNumber   String
   phone            String?
-  address          String
+  /// Optional, because Yaoundé mostly does not use street addresses.
+  ///
+  /// This was NOT NULL and required by the API, which meant a business
+  /// photographed off its own Instagram page — name, phone, quartier, hours all
+  /// read correctly — could not be saved at all. The whole address stack in this
+  /// product exists because addresses here are landmarks; demanding a postal
+  /// line from the catalogue contradicted it. `src/lib/merchants/complete.ts`
+  /// holds the rule that replaced it: a quartier, a pin OR an address.
+  address          String?
   landmark         String?
   neighbourhood    String?
   arrondissement   Arrondissement?

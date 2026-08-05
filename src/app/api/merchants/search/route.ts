@@ -28,7 +28,7 @@ export interface MerchantResult {
   category: MerchantCategory;
   subcategory: string | null;
   neighbourhood: string | null;
-  address: string;
+  address: string | null;
   landmark: string | null;
   latitude: number | null;
   longitude: number | null;
