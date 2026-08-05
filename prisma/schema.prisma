@@ -548,14 +548,14 @@ model ServiceLocation {
 /// name. Rows imported from OpenStreetMap land here unverified and invisible;
 /// only a merchant a human has actually called is shown to a customer.
 model Merchant {
-  id               String           @id @default(cuid())
-  merchantName     String
-  category         MerchantCategory
+  id                    String           @id @default(cuid())
+  merchantName          String
+  category              MerchantCategory
   /// The raw source tag (restaurant, bakery, pharmacy, supermarket…) kept for
   /// display and ranking without multiplying the category enum.
-  subcategory      String?
-  whatsappNumber   String
-  phone            String?
+  subcategory           String?
+  whatsappNumber        String
+  phone                 String?
   /// Optional, because Yaoundé mostly does not use street addresses.
   ///
   /// This was NOT NULL and required by the API, which meant a business
@@ -564,45 +564,52 @@ model Merchant {
   /// product exists because addresses here are landmarks; demanding a postal
   /// line from the catalogue contradicted it. `src/lib/merchants/complete.ts`
   /// holds the rule that replaced it: a quartier, a pin OR an address.
-  address          String?
-  landmark         String?
-  neighbourhood    String?
-  arrondissement   Arrondissement?
-  latitude         Float?
-  longitude        Float?
-  zoneId           String?
-  zone             Zone?            @relation(fields: [zoneId], references: [id])
-  openingHours     String?
+  address               String?
+  landmark              String?
+  neighbourhood         String?
+  arrondissement        Arrondissement?
+  latitude              Float?
+  longitude             Float?
+  zoneId                String?
+  zone                  Zone?            @relation(fields: [zoneId], references: [id])
+  openingHours          String?
   /// Open during our trading night — the only availability that matters here.
-  nightOpen        Boolean          @default(false)
-  open24h          Boolean          @default(false)
+  nightOpen             Boolean          @default(false)
+  open24h               Boolean          @default(false)
   /// Temporarily off without losing the record (kitchen closed, phone down).
-  acceptingOrders  Boolean          @default(true)
-  website          String?
+  acceptingOrders       Boolean          @default(true)
+  /// When this business last told us what they actually have.
+  ///
+  /// The thing no competitor here does: everywhere else you order a dish and
+  /// find out it ran out when the rider arrives. A customer sees this as
+  /// "confirmed 12 minutes ago", and a restaurant nobody has asked tonight says
+  /// so plainly rather than pretending.
+  availabilityCheckedAt DateTime?
+  website               String?
   /// Their Facebook / Instagram / TikTok page. Stored as a link to tap, not
   /// scraped: the platforms give no way to search for a business, and block
   /// unauthenticated reads. What it is for is judging at a glance whether a
   /// business is still posting — which is how the owner actually checks.
-  socialUrl        String?
-  socialPlatform   String? // FACEBOOK | INSTAGRAM | TIKTOK | OTHER
+  socialUrl             String?
+  socialPlatform        String? // FACEBOOK | INSTAGRAM | TIKTOK | OTHER
   /// Shown to customers so they recognize the place. Uploaded with the
   /// merchant's permission, never taken from a third-party listing.
-  logoUrl          String?
-  photoUrl         String?
-  notes            String?
-  aliases          String[]
+  logoUrl               String?
+  photoUrl              String?
+  notes                 String?
+  aliases               String[]
   /// Normalized name + aliases, for the same fuzzy search the locations use.
-  searchKey        String           @default("")
-  source           String           @default("admin") // admin | social | signup | osm
-  osmId            String?          @unique
+  searchKey             String           @default("")
+  source                String           @default("admin") // admin | social | signup | osm
+  osmId                 String?          @unique
   /// When someone last saw this business posting, replying, or trading.
-  lastSeenActiveAt DateTime?
-  popularityRank   Int              @default(0)
-  verified         Boolean          @default(false)
-  active           Boolean          @default(true)
+  lastSeenActiveAt      DateTime?
+  popularityRank        Int              @default(0)
+  verified              Boolean          @default(false)
+  active                Boolean          @default(true)
   /// Stamped when someone actually reached them on the phone.
-  phoneVerifiedAt  DateTime?
-  lastConfirmedAt  DateTime?
+  phoneVerifiedAt       DateTime?
+  lastConfirmedAt       DateTime?
 
   /// How much delivery fee we will carry for this merchant before they settle.
   /// 0 means no float, and that is the default: a float is us lending money, so
@@ -634,11 +641,12 @@ model Merchant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders      Order[]
-  products    MerchantProduct[]
-  dutyShifts  PharmacyDuty[]
-  staffNotes  MerchantNote[]
-  floatLedger MerchantFloatLedger[]
+  orders            Order[]
+  products          MerchantProduct[]
+  dutyShifts        PharmacyDuty[]
+  staffNotes        MerchantNote[]
+  floatLedger       MerchantFloatLedger[]
+  availabilityPings AvailabilityPing[]
 
   @@index([category, verified, active])
   @@index([verified, active])
@@ -695,9 +703,9 @@ model RiderFloatLedger {
 /// prices beat a full menu nobody keeps current — so the customer can order a
 /// real dish at a real price instead of guessing a budget.
 model MerchantProduct {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   merchantId     String
-  merchant       Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant       Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   name           String
   nameFr         String?
   priceXaf       Int?
@@ -709,20 +717,25 @@ model MerchantProduct {
   /// One short line, so the grid reads like a menu instead of a stock take.
   description    String?
   descriptionFr  String?
-  available      Boolean  @default(true)
+  available      Boolean   @default(true)
+  /// When the shop last said this one had run out. Cleared when they say it is
+  /// back. Kept separate from `available`, which is the merchant's standing
+  /// menu — "we do not sell this" and "we are out tonight" are different facts
+  /// and only one of them should clear itself.
+  soldOutAt      DateTime?
   /// Cleared for a customer to browse and tap. **Pharmacies only** — and it
   /// defaults to false because the safe direction is invisible. Dispensing
   /// prescription medicine is controlled by the Ordre des Pharmaciens, so a
   /// photographed pharmacy price list must never put a prescription drug in
   /// front of a customer as a priced row with a plus button. Someone ticks each
   /// one. Food ignores this field entirely.
-  otcApproved    Boolean  @default(false)
-  popularityRank Int      @default(0)
+  otcApproved    Boolean   @default(false)
+  popularityRank Int       @default(0)
   /// Where the price came from: typed by staff, or drafted from the merchant's
   /// own published menu and then approved.
-  source         String   @default("admin")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  source         String    @default("admin")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([merchantId, available])
 }
@@ -1492,4 +1505,37 @@ model AssistantTurn {
 
   @@index([customerId, createdAt])
   @@index([createdAt])
+}
+
+/// Asking a business what is actually on the fire, and what they said back.
+///
+/// The owner's idea, and the strongest one in the product: everywhere else you
+/// order a dish and discover it ran out when the rider gets there.
+///
+/// Stated plainly because it shapes the design: **a wa.me ping cannot receive a
+/// reply.** It opens WhatsApp with the message typed and the answer lands in
+/// the owner's phone. So there are two ways an answer gets in, and this row
+/// records which — `staff_paste` when somebody pasted the reply, `merchant`
+/// when the business tapped the signed link and typed it themselves, `cloud`
+/// when the Meta Cloud API is eventually approved and delivers it directly.
+///
+/// Append-only: "who said this was available, and when" must never be a memory.
+model AvailabilityPing {
+  id              String    @id @default(cuid())
+  merchantId      String
+  merchant        Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  sentAt          DateTime  @default(now())
+  sentByUserId    String?
+  /// What they said, verbatim, before a model touched it.
+  replyText       String?
+  repliedAt       DateTime?
+  /// staff_paste | merchant | cloud
+  source          String    @default("staff_paste")
+  /// When the reading of it was actually applied to the products.
+  appliedAt       DateTime?
+  appliedByUserId String?
+  /// How many products it changed, so a ping that read nothing is visible.
+  changedCount    Int       @default(0)
+
+  @@index([merchantId, sentAt])
 }

@@ -117,6 +117,7 @@ export default async function MerchantsPage({
           active: m.active,
           phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,
           lastConfirmedAt: m.lastConfirmedAt?.toISOString() ?? null,
+          availabilityCheckedAt: m.availabilityCheckedAt?.toISOString() ?? null,
           // Whether the business has claimed its own login. Never the hash
           // itself — the console has no business holding a password digest.
           hasLogin: m.pinHash != null,
