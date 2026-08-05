@@ -32,6 +32,8 @@ export interface FoodItem {
   priceXaf: number | null;
   unit: string | null;
   photoUrl: string | null;
+  /** They told us it ran out. Shown as out, never quietly removed. */
+  soldOut: boolean;
 }
 
 export interface FoodMerchant {
@@ -43,6 +45,13 @@ export interface FoodMerchant {
   photoUrl: string | null;
   openNow: boolean;
   open24h: boolean;
+  /**
+   * When this restaurant last told us what they actually have.
+   *
+   * The differentiator, rendered as "confirmed 12 minutes ago". Everywhere else
+   * you order a dish and find out it ran out when the rider arrives.
+   */
+  checkedAt: string | null;
   items: FoodItem[];
 }
 
@@ -75,6 +84,7 @@ export async function GET() {
       photoUrl: true,
       nightOpen: true,
       open24h: true,
+      availabilityCheckedAt: true,
       products: {
         where: { available: true },
         orderBy: [{ popularityRank: "desc" }, { name: "asc" }],
@@ -86,6 +96,7 @@ export async function GET() {
           priceXaf: true,
           unit: true,
           photoUrl: true,
+          soldOutAt: true,
         },
       },
     },
@@ -100,7 +111,19 @@ export async function GET() {
     photoUrl: m.photoUrl,
     openNow: m.open24h || (isNight && m.nightOpen),
     open24h: m.open24h,
-    items: m.products,
+    checkedAt: m.availabilityCheckedAt?.toISOString() ?? null,
+    // Sold-out items are sent, not filtered out. "They ran out tonight" is
+    // information a customer wants — silently removing the dish they came for
+    // reads as us not having it at all, which is a different and worse message.
+    items: m.products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      nameFr: p.nameFr,
+      priceXaf: p.priceXaf,
+      unit: p.unit,
+      photoUrl: p.photoUrl,
+      soldOut: p.soldOutAt != null,
+    })),
   }));
 
   return NextResponse.json({

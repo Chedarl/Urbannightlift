@@ -9,6 +9,7 @@ import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { formatXaf } from "@/lib/utils";
 import type { SelectedLocation } from "@/lib/locations/types";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
+import { freshLabel } from "@/lib/merchants/freshness";
 import type { PaymentMethod } from "@prisma/client";
 
 /**
@@ -298,6 +299,15 @@ export function FoodForm() {
                               ? "Fermé"
                               : "Closed"}
                         </span>
+                        {/*
+                          The line nobody else in this market can show. A
+                          restaurant that told us what is on the fire in the
+                          last couple of hours says so; one nobody has asked
+                          tonight says that instead of pretending.
+                        */}
+                        <span className={freshLabel(m.checkedAt, fr).fresh ? "text-safe" : "text-mist-600"}>
+                          {freshLabel(m.checkedAt, fr).text}
+                        </span>
                       </span>
                     </span>
                   </button>
@@ -319,20 +329,31 @@ export function FoodForm() {
                               className="flex items-center justify-between gap-3 border-b border-ink-800 px-3 py-2.5 last:border-0"
                             >
                               <span className="min-w-0">
-                                <span className="block truncate text-sm text-mist-100">
+                                <span
+                                  className={`block truncate text-sm ${
+                                    item.soldOut ? "text-mist-600 line-through" : "text-mist-100"
+                                  }`}
+                                >
                                   {(fr && item.nameFr) || item.name}
                                 </span>
                                 <span className="text-xs text-mist-500">
-                                  {item.priceXaf != null
-                                    ? formatXaf(item.priceXaf)
-                                    : fr
-                                      ? "prix à confirmer"
-                                      : "price to confirm"}
-                                  {item.unit ? ` · ${item.unit}` : ""}
+                                  {/* Shown as out rather than quietly removed: "they
+                                      ran out tonight" is information, and a dish that
+                                      simply vanishes reads as one we never had. */}
+                                  {item.soldOut
+                                    ? fr
+                                      ? "fini ce soir"
+                                      : "sold out tonight"
+                                    : item.priceXaf != null
+                                      ? formatXaf(item.priceXaf)
+                                      : fr
+                                        ? "prix à confirmer"
+                                        : "price to confirm"}
+                                  {item.unit && !item.soldOut ? ` · ${item.unit}` : ""}
                                 </span>
                               </span>
                               <span className="flex shrink-0 items-center gap-2">
-                                {qty > 0 && (
+                                {!item.soldOut && qty > 0 && (
                                   <>
                                     <button
                                       type="button"
@@ -346,13 +367,15 @@ export function FoodForm() {
                                     </span>
                                   </>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={() => bump(item.id, 1)}
-                                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </button>
+                                {!item.soldOut && (
+                                  <button
+                                    type="button"
+                                    onClick={() => bump(item.id, 1)}
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                               </span>
                             </li>
                           );

@@ -12,6 +12,7 @@ import { Badge } from "@/components/shared/Badge";
 import { normalizePhone, cn } from "@/lib/utils";
 import { buildWaLink } from "@/lib/whatsapp/links";
 import { MerchantProducts, type ProductRow } from "@/components/admin/MerchantProducts";
+import { AvailabilityPing } from "@/components/admin/AvailabilityPing";
 import { MerchantListImport } from "@/components/admin/MerchantListImport";
 import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
@@ -59,6 +60,8 @@ export interface MerchantItem {
   active: boolean;
   phoneVerifiedAt: string | null;
   lastConfirmedAt: string | null;
+  /** When they last told us what is actually on the fire. */
+  availabilityCheckedAt: string | null;
   /** They have set a PIN and can run their own prices and hours. */
   hasLogin: boolean;
   products: ProductRow[];
@@ -428,6 +431,17 @@ export function MerchantsManager({
                 </p>
               )}
               {m.notes && <p className="mt-1 text-[11px] text-mist-500">{m.notes}</p>}
+
+              {/* Asking what is actually on the fire — only worth it once a
+                  customer can see this business at all. */}
+              {m.verified && m.category === "FOOD" && (
+                <AvailabilityPing
+                  merchantId={m.id}
+                  merchantName={m.merchantName}
+                  checkedAt={m.availabilityCheckedAt}
+                  itemCount={m.products.length}
+                />
+              )}
 
               {/* Prices only matter once a merchant is real to customers. */}
               {m.verified && (
