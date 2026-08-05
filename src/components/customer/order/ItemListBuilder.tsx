@@ -4,6 +4,7 @@ import { useFieldArray, type Control, type UseFormRegister } from "react-hook-fo
 import { Plus, Trash2 } from "lucide-react";
 import type { OrderInput } from "@/lib/validation/orderSchema";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 const cellCls =
   "w-full rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-2 text-sm text-mist-100 placeholder:text-mist-500 focus:outline-none focus:ring-2";
@@ -40,6 +41,7 @@ export function ItemListBuilder({
   accent: string;
   emptyRow: Record<string, string | number>;
 }) {
+  const { locale } = useTranslation();
   const { fields, append, remove } = useFieldArray({
     control,
     // react-hook-form types field-array names against the schema; serviceDetails
@@ -69,7 +71,7 @@ export function ItemListBuilder({
             type="button"
             onClick={() => remove(i)}
             className="mt-1 shrink-0 rounded-lg border border-ink-700 bg-ink-800 p-2 text-mist-500 hover:text-restricted"
-            aria-label="Remove"
+            aria-label={locale === "fr" ? "Supprimer" : "Remove"}
           >
             <Trash2 className="h-4 w-4" />
           </button>

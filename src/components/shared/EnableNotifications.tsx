@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, Send } from "lucide-react";
 
+import { useTranslation } from "@/lib/i18n";
+
 /**
  * Turns Web Push on for this device.
  *
@@ -33,6 +35,8 @@ export function EnableNotifications({
   orderCode?: string;
   label?: string;
 }) {
+  const { locale } = useTranslation();
+  const fr = locale === "fr";
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -48,9 +52,15 @@ export function EnableNotifications({
     try {
       const res = await fetch("/api/push/test", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      setTestResult(res.ok ? "Sent — check your device." : (data.error ?? "Couldn't send."));
+      setTestResult(
+        res.ok
+          ? fr
+            ? "Envoyée — regardez votre appareil."
+            : "Sent — check your device."
+          : (data.error ?? (fr ? "Envoi impossible." : "Couldn't send."))
+      );
     } catch {
-      setTestResult("Couldn't reach the server.");
+      setTestResult(fr ? "Serveur injoignable." : "Couldn't reach the server.");
     } finally {
       setBusy(false);
     }
@@ -153,15 +163,23 @@ export function EnableNotifications({
   if (state === "needs-install") {
     return (
       <span className={`${base} border-ink-600 text-mist-400 ${className}`}>
-        <Bell className="h-3.5 w-3.5" /> Add to Home Screen to get alerts
+        <Bell className="h-3.5 w-3.5" />{" "}
+        {fr ? "Ajoutez à l'écran d'accueil pour les alertes" : "Add to Home Screen to get alerts"}
       </span>
     );
   }
 
   if (state === "denied") {
     return (
-      <span className={`${base} border-ink-600 text-mist-400 ${className}`} title="Re-enable notifications in your browser settings for this site">
-        <BellOff className="h-3.5 w-3.5" /> Notifications blocked
+      <span
+        className={`${base} border-ink-600 text-mist-400 ${className}`}
+        title={
+          fr
+            ? "Réactivez les notifications pour ce site dans les réglages de votre navigateur"
+            : "Re-enable notifications in your browser settings for this site"
+        }
+      >
+        <BellOff className="h-3.5 w-3.5" /> {fr ? "Notifications bloquées" : "Notifications blocked"}
       </span>
     );
   }
@@ -170,16 +188,18 @@ export function EnableNotifications({
     return (
       <span className={`inline-flex flex-wrap items-center gap-2 ${className}`}>
         <button type="button" onClick={disable} disabled={busy} className={`${base} border-safe/40 bg-safe/10 text-safe`}>
-          <BellRing className="h-3.5 w-3.5" /> Alerts on
+          <BellRing className="h-3.5 w-3.5" /> {fr ? "Alertes activées" : "Alerts on"}
         </button>
         <button
           type="button"
           onClick={sendTest}
           disabled={busy}
           className={`${base} border-ink-600 text-mist-300 hover:text-mist-100`}
-          title="Send a test notification to this device"
+          title={
+            fr ? "Envoyer une notification de test à cet appareil" : "Send a test notification to this device"
+          }
         >
-          <Send className="h-3.5 w-3.5" /> Test
+          <Send className="h-3.5 w-3.5" /> {fr ? "Tester" : "Test"}
         </button>
         {testResult && <span className="text-xs text-mist-400">{testResult}</span>}
       </span>
@@ -188,7 +208,12 @@ export function EnableNotifications({
 
   return (
     <button type="button" onClick={enable} disabled={busy} className={`${base} border-gold-400/50 bg-gold-400/10 text-gold-200 hover:bg-gold-400/20 ${className}`}>
-      <Bell className="h-3.5 w-3.5" /> {busy ? "Enabling…" : (label ?? "Turn on alerts")}
+      <Bell className="h-3.5 w-3.5" />{" "}
+      {busy
+        ? fr
+          ? "Activation…"
+          : "Enabling…"
+        : (label ?? (fr ? "Activer les alertes" : "Turn on alerts"))}
     </button>
   );
 }

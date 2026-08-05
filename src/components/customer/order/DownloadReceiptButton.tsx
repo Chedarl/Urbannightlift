@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ReceiptText, Loader2 } from "lucide-react";
 import { generateReceiptPdfBlob, type ReceiptPdfData } from "@/components/customer/order/receiptPdf";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Downloads the delivery receipt — proof of payment and proof of delivery in
@@ -19,6 +20,7 @@ export function DownloadReceiptButton({
   label: string;
   className?: string;
 }) {
+  const { locale } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
 
@@ -52,7 +54,13 @@ export function DownloadReceiptButton({
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ReceiptText className="h-4 w-4" />} {label}
       </button>
-      {error && <span className="text-xs text-restricted">Couldn&apos;t build the receipt. Try again.</span>}
+      {error && (
+        <span className="text-xs text-restricted">
+          {locale === "fr"
+            ? "Impossible de générer le reçu. Réessayez."
+            : "Couldn't build the receipt. Try again."}
+        </span>
+      )}
     </div>
   );
 }

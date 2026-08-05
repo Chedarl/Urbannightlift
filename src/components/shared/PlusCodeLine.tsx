@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Copy, Check, MapPin } from "lucide-react";
 
 import { encodePlusCode } from "@/lib/locations/plusCode";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * The address a place has when it has no address.
@@ -35,6 +36,8 @@ export function PlusCodeLine({
   lng: number | null;
   label?: string;
 }) {
+  const { locale } = useTranslation();
+  const fr = locale === "fr";
   const [copied, setCopied] = useState(false);
 
   // No pin, no code. A Plus Code for a guessed point would be precise about
@@ -49,7 +52,7 @@ export function PlusCodeLine({
     } catch {
       // Older Android WebViews refuse the clipboard without a gesture chain.
       // A prompt is ugly and always works, which is the right trade at 1 AM.
-      window.prompt("Copy this code:", code);
+      window.prompt(fr ? "Copiez ce code :" : "Copy this code:", code);
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -59,7 +62,11 @@ export function PlusCodeLine({
     <button
       type="button"
       onClick={copy}
-      title="Tap to copy. Paste it into any map app, or read it out over the phone."
+      title={
+        fr
+          ? "Touchez pour copier. Collez-le dans n'importe quelle appli de cartes, ou lisez-le au téléphone."
+          : "Tap to copy. Paste it into any map app, or read it out over the phone."
+      }
       className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-800/60 px-2 py-1 font-mono text-[11px] text-mist-300 hover:text-mist-100"
     >
       <MapPin className="h-3 w-3 text-gold-300" />

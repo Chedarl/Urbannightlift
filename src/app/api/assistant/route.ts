@@ -14,6 +14,8 @@ import {
   type AssistantFacts,
 } from "@/lib/ai/assistant/context";
 import { serviceLabels } from "@/lib/ai/assistant/labels";
+import { customerStatusDictKey } from "@/lib/orders/statusLabels";
+import { translate } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -142,7 +144,12 @@ export async function POST(req: NextRequest) {
     orders: orders.map((o) => ({
       orderCode: o.orderCode,
       service: labels[o.serviceType] ?? o.serviceType,
-      status: o.orderStatus.toLowerCase().replace(/_/g, " "),
+      // The same nine words the customer already sees on their own order, in
+      // the language they are speaking. Handing the model the raw enum gave a
+      // French conversation "rider_arrived_at_delivery" to paraphrase, and it
+      // would also have described the order in language the customer has never
+      // been shown.
+      status: translate(fr ? "fr" : "en", customerStatusDictKey(o.orderStatus)),
       placedAt: o.createdAt.toISOString().slice(0, 10),
       // Pre-formatted by us. The model is told to quote, never to calculate.
       // The settled fee where there is one, the estimate otherwise — the same
