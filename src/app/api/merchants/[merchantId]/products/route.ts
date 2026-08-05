@@ -61,6 +61,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
       // rather than rejected or silently turned into zero.
       priceXaf: Number.isFinite(price) && price > 0 ? Math.round(price) : null,
       unit: typeof body.unit === "string" && body.unit.trim() ? body.unit.trim() : null,
+      // What the board groups it under, and one line about it. Both drive the
+      // customer's menu — the category strip and the line under a dish card —
+      // and both were readable by the menu-photo tool but not typeable here.
+      category: typeof body.category === "string" && body.category.trim() ? body.category.trim().slice(0, 32) : null,
+      description:
+        typeof body.description === "string" && body.description.trim()
+          ? body.description.trim().slice(0, 120)
+          : null,
       source: typeof body.source === "string" ? body.source : "admin",
     },
   });

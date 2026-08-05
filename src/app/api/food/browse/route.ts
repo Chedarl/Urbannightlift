@@ -32,6 +32,11 @@ export interface FoodItem {
   priceXaf: number | null;
   unit: string | null;
   photoUrl: string | null;
+  /** What the board groups it under — BROCHETTES, POULET. Drives the strip. */
+  category: string | null;
+  /** One short line, so the grid reads like a menu rather than a stock take. */
+  description: string | null;
+  descriptionFr: string | null;
   /** They told us it ran out. Shown as out, never quietly removed. */
   soldOut: boolean;
 }
@@ -96,6 +101,9 @@ export async function GET() {
           priceXaf: true,
           unit: true,
           photoUrl: true,
+          category: true,
+          description: true,
+          descriptionFr: true,
           soldOutAt: true,
         },
       },
@@ -122,6 +130,9 @@ export async function GET() {
       priceXaf: p.priceXaf,
       unit: p.unit,
       photoUrl: p.photoUrl,
+      category: p.category,
+      description: p.description,
+      descriptionFr: p.descriptionFr,
       soldOut: p.soldOutAt != null,
     })),
   }));

@@ -47,25 +47,32 @@ export function MerchantProducts({
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
   const [draft, setDraft] = useState<DraftRow[] | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function add(n: string, p: number | null) {
+  async function add(n: string, p: number | null, extra: Record<string, unknown> = {}) {
     await fetch(`/api/merchants/${merchantId}/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: n, priceXaf: p }),
+      body: JSON.stringify({ name: n, priceXaf: p, ...extra }),
     });
   }
 
   async function addOne() {
     if (name.trim().length < 2) return;
     setBusy(true);
-    await add(name.trim(), price ? Number(price) : null);
+    await add(name.trim(), price ? Number(price) : null, {
+      category: category.trim() || null,
+      description: description.trim() || null,
+    });
     setName("");
     setPrice("");
+    setCategory("");
+    setDescription("");
     setBusy(false);
     startTransition(() => router.refresh());
   }
@@ -194,6 +201,21 @@ export function MerchantProducts({
           inputMode="numeric"
           placeholder="Price XAF"
           className="w-28 rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-mist-100 focus:border-violet-500 focus:outline-none"
+        />
+        {/* What the board groups it under. Two or more categories turn the
+            customer's menu into a browsable strip instead of a long list —
+            the menu photo already reads these, this is the typed door. */}
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="Group (Grillades…)"
+          className="w-36 rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-mist-100 focus:border-violet-500 focus:outline-none"
+        />
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="One short line (optional)"
+          className="min-w-[10rem] flex-1 rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-mist-100 focus:border-violet-500 focus:outline-none"
         />
         <Button size="sm" variant="outline" onClick={addOne} disabled={busy || pending || name.trim().length < 2}>
           <Plus className="h-3.5 w-3.5" /> Add

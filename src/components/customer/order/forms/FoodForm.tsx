@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, Search, Plus, Minus, MapPin, Clock, Store, Loader2 } from "lucide-react";
+import { UtensilsCrossed, Search, Store, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { formatXaf } from "@/lib/utils";
 import type { SelectedLocation } from "@/lib/locations/types";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
-import { freshLabel } from "@/lib/merchants/freshness";
+import { RestaurantCard } from "@/components/customer/food/RestaurantCard";
 import type { PaymentMethod } from "@prisma/client";
 
 /**
@@ -256,136 +256,17 @@ export function FoodForm() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {shown.map((m) => {
-              const open = openMerchantId === m.id;
-              return (
-                <section key={m.id} className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
-                  <button
-                    type="button"
-                    onClick={() => setOpenMerchantId(open ? null : m.id)}
-                    className="flex w-full items-center gap-3 p-3 text-left"
-                  >
-                    {/* Their own logo, uploaded with their permission, or a
-                        letter. Never a stock photograph of somebody else's food. */}
-                    {m.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`/api/media?path=${encodeURIComponent(m.logoUrl)}`}
-                        alt=""
-                        className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-lg font-bold text-amber-300">
-                        {m.name.charAt(0)}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-mist-100">{m.name}</span>
-                      <span className="flex items-center gap-2 text-xs text-mist-500">
-                        {m.neighbourhood && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" /> {m.neighbourhood}
-                          </span>
-                        )}
-                        <span
-                          className={`flex items-center gap-1 ${m.openNow ? "text-safe" : "text-mist-500"}`}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {m.openNow
-                            ? fr
-                              ? "Ouvert"
-                              : "Open now"
-                            : fr
-                              ? "Fermé"
-                              : "Closed"}
-                        </span>
-                        {/*
-                          The line nobody else in this market can show. A
-                          restaurant that told us what is on the fire in the
-                          last couple of hours says so; one nobody has asked
-                          tonight says that instead of pretending.
-                        */}
-                        <span className={freshLabel(m.checkedAt, fr).fresh ? "text-safe" : "text-mist-600"}>
-                          {freshLabel(m.checkedAt, fr).text}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-
-                  {open && (
-                    <ul className="border-t border-ink-700">
-                      {m.items.length === 0 ? (
-                        <li className="p-3 text-xs text-mist-500">
-                          {fr
-                            ? "Pas encore de carte ici. Écrivez ce que vous voulez plus bas."
-                            : "No menu here yet. Write what you want below."}
-                        </li>
-                      ) : (
-                        m.items.map((item) => {
-                          const qty = cart[item.id] ?? 0;
-                          return (
-                            <li
-                              key={item.id}
-                              className="flex items-center justify-between gap-3 border-b border-ink-800 px-3 py-2.5 last:border-0"
-                            >
-                              <span className="min-w-0">
-                                <span
-                                  className={`block truncate text-sm ${
-                                    item.soldOut ? "text-mist-600 line-through" : "text-mist-100"
-                                  }`}
-                                >
-                                  {(fr && item.nameFr) || item.name}
-                                </span>
-                                <span className="text-xs text-mist-500">
-                                  {/* Shown as out rather than quietly removed: "they
-                                      ran out tonight" is information, and a dish that
-                                      simply vanishes reads as one we never had. */}
-                                  {item.soldOut
-                                    ? fr
-                                      ? "fini ce soir"
-                                      : "sold out tonight"
-                                    : item.priceXaf != null
-                                      ? formatXaf(item.priceXaf)
-                                      : fr
-                                        ? "prix à confirmer"
-                                        : "price to confirm"}
-                                  {item.unit && !item.soldOut ? ` · ${item.unit}` : ""}
-                                </span>
-                              </span>
-                              <span className="flex shrink-0 items-center gap-2">
-                                {!item.soldOut && qty > 0 && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => bump(item.id, -1)}
-                                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-ink-700 text-mist-300"
-                                    >
-                                      <Minus className="h-3.5 w-3.5" />
-                                    </button>
-                                    <span className="w-4 text-center text-sm font-semibold text-mist-100">
-                                      {qty}
-                                    </span>
-                                  </>
-                                )}
-                                {!item.soldOut && (
-                                  <button
-                                    type="button"
-                                    onClick={() => bump(item.id, 1)}
-                                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300"
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </span>
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
-                  )}
-                </section>
-              );
-            })}
+            {shown.map((m) => (
+              <RestaurantCard
+                key={m.id}
+                merchant={m}
+                fr={fr}
+                open={openMerchantId === m.id}
+                onToggle={() => setOpenMerchantId(openMerchantId === m.id ? null : m.id)}
+                quantities={cart}
+                onBump={bump}
+              />
+            ))}
           </div>
         </>
       )}
