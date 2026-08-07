@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader, SectionLabel } from "@/components/shared/portalKit";
 import { Button } from "@/components/shared/Button";
+import { ImagePicker } from "@/components/shared/ImagePicker";
 import type { MerchantCategory } from "@prisma/client";
 
 interface ShopFields {
@@ -21,6 +22,8 @@ interface ShopFields {
   website: string | null;
   socialUrl: string | null;
   logoUrl: string | null;
+  /** Their cover photo, behind their card on the food page. */
+  photoUrl: string | null;
 }
 
 /**
@@ -46,6 +49,8 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
     open24h: merchant.open24h,
     website: merchant.website ?? "",
     socialUrl: merchant.socialUrl ?? "",
+    logoUrl: merchant.logoUrl,
+    photoUrl: merchant.photoUrl,
   });
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -84,6 +89,46 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
         subtitle={merchant.merchantName}
         back="/merchant"
       />
+
+      {/*
+        Their pictures, which until now no screen anywhere could set — the food
+        page rendered a cover photo that nothing in the product could fill.
+        Uploaded on change and saved with the rest of the form, so a photo can
+        never be sitting in storage attached to nothing.
+      */}
+      <SectionLabel>{fr ? "Vos photos" : "Your pictures"}</SectionLabel>
+      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-ink-700 bg-ink-900 p-4">
+        <ImagePicker
+          value={form.logoUrl}
+          onChange={(path) => setForm({ ...form, logoUrl: path })}
+          label={fr ? "Votre logo" : "Your logo"}
+          hint={
+            fr
+              ? "C'est ce que les clients reconnaissent en premier."
+              : "This is what customers recognise first."
+          }
+          prefix="shop-logo"
+          shape="square"
+          fr={fr}
+        />
+        <ImagePicker
+          value={form.photoUrl}
+          onChange={(path) => setForm({ ...form, photoUrl: path })}
+          label={fr ? "Photo de couverture" : "Cover photo"}
+          hint={
+            fr
+              ? "Votre devanture ou vos plats. Vos propres photos uniquement."
+              : "Your shop front or your dishes. Your own photographs only."
+          }
+          prefix="shop-cover"
+          fr={fr}
+        />
+        <p className="text-[11px] leading-relaxed text-mist-500">
+          {fr
+            ? "N'utilisez que vos propres photos. Enregistrez en bas pour les publier."
+            : "Use only your own photographs. Press save at the bottom to publish them."}
+        </p>
+      </div>
 
       <SectionLabel>{fr ? "Où vous trouver" : "Finding you"}</SectionLabel>
       <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">

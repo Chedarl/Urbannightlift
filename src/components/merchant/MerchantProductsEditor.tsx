@@ -6,6 +6,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { PageHeader, CardGroup, RowDivider } from "@/components/shared/portalKit";
 import { Button } from "@/components/shared/Button";
+import { ImagePicker } from "@/components/shared/ImagePicker";
 import { formatXaf } from "@/lib/utils";
 
 interface Product {
@@ -14,6 +15,8 @@ interface Product {
   priceXaf: number | null;
   unit: string | null;
   available: boolean;
+  /** `bucket/key` of the dish photograph, if they have taken one. */
+  photoUrl: string | null;
 }
 
 /**
@@ -123,6 +126,20 @@ export function MerchantProductsEditor({ initial }: { initial: Product[] }) {
             <div key={p.id}>
               {i > 0 && <RowDivider />}
               <div className="flex items-center gap-3 px-4 py-3">
+                {/* Their dish, photographed by them. A picture sells a plate at
+                    1 AM far better than its name does, and until now nothing in
+                    the product could put one there. */}
+                <ImagePicker
+                  value={p.photoUrl}
+                  onChange={async (path) => {
+                    await call("PATCH", { id: p.id, photoUrl: path });
+                  }}
+                  label={fr ? `Photo de ${p.name}` : `Photo of ${p.name}`}
+                  prefix={`dish-${p.id}`}
+                  shape="square"
+                  disabled={busy}
+                  fr={fr}
+                />
                 <div className="min-w-0 flex-1">
                   <p className={`truncate text-[15px] font-medium ${p.available ? "text-mist-100" : "text-mist-500 line-through"}`}>
                     {p.name}

@@ -23,6 +23,7 @@ export default async function MerchantProfilePage() {
         website: merchant.website,
         socialUrl: merchant.socialUrl,
         logoUrl: merchant.logoUrl,
+        photoUrl: merchant.photoUrl,
       }}
     />
   );

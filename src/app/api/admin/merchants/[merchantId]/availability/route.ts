@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { readAvailability } from "@/lib/ai/availability";
 import { applyAvailability } from "@/lib/merchants/availabilityApply";
+import { recordAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,6 +53,54 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
         soldOut: c.soldOut === true,
       }));
 
+    /*
+     * The dishes they named that we do not stock yet, ticked by a person.
+     *
+     * Never taken from the reading — only from what came back in this request,
+     * so a row nobody looked at cannot become a product. That is the same rule
+     * the changes above follow, and it is the whole reason reading and applying
+     * are two requests.
+     */
+    const newItems = Array.isArray(body.newItems)
+      ? (body.newItems as { name?: unknown; priceXaf?: unknown }[])
+          .map((n) => ({
+            name: typeof n.name === "string" ? n.name.trim().slice(0, 60) : "",
+            priceXaf:
+              Number.isFinite(Number(n.priceXaf)) && Number(n.priceXaf) > 0
+                ? Math.round(Number(n.priceXaf))
+                : null,
+          }))
+          .filter((n) => n.name.length >= 2)
+          .slice(0, 20)
+      : [];
+
+    let added = 0;
+    if (newItems.length > 0) {
+      const existing = new Set(items.map((i) => i.name.trim().toLowerCase()));
+      const fresh = newItems.filter((n) => !existing.has(n.name.toLowerCase()));
+      if (fresh.length > 0) {
+        const result = await prisma.merchantProduct.createMany({
+          data: fresh.map((n) => ({
+            merchantId,
+            name: n.name,
+            priceXaf: n.priceXaf,
+            // Where it came from, so a price nobody typed can be traced back to
+            // the WhatsApp reply it was read out of.
+            source: "availability_ping",
+          })),
+          skipDuplicates: true,
+        });
+        added = result.count;
+        await recordAudit({
+          actor: { id: user.id, fullName: user.fullName, role: user.role },
+          action: "merchant.menu_from_ping",
+          entityType: "merchant",
+          entityId: merchantId,
+          entityLabel: fresh.map((n) => n.name).join(", ").slice(0, 200),
+        });
+      }
+    }
+
     const { changed } = await applyAvailability({
       merchantId,
       pingId,
@@ -60,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
       replyText,
       source: "staff_paste",
     });
-    return NextResponse.json({ applied: true, changed });
+    return NextResponse.json({ applied: true, changed, added });
   }
 
   const reading = await readAvailability(replyText, items);

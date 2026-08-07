@@ -57,7 +57,7 @@ export default async function MerchantsPage({
         products: {
           where: { available: true },
           orderBy: [{ popularityRank: "desc" }, { name: "asc" }],
-          select: { id: true, name: true, priceXaf: true, otcApproved: true },
+          select: { id: true, name: true, priceXaf: true, otcApproved: true, photoUrl: true },
         },
       },
       // A business that filled in its own page answered us, which is the best
@@ -120,6 +120,7 @@ export default async function MerchantsPage({
           socialUrl: m.socialUrl,
           socialPlatform: m.socialPlatform,
           logoUrl: m.logoUrl,
+          photoUrl: m.photoUrl,
           verified: m.verified,
           active: m.active,
           phoneVerifiedAt: m.phoneVerifiedAt?.toISOString() ?? null,

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Sparkles, Send, Loader2, Check, X } from "lucide-react";
+import { Sparkles, Check, X } from "lucide-react";
+
+import { ChatPanel } from "@/components/shared/ChatPanel";
 
 /**
  * Ask the console what needs you.
@@ -10,7 +12,9 @@ import { Sparkles, Send, Loader2, Check, X } from "lucide-react";
  * The owner asked why there was no chat in settings. There was none because the
  * customer assistant is deliberately hidden on `/admin` — it is grounded in one
  * customer's own orders, so on a dispatcher's screen it would be answering the
- * wrong person out of the wrong data. This is the staff one.
+ * wrong person out of the wrong data. This is the staff one, and it now lives in
+ * **Customer service**, where the owner said it belongs, rather than on a
+ * settings page nobody opens mid-shift.
  *
  * It answers from the same rows the console renders, and it offers buttons.
  * Two rules make those buttons safe, and both are visible in this file:
@@ -24,9 +28,14 @@ import { Sparkles, Send, Loader2, Check, X } from "lucide-react";
  * **Anything that changes something asks first.** Navigation is a plain link.
  * A mutation is a confirm step with the sentence spelled out, because the whole
  * risk of an actionable chat is the tap you make without reading.
+ *
+ * The chat mechanics — streaming, Stop, New chat, the conversation staying on
+ * screen — are `ChatPanel`, shared with the customer's. Two implementations of
+ * one idea is exactly how they drifted into behaving differently, which is what
+ * was reported.
  */
 
-interface Request {
+interface StaffRequest {
   type: "link" | "request";
   href?: string;
   method?: "PATCH";
@@ -38,13 +47,7 @@ interface Request {
 interface Offer {
   label: string;
   mutation: boolean;
-  request: Request;
-}
-
-interface Turn {
-  from: "you" | "unl";
-  text: string;
-  offers?: Offer[];
+  request: StaffRequest;
 }
 
 const OPENERS = [
@@ -54,48 +57,8 @@ const OPENERS = [
 ];
 
 export function StaffAssistant() {
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [question, setQuestion] = useState("");
-  const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Offer | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [turns, busy]);
-
-  async function ask(text: string) {
-    const asked = text.trim();
-    if (!asked || busy) return;
-    // Staff conversations are not stored: a dispatcher's console is shared, and
-    // a thread left on it would follow whoever sat down next. The turns travel
-    // in the request instead.
-    const history = turns.map((t) => ({ role: t.from, text: t.text }));
-    setTurns((prev) => [...prev, { from: "you", text: asked }]);
-    setQuestion("");
-    setBusy(true);
-    try {
-      const res = await fetch("/api/admin/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: asked, history }),
-      });
-      const data = await res.json();
-      setTurns((prev) => [
-        ...prev,
-        {
-          from: "unl",
-          text: data.reply ?? "I couldn't answer that.",
-          offers: Array.isArray(data.actions) ? data.actions : [],
-        },
-      ]);
-    } catch {
-      setTurns((prev) => [...prev, { from: "unl", text: "Couldn't reach the server." }]);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   /**
    * Runs the endpoint the button describes, from this browser, with this staff
@@ -139,71 +102,50 @@ export function StaffAssistant() {
         and your name goes on what they do.
       </p>
 
-      {turns.length === 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {OPENERS.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => ask(o)}
-              className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1.5 text-xs text-mist-300 hover:border-violet-500"
-            >
-              {o}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {turns.length > 0 && (
-        <div className="mt-3 flex max-h-96 flex-col gap-3 overflow-y-auto">
-          {turns.map((turn, i) => (
-            <div key={i} className={turn.from === "you" ? "self-end" : "self-start"}>
-              <div
-                className={`max-w-md rounded-2xl px-3 py-2 text-xs leading-relaxed ${
-                  turn.from === "you"
-                    ? "bg-violet-600 text-white"
-                    : "border border-ink-700 bg-ink-900 text-mist-200"
-                }`}
-              >
-                {turn.text}
-              </div>
-
-              {turn.offers && turn.offers.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {turn.offers.map((offer, j) =>
-                    offer.request.type === "link" ? (
-                      <Link
-                        key={j}
-                        href={offer.request.href ?? "#"}
-                        className="rounded-lg border border-ink-600 px-3 py-1.5 text-xs font-medium text-mist-200 hover:border-violet-500"
-                      >
-                        {offer.label}
-                      </Link>
-                    ) : (
-                      <button
-                        key={j}
-                        type="button"
-                        onClick={() => setPending(offer)}
-                        // A mutation is deliberately gold rather than violet:
-                        // it should not look like the links beside it.
-                        className="rounded-lg border border-gold-400/50 bg-gold-400/10 px-3 py-1.5 text-xs font-semibold text-gold-200"
-                      >
-                        {offer.label}
-                      </button>
-                    )
-                  )}
-                </div>
+      <div className="mt-3">
+        <ChatPanel
+          endpoint="/api/admin/assistant"
+          openers={OPENERS}
+          dense
+          copy={{
+            placeholder: "Ask about tonight…",
+            intro: "Ask what needs you, who is waiting, or why something is failing.",
+            thinking: "Reading tonight…",
+            stop: "Stop",
+            newChat: "New chat",
+            send: "Send",
+            stopped: "You stopped this answer.",
+            unreachable: "Couldn't reach the server.",
+            noAnswer: "I couldn't answer that.",
+          }}
+          renderActions={(actions) => (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(actions as Offer[]).map((offer, j) =>
+                offer.request?.type === "link" ? (
+                  <Link
+                    key={j}
+                    href={offer.request.href ?? "#"}
+                    className="rounded-lg border border-ink-600 px-3 py-1.5 text-xs font-medium text-mist-200 hover:border-violet-500"
+                  >
+                    {offer.label}
+                  </Link>
+                ) : (
+                  <button
+                    key={j}
+                    type="button"
+                    onClick={() => setPending(offer)}
+                    // A mutation is deliberately gold rather than violet: it
+                    // should not look like the links beside it.
+                    className="rounded-lg border border-gold-400/50 bg-gold-400/10 px-3 py-1.5 text-xs font-semibold text-gold-200"
+                  >
+                    {offer.label}
+                  </button>
+                )
               )}
             </div>
-          ))}
-          {busy && (
-            <p className="flex items-center gap-2 self-start text-xs text-mist-500">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading tonight…
-            </p>
           )}
-          <div ref={endRef} />
-        </div>
-      )}
+        />
+      </div>
 
       {/*
         The confirm step. The sentence is written by `staffActions.ts` and says
@@ -233,29 +175,6 @@ export function StaffAssistant() {
       )}
 
       {note && <p className="mt-2 text-xs leading-relaxed text-mist-300">{note}</p>}
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(question);
-        }}
-        className="mt-3 flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3 py-2"
-      >
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask about tonight…"
-          className="w-full bg-transparent text-xs text-mist-100 placeholder:text-mist-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={busy || question.trim().length < 2}
-          className="shrink-0 text-violet-300 disabled:opacity-40"
-          aria-label="Send"
-        >
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
     </div>
   );
 }

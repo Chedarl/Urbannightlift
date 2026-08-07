@@ -51,6 +51,11 @@ export async function PATCH(req: NextRequest) {
   if (socialUrl !== undefined) data.socialUrl = socialUrl;
   const logoUrl = str(body.logoUrl, MAX.url);
   if (logoUrl !== undefined) data.logoUrl = logoUrl;
+  // Their own cover photo, behind their card on the food page. The second door
+  // the owner asked for: staff can set this, and so can the shop itself — it is
+  // their storefront and they have better pictures of it than we do.
+  const photoUrl = str(body.photoUrl, MAX.url);
+  if (photoUrl !== undefined) data.photoUrl = photoUrl;
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to change" }, { status: 400 });

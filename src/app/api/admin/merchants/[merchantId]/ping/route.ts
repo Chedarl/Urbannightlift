@@ -33,14 +33,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ mercha
     select: { id: true, merchantName: true, whatsappNumber: true, products: { select: { id: true } } },
   });
   if (!merchant) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (merchant.products.length === 0) {
-    // Asking what is available from a business with nothing listed produces a
-    // sentence nobody can act on. Say so rather than sending it.
-    return NextResponse.json(
-      { error: "This business has no items listed yet, so there is nothing to ask about." },
-      { status: 400 }
-    );
-  }
+
+  /*
+   * A merchant with nothing listed used to be refused here, on the reasoning
+   * that asking "what ran out" of an empty list produces a sentence nobody can
+   * act on. True — and it made the feature unreachable, because the way a list
+   * gets filled is by asking. A business sat verified and empty forever.
+   *
+   * So the ask changes instead of being blocked: with no list we ask what they
+   * sell and for how much, and their answer becomes the menu.
+   */
+  const empty = merchant.products.length === 0;
 
   const ping = await prisma.availabilityPing.create({
     data: { merchantId: merchant.id, sentByUserId: user.id },
@@ -50,7 +53,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ mercha
   const url = pingUrl(createPingToken(merchant.id, ping.id));
   return NextResponse.json({
     pingId: ping.id,
-    waLink: buildWaLink(merchant.whatsappNumber, pingMessage(merchant.merchantName, url)),
+    waLink: buildWaLink(merchant.whatsappNumber, pingMessage(merchant.merchantName, url, empty)),
+    // So the panel knows which reply it is about to read.
+    askedForMenu: empty,
     url,
   });
 }

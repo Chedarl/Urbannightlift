@@ -152,6 +152,93 @@ check(
   })()
 );
 
+
+console.log("\nThe first reply builds the menu");
+{
+  // A business we have just verified, with nothing listed. This is the case the
+  // whole feature used to refuse — and refusing it is what left new merchants
+  // permanently empty, because asking is the only way to get a list.
+  const fresh = shapeReading(
+    { priced: [{ name: "gâteau chocolat", priceXaf: 5000 }, { name: "croissant", priceXaf: 500 }] },
+    []
+  );
+  check("both dishes come back to be added", fresh.newItems.length === 2);
+  check("with the price they actually said", fresh.newItems[0].priceXaf === 5000);
+  check(
+    "and nothing is marked sold out",
+    fresh.changes.length === 0,
+    "there is no menu yet, so there is nothing that could have run out"
+  );
+}
+
+console.log("\nA price is repeated, never invented");
+check(
+  "no price given is no price shown",
+  shapeReading({ priced: [{ name: "beignets" }] }, []).newItems[0].priceXaf === null,
+  "a blank price asks a person; a guessed one becomes an argument at the door"
+);
+check(
+  "a misread decimal is refused rather than published",
+  shapeReading({ priced: [{ name: "gâteau", priceXaf: 5 }] }, []).newItems[0].priceXaf === null,
+  "5 XAF for a cake is a model that read 5.000 as five, and it must not reach a menu"
+);
+check(
+  "a negative price is refused",
+  shapeReading({ priced: [{ name: "gâteau", priceXaf: -900 }] }, []).newItems[0].priceXaf === null
+);
+check(
+  "an absurd price is refused",
+  shapeReading({ priced: [{ name: "gâteau", priceXaf: 99_000_000 }] }, []).newItems[0].priceXaf === null
+);
+check(
+  "a fractional price is rounded, not dropped",
+  shapeReading({ priced: [{ name: "gâteau", priceXaf: 4999.6 }] }, []).newItems[0].priceXaf === 5000
+);
+
+console.log("\nAnd it is still never created behind anybody's back");
+{
+  const known = shapeReading({ priced: [{ name: "poisson braisé", priceXaf: 4000 }] }, MENU);
+  check(
+    "something already on their list is not offered as new",
+    known.newItems.length === 0,
+    "that is a price change, which is a person's decision, not a stock reading"
+  );
+}
+{
+  const named = shapeReading({ available: ["ndolé"] }, MENU);
+  check("a dish we do not carry is offered rather than created", named.newItems.length === 1);
+  check("and it carries no price nobody gave", named.newItems[0].priceXaf === null);
+  check(
+    "it is still reported as unmatched too",
+    named.unmatched.includes("ndolé"),
+    "the old wording stays for anyone reading the reading, not just the panel"
+  );
+}
+check(
+  "the same dish named twice is offered once",
+  shapeReading(
+    { priced: [{ name: "ndolé", priceXaf: 3000 }], available: ["Ndole"] },
+    MENU
+  ).newItems.length === 1
+);
+check(
+  "a priced reading wins over a bare mention",
+  shapeReading(
+    { priced: [{ name: "ndolé", priceXaf: 3000 }], available: ["ndolé"] },
+    MENU
+  ).newItems[0].priceXaf === 3000,
+  "a price is the useful half; losing it to a duplicate would waste the reply"
+);
+check("junk is not a dish", shapeReading({ priced: [{ name: "a" }, {}] }, []).newItems.length === 0);
+check(
+  "one reply cannot propose a hundred rows",
+  shapeReading(
+    { priced: Array.from({ length: 40 }, (_, i) => ({ name: `dish ${i}`, priceXaf: 1000 })) },
+    []
+  ).newItems.length === 20,
+  "somebody has to read this list at 1 AM"
+);
+
 console.log(
   `\n${failures === 0 ? "It reads what they said, and never more than that." : `${failures} check(s) FAILED.`}\n`
 );

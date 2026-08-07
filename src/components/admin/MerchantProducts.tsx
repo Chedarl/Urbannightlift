@@ -6,6 +6,7 @@ import { Plus, Trash2, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/shared/Button";
 import { MenuPhotoImport } from "@/components/admin/MenuPhotoImport";
+import { ImagePicker } from "@/components/shared/ImagePicker";
 import { formatXaf } from "@/lib/utils";
 
 /**
@@ -22,6 +23,8 @@ export interface ProductRow {
   priceXaf: number | null;
   /** Pharmacies only: cleared for a customer to see and tap. Default false. */
   otcApproved?: boolean;
+  /** `bucket/key` of the dish photograph, if anyone has taken one. */
+  photoUrl?: string | null;
 }
 
 interface DraftRow {
@@ -54,8 +57,42 @@ export function MerchantProducts({
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Every mutation on this panel reports what came back.
+   *
+   * `add`, `setOtc` and `remove` all used to discard the response entirely. On
+   * any failure the fields cleared, the list did not change, and nothing was
+   * said — which is exactly what "adding their menu does not work" looks like
+   * from the outside, whether or not the server was refusing.
+   *
+   * **This is the same defect fixed for the fourth time in this codebase.** So,
+   * stated as a rule rather than a patch: a `fetch` in an admin mutation whose
+   * response is not read is a review smell. There is one helper, everything
+   * goes through it, and a caller cannot forget.
+   */
+  async function send(
+    label: string,
+    url: string,
+    init: RequestInit
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return true;
+      const data = await res.json().catch(() => ({}));
+      setNote(
+        res.status === 403 || res.status === 401
+          ? `Your role does not allow that (${label}).`
+          : (data.error ?? `${label} didn't go through (${res.status}).`)
+      );
+      return false;
+    } catch {
+      setNote(`Couldn't reach the server (${label}).`);
+      return false;
+    }
+  }
+
   async function add(n: string, p: number | null, extra: Record<string, unknown> = {}) {
-    await fetch(`/api/merchants/${merchantId}/products`, {
+    return send("Adding the item", `/api/merchants/${merchantId}/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: n, priceXaf: p, ...extra }),
@@ -65,16 +102,22 @@ export function MerchantProducts({
   async function addOne() {
     if (name.trim().length < 2) return;
     setBusy(true);
-    await add(name.trim(), price ? Number(price) : null, {
+    setNote(null);
+    const ok = await add(name.trim(), price ? Number(price) : null, {
       category: category.trim() || null,
       description: description.trim() || null,
     });
-    setName("");
-    setPrice("");
-    setCategory("");
-    setDescription("");
+    // The fields are only cleared once the row actually exists. Clearing them
+    // on a failure throws away what somebody just typed and makes a server
+    // error look like a screen that ignored them.
+    if (ok) {
+      setName("");
+      setPrice("");
+      setCategory("");
+      setDescription("");
+    }
     setBusy(false);
-    startTransition(() => router.refresh());
+    if (ok) startTransition(() => router.refresh());
   }
 
   /**
@@ -87,17 +130,38 @@ export function MerchantProducts({
    * person, and the answer is no until they say otherwise.
    */
   async function setOtc(productId: string, otcApproved: boolean) {
-    await fetch(`/api/merchants/${merchantId}/products`, {
+    setNote(null);
+    const ok = await send(
+      otcApproved ? "Putting it on the shelf" : "Taking it off the shelf",
+      `/api/merchants/${merchantId}/products`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, otcApproved }),
+      }
+    );
+    if (ok) startTransition(() => router.refresh());
+  }
+
+  /** A picture of the dish, which nothing in this product could set until now. */
+  async function setPhoto(productId: string, photoUrl: string | null) {
+    setNote(null);
+    const ok = await send("Saving the photo", `/api/merchants/${merchantId}/products`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, otcApproved }),
+      body: JSON.stringify({ productId, photoUrl }),
     });
-    startTransition(() => router.refresh());
+    if (ok) startTransition(() => router.refresh());
   }
 
   async function remove(productId: string) {
-    await fetch(`/api/merchants/${merchantId}/products?productId=${productId}`, { method: "DELETE" });
-    startTransition(() => router.refresh());
+    setNote(null);
+    const ok = await send(
+      "Removing the item",
+      `/api/merchants/${merchantId}/products?productId=${productId}`,
+      { method: "DELETE" }
+    );
+    if (ok) startTransition(() => router.refresh());
   }
 
   /**
@@ -122,14 +186,24 @@ export function MerchantProducts({
 
   async function saveDraft() {
     setBusy(true);
+    setNote(null);
+    let saved = 0;
     for (const i of picked) {
       const row = draft?.[i];
-      if (row) await add(row.name, row.priceXaf);
+      if (!row) continue;
+      // Stop at the first refusal. Ploughing on would report a whole menu saved
+      // when the first row was rejected and the rest may be too.
+      if (!(await add(row.name, row.priceXaf))) break;
+      saved++;
     }
-    setDraft(null);
-    setPicked(new Set());
+    if (saved === picked.size) {
+      setDraft(null);
+      setPicked(new Set());
+    } else {
+      setNote((n) => `${n ?? "That didn't finish."} ${saved} of ${picked.size} saved.`);
+    }
     setBusy(false);
-    startTransition(() => router.refresh());
+    if (saved > 0) startTransition(() => router.refresh());
   }
 
   return (
@@ -175,6 +249,16 @@ export function MerchantProducts({
                   {p.otcApproved ? "On the shelf" : "Not shown"}
                 </button>
               )}
+              {/* The dish photo. The customer's menu has rendered this column
+                  since the card was built and no screen could fill it. */}
+              <ImagePicker
+                value={p.photoUrl ?? null}
+                onChange={(path) => setPhoto(p.id, path)}
+                label={`Photo of ${p.name}`}
+                prefix={`dish-${p.id}`}
+                shape="square"
+                disabled={pending}
+              />
               <button
                 type="button"
                 onClick={() => remove(p.id)}

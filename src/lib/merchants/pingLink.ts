@@ -100,7 +100,27 @@ export function pingUrl(token: string, origin?: string): string {
  * first because most kitchens here answer in French, and it says how to reply
  * both ways. A restaurant should be able to answer without opening anything.
  */
-export function pingMessage(merchantName: string, url: string): string {
+export function pingMessage(merchantName: string, url: string, askForMenu = false): string {
+  /*
+   * Two different questions, because a business with nothing listed cannot
+   * answer the first one.
+   *
+   * "What ran out tonight?" needs a menu to run out of. Sent to a merchant we
+   * have just verified, it is unanswerable — and refusing to send it at all is
+   * what left new businesses sitting empty, since the only way to get a menu is
+   * to ask for one. So the first ping asks for the menu, and every ping after
+   * that asks what is on the fire.
+   */
+  if (askForMenu) {
+    return `Bonsoir ${merchantName} 👋 Urban Night Lift.
+
+Qu'est-ce que vous vendez ce soir, et à quel prix ? Répondez ici — par exemple « gâteau chocolat 5000, croissant 500 ».
+
+Ou touchez ce lien pour le faire vous-même : ${url}
+
+Nous le mettons sur votre page tout de suite. Merci !`;
+  }
+
   return `Bonsoir ${merchantName} 👋 Urban Night Lift.
 
 Qu'est-ce que vous avez ce soir ? Répondez ici en un mot — par exemple « on a tout » ou « plus de poisson braisé ».

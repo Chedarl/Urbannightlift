@@ -135,8 +135,17 @@ function walk(dir: string, out: string[] = []): string[] {
  */
 const TRANSLATED = /\bfr\s*\?|\bt\(|\btranslate\(|\btr\(|locale\s*===|\ben:\s*["'`]|\{fr\s*\?/;
 
-/** Text between JSX tags: `>Some words here<`, ignoring anything interpolated. */
-const JSX_TEXT = /> *([A-Za-zÀ-ÿ][^<>{}\n]{7,}?) *</g;
+/**
+ * Text between JSX tags: `>Some words here<`, ignoring anything interpolated.
+ *
+ * The `(?<!=)` matters more than it looks. Without it, a TypeScript arrow type
+ * of the shape `=> void | Promise<void>` reads as a closing bracket followed by
+ * prose followed by an opening bracket, and the check reports a language leak
+ * in a type annotation nobody will ever see on a screen. A check that cries
+ * wolf about types is one people start ignoring about copy, which would cost
+ * exactly the thing this file exists to protect.
+ */
+const JSX_TEXT = /(?<!=)> *([A-Za-zÀ-ÿ][^<>{}\n]{7,}?) *</g;
 /** Attributes a person reads or hears. */
 const HUMAN_ATTR = /\b(?:placeholder|title|aria-label|alt)=["']([^"']{5,})["']/g;
 

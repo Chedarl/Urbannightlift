@@ -103,6 +103,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const reading = await readAvailability(replyText, items);
   if (reading.error) return NextResponse.json({ error: reading.error }, { status: 400 });
 
+  /*
+   * A dish they named that we do not carry, added straight away.
+   *
+   * The staff path ticks these first, because somebody pasting a message read
+   * on another screen is reporting second-hand. Here the person typing **is**
+   * the business: it is their kitchen, their dish and their price, and making
+   * them wait for one of us to approve their own menu is the friction that kept
+   * this catalogue empty. Same rule as the availability itself, which has
+   * applied in one step on this route since it was built.
+   */
+  let added = 0;
+  if (reading.newItems.length > 0) {
+    const existing = new Set(items.map((i) => i.name.trim().toLowerCase()));
+    const fresh = reading.newItems.filter((n) => !existing.has(n.name.toLowerCase()));
+    if (fresh.length > 0) {
+      const result = await prisma.merchantProduct.createMany({
+        data: fresh.map((n) => ({
+          merchantId: found.merchant.id,
+          name: n.name,
+          priceXaf: n.priceXaf,
+          source: "merchant_ping",
+        })),
+        skipDuplicates: true,
+      });
+      added = result.count;
+    }
+  }
+
   await applyAvailability({
     merchantId: found.merchant.id,
     pingId: found.claim.p,
@@ -115,8 +143,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   return NextResponse.json({
     ok: true,
     changed: reading.changes.length,
+    added,
     // Their own words back, so somebody who typed a dish we do not carry finds
     // out now rather than wondering why nothing happened.
-    unmatched: reading.unmatched,
+    unmatched: added > 0 ? [] : reading.unmatched,
   });
 }

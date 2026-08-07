@@ -83,7 +83,16 @@ export function MerchantAvailability({ token }: { token: string }) {
         return;
       }
       setUnmatched(data.unmatched ?? []);
-      setDone(fr ? "Merci ! C'est à jour." : "Thank you! It's updated.");
+      const added = Number(data.added ?? 0);
+      setDone(
+        added > 0
+          ? fr
+            ? `Merci ! ${added} article${added === 1 ? "" : "s"} ajouté${added === 1 ? "" : "s"} à votre carte.`
+            : `Thank you! ${added} item${added === 1 ? "" : "s"} added to your menu.`
+          : fr
+            ? "Merci ! C'est à jour."
+            : "Thank you! It's updated."
+      );
     } catch {
       setDone(fr ? "Connexion impossible. Réessayez." : "Couldn't connect. Try again.");
     } finally {
@@ -136,16 +145,44 @@ export function MerchantAvailability({ token }: { token: string }) {
     );
   }
 
+  /*
+   * Nothing listed yet. This is the first ping, and their answer *is* the menu.
+   *
+   * The page used to be built entirely around a list they might not have, so a
+   * newly verified business tapped the link and found an empty screen with a
+   * Send button. The question changes instead: what do you sell, and for how
+   * much. One reply and they have a page.
+   */
+  const empty = items.length === 0;
+
   return (
     <Frame fr={fr}>
       <div className="flex flex-col gap-5">
         <div>
           <h1 className="font-display text-xl font-bold text-mist-100">
             {merchantName || (fr ? "Votre restaurant" : "Your restaurant")} —{" "}
-            {fr ? "qu'avez-vous ce soir ?" : "what have you got tonight?"}
+            {empty
+              ? fr
+                ? "que vendez-vous ?"
+                : "what do you sell?"
+              : fr
+                ? "qu'avez-vous ce soir ?"
+                : "what have you got tonight?"}
           </h1>
           <p className="mt-1 text-sm leading-relaxed text-mist-400">
-            {fr ? (
+            {empty ? (
+              fr ? (
+                <>
+                  Écrivez vos plats et vos prix, séparés par des virgules. Nous les mettons sur
+                  votre page tout de suite.
+                </>
+              ) : (
+                <>
+                  Write your dishes and their prices, separated by commas. We put them on your page
+                  straight away.
+                </>
+              )
+            ) : fr ? (
               <>
                 Touchez ce qui est <strong>fini</strong>. Ce qui reste allumé, vos clients peuvent le
                 commander.
@@ -159,7 +196,7 @@ export function MerchantAvailability({ token }: { token: string }) {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className={`flex flex-col gap-2 ${empty ? "hidden" : ""}`}>
           {items.map((item) => {
             const off = soldOut.has(item.id);
             return (
@@ -189,27 +226,42 @@ export function MerchantAvailability({ token }: { token: string }) {
           })}
         </div>
 
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => send({ soldOutIds: [...soldOut] })}
-          className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          {fr ? "Envoyer" : "Send"}
-        </button>
+        {!empty && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => send({ soldOutIds: [...soldOut] })}
+            className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {fr ? "Envoyer" : "Send"}
+          </button>
+        )}
 
-        {/* The other way, for whoever would rather type than tap. */}
+        {/* The other way, for whoever would rather type than tap — and the only
+            way when there is no list yet to tap at. */}
         <div className="rounded-xl border border-ink-700 bg-ink-900 p-3">
           <p className="text-xs text-mist-400">
-            {fr ? "Ou écrivez-le simplement :" : "Or just write it:"}
+            {empty
+              ? fr
+                ? "Votre carte :"
+                : "Your menu:"
+              : fr
+                ? "Ou écrivez-le simplement :"
+                : "Or just write it:"}
           </p>
           <div className="mt-2 flex items-center gap-2">
             <input
               value={reply}
               onChange={(e) => setReply(e.target.value)}
               placeholder={
-                fr ? "« on a tout » · « plus de poisson braisé »" : '"we have everything" · "no more fish"'
+                empty
+                  ? fr
+                    ? "« gâteau chocolat 5000, croissant 500 »"
+                    : '"chocolate cake 5000, croissant 500"'
+                  : fr
+                    ? "« on a tout » · « plus de poisson braisé »"
+                    : '"we have everything" · "no more fish"'
               }
               className="w-full bg-transparent text-sm text-mist-100 placeholder:text-mist-600 focus:outline-none"
             />

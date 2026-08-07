@@ -7,6 +7,7 @@ import { merchantToLocation, type ZoneData } from "@/lib/locations/fromMerchant"
 import type { SelectedLocation } from "@/lib/locations/types";
 import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
 import { formatXaf } from "@/lib/utils";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 
 /**
  * Who is open tonight, shown rather than searched for.
@@ -109,9 +110,9 @@ export function PharmacyTonight({
                 }`}
               >
                 <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink-800 text-teal-300">
-                  {p.logoUrl ? (
+                  {mediaSrc(p.logoUrl) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.logoUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={mediaSrc(p.logoUrl)!} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <Store className="h-4 w-4" />
                   )}

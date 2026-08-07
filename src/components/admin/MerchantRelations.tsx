@@ -19,6 +19,7 @@ import { buildWaLink } from "@/lib/whatsapp/links";
 import { SellTonightPanel } from "@/components/admin/SellTonightPanel";
 import { cn } from "@/lib/utils";
 import { STANDING_LABEL, type MerchantStanding } from "@/lib/merchants/health";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 
 /**
  * Merchants as relationships — the SMB half of the business.
@@ -135,9 +136,9 @@ export function MerchantRelations() {
               )}
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-ink-800 text-mist-400">
-                {m.logoUrl ? (
+                {mediaSrc(m.logoUrl) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.logoUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={mediaSrc(m.logoUrl)!} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <Store className="h-5 w-5" />
                 )}
@@ -221,9 +222,9 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-ink-800 text-mist-400">
-              {m.logoUrl ? (
+              {mediaSrc(m.logoUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.logoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={mediaSrc(m.logoUrl)!} alt="" className="h-full w-full object-cover" />
               ) : (
                 <Store className="h-5 w-5" />
               )}

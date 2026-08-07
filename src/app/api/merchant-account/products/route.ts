@@ -103,6 +103,12 @@ export async function PATCH(req: NextRequest) {
     const price = Number(body.priceXaf);
     data.priceXaf = Number.isFinite(price) && price > 0 ? Math.round(price) : null;
   }
+  // A photograph of the dish, taken by the shop that cooks it. Explicit null
+  // clears it, which is why this tests for the key rather than for a value.
+  if ("photoUrl" in body) {
+    data.photoUrl =
+      typeof body.photoUrl === "string" && body.photoUrl.trim() ? body.photoUrl.trim().slice(0, 400) : null;
+  }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
   }
