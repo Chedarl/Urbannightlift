@@ -19,6 +19,7 @@ import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
 import { missingForMerchant, describeMissing } from "@/lib/merchants/complete";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
+import { ImagePicker } from "@/components/shared/ImagePicker";
 import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
 
@@ -58,6 +59,8 @@ export interface MerchantItem {
   socialUrl: string | null;
   socialPlatform: string | null;
   logoUrl: string | null;
+  /** Their own cover photo, behind the card on the food page. */
+  photoUrl: string | null;
   verified: boolean;
   active: boolean;
   phoneVerifiedAt: string | null;
@@ -112,6 +115,8 @@ export function MerchantsManager({
   const [createError, setCreateError] = useState<string | null>(null);
   const [search, setSearch] = useState(query);
   const [inviteCopied, setInviteCopied] = useState(false);
+  /** What the last edit on any row actually did. Previously: nothing was said. */
+  const [rowNote, setRowNote] = useState<string | null>(null);
 
   function go(next: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -158,13 +163,37 @@ export function MerchantsManager({
     setTimeout(() => setInviteCopied(false), 2500);
   }
 
-  async function patch(id: string, body: Record<string, unknown>) {
-    await fetch(`/api/merchants/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    startTransition(() => router.refresh());
+  /**
+   * Every merchant edit on this screen, and it reports what came back.
+   *
+   * This discarded its response too — so verifying a business, marking it still
+   * trading, or saving a cover photo all looked identical whether the server
+   * agreed or refused. The same defect as the products panel, in the file above
+   * it.
+   */
+  async function patch(id: string, body: Record<string, unknown>): Promise<boolean> {
+    setRowNote(null);
+    try {
+      const res = await fetch(`/api/merchants/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setRowNote(
+          res.status === 403 || res.status === 401
+            ? "Your role does not allow that."
+            : (data.error ?? `That didn't save (${res.status}).`)
+        );
+        return false;
+      }
+      startTransition(() => router.refresh());
+      return true;
+    } catch {
+      setRowNote("Couldn't reach the server.");
+      return false;
+    }
   }
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -277,6 +306,15 @@ export function MerchantsManager({
             {t("common.save")}
           </Button>
         </div>
+      )}
+
+      {/* What the last edit actually did. Verifying, marking still-trading and
+          saving a photo all used to look identical whether the server agreed or
+          refused. */}
+      {rowNote && (
+        <p className="rounded-xl border border-caution/40 bg-caution/10 px-3 py-2 text-xs text-caution">
+          {rowNote}
+        </p>
       )}
 
       <div className="flex flex-col gap-2">
@@ -450,6 +488,26 @@ export function MerchantsManager({
                   checkedAt={m.availabilityCheckedAt}
                   itemCount={m.products.length}
                 />
+              )}
+
+              {/* The cover photo behind their card on the food page. There was
+                  no way to set this anywhere in the product — the column was
+                  rendered and never writable — so every card showed a plain
+                  gradient. Their own photograph only: never a stock kitchen,
+                  never one lifted off somebody's page. */}
+              {m.verified && (
+                <div className="mt-2">
+                  <ImagePicker
+                    value={m.photoUrl ?? null}
+                    onChange={async (path) => {
+                      await patch(m.id, { photoUrl: path });
+                    }}
+                    label="Cover photo"
+                    hint="Shown behind their card on the food page. Use a photo they sent us."
+                    prefix={`cover-${m.id}`}
+                    disabled={pending}
+                  />
+                </div>
               )}
 
               {/* Trial cleanup only. Gone the moment test mode goes off. */}

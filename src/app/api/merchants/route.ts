@@ -53,6 +53,10 @@ const MERCHANT_FIELDS = [
   "socialUrl",
   "socialPlatform",
   "logoUrl",
+  // The cover photo behind a restaurant card. It was read by the food page and
+  // writable by nothing — the card had a slot no screen in the product could
+  // fill, so every cover was going to stay empty forever.
+  "photoUrl",
   "notes",
   "verified",
   "active",

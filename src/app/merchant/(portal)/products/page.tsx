@@ -20,7 +20,7 @@ export default async function MerchantProductsPage() {
   const products = await prisma.merchantProduct.findMany({
     where: { merchantId: merchant.id },
     orderBy: [{ popularityRank: "desc" }, { name: "asc" }],
-    select: { id: true, name: true, priceXaf: true, unit: true, available: true },
+    select: { id: true, name: true, priceXaf: true, unit: true, available: true, photoUrl: true },
   });
 
   return <MerchantProductsEditor initial={products} />;

@@ -69,6 +69,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ mer
         typeof body.description === "string" && body.description.trim()
           ? body.description.trim().slice(0, 120)
           : null,
+      // A picture of the dish. Accepted here at last: the customer's menu has
+      // rendered this column since the card was built and nothing could set it.
+      photoUrl: typeof body.photoUrl === "string" && body.photoUrl.trim() ? body.photoUrl.trim() : null,
       source: typeof body.source === "string" ? body.source : "admin",
     },
   });
@@ -103,20 +106,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ me
 
   const body = await req.json().catch(() => ({}));
   const productId = typeof body.productId === "string" ? body.productId : "";
-  const otcApproved = body.otcApproved === true;
   if (!productId) return NextResponse.json({ error: "No product given" }, { status: 400 });
+
+  // Two quite different edits share this handler, and only one is present on
+  // any given call. Clearing a medicine for the shelf is a controlled decision;
+  // putting a photograph on a dish is not, so they are audited differently and
+  // neither silently performs the other.
+  const photoGiven = "photoUrl" in body;
+  const otcGiven = "otcApproved" in body;
+  if (!photoGiven && !otcGiven) {
+    return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
+  }
+
+  const otcApproved = body.otcApproved === true;
+  const photoUrl =
+    typeof body.photoUrl === "string" && body.photoUrl.trim() ? body.photoUrl.trim() : null;
 
   // Scoped to the merchant in the path, so a stray id cannot flip somebody
   // else's product onto a browsing page.
   const updated = await prisma.merchantProduct.updateMany({
     where: { id: productId, merchantId },
-    data: { otcApproved },
+    data: {
+      ...(otcGiven ? { otcApproved } : {}),
+      ...(photoGiven ? { photoUrl } : {}),
+    },
   });
   if (updated.count === 0) return NextResponse.json({ error: "No such product" }, { status: 404 });
 
   await recordAudit({
     actor: { id: user.id, fullName: user.fullName, role: user.role },
-    action: otcApproved ? "merchant.product_otc_cleared" : "merchant.product_otc_withdrawn",
+    action: otcGiven
+      ? otcApproved
+        ? "merchant.product_otc_cleared"
+        : "merchant.product_otc_withdrawn"
+      : "merchant.product_photo_set",
     entityType: "merchant",
     entityId: merchantId,
     entityLabel: productId,
