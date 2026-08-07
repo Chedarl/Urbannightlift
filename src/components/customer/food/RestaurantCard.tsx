@@ -5,6 +5,7 @@ import { MapPin, Clock, Plus, Minus, Radio } from "lucide-react";
 
 import { formatXaf } from "@/lib/utils";
 import { freshLabel } from "@/lib/merchants/freshness";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 
 /**
@@ -71,18 +72,24 @@ export function RestaurantCard({
   const fresh = freshLabel(merchant.checkedAt, fr);
   const inCart = merchant.items.reduce((n, i) => n + (quantities[i.id] ?? 0), 0);
 
+  /*
+   * Both of these used to be built by hand as `/api/media?path=…`, which is the
+   * route for **private** files: it refuses `merchant-logos` outright and wants
+   * a staff session. On a customer's phone the logo could never have loaded,
+   * and it read as a failed upload rather than as a wrong URL. `mediaSrc` makes
+   * that decision from the bucket, once, for every screen.
+   */
+  const cover = mediaSrc(merchant.photoUrl);
+  const logo = mediaSrc(merchant.logoUrl);
+
   return (
     <section className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
       <button type="button" onClick={onToggle} className="block w-full text-left">
         {/* Their own cover photo if they sent one. Never a stock kitchen. */}
         <span className="relative block h-28 w-full overflow-hidden bg-gradient-to-br from-amber-500/20 to-ink-800">
-          {merchant.photoUrl && (
+          {cover && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`/api/media?path=${encodeURIComponent(merchant.photoUrl)}`}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <img src={cover} alt="" className="h-full w-full object-cover" />
           )}
           <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-ink-900 to-transparent" />
           {inCart > 0 && (
@@ -94,10 +101,10 @@ export function RestaurantCard({
 
         <span className="flex items-start gap-3 px-3 pb-3 pt-0">
           <span className="-mt-6 shrink-0">
-            {merchant.logoUrl ? (
+            {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/media?path=${encodeURIComponent(merchant.logoUrl)}`}
+                src={logo}
                 alt=""
                 className="h-14 w-14 rounded-2xl border-2 border-ink-900 object-cover"
               />
@@ -163,6 +170,7 @@ export function RestaurantCard({
                   const qty = quantities[item.id] ?? 0;
                   const name = (fr && item.nameFr) || item.name;
                   const description = (fr && item.descriptionFr) || item.description;
+                  const photo = mediaSrc(item.photoUrl);
                   return (
                     <li
                       key={item.id}
@@ -171,10 +179,10 @@ export function RestaurantCard({
                       }`}
                     >
                       <span className="relative block h-20 w-full bg-amber-500/10">
-                        {item.photoUrl ? (
+                        {photo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={`/api/media?path=${encodeURIComponent(item.photoUrl)}`}
+                            src={photo}
                             alt=""
                             className={`h-full w-full object-cover ${item.soldOut ? "grayscale" : ""}`}
                           />

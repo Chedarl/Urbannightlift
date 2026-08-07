@@ -7,6 +7,7 @@ import { merchantToLocation, type ZoneData } from "@/lib/locations/fromMerchant"
 import { type SelectedLocation } from "@/lib/locations/types";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { MerchantCategory } from "@prisma/client";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 
 /**
  * Pick the place we're collecting from.
@@ -183,10 +184,10 @@ export function MerchantField({
                   <div className="flex min-w-0 items-start gap-2.5">
                     {/* The logo is what people actually recognize — far faster
                         than reading a name they half-remember. */}
-                    {m.logoUrl && (
+                    {mediaSrc(m.logoUrl) && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={m.logoUrl}
+                        src={mediaSrc(m.logoUrl)!}
                         alt=""
                         className="h-9 w-9 shrink-0 rounded-lg border border-ink-700 object-cover"
                       />

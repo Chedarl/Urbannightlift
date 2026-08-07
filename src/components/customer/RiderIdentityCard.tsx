@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck, Bike, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 
 /**
  * Who is coming, before they knock.
@@ -52,10 +53,10 @@ export function RiderIdentityCard({ orderCode, fr }: { orderCode: string; fr: bo
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-violet-500/30 bg-violet-950/30 p-4">
-      {rider.photoUrl ? (
+      {mediaSrc(rider.photoUrl) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={publicUrl(rider.photoUrl)}
+          src={mediaSrc(rider.photoUrl)!}
           alt={rider.fullName}
           className="h-14 w-14 shrink-0 rounded-2xl object-cover"
         />
@@ -101,11 +102,10 @@ export function RiderIdentityCard({ orderCode, fr }: { orderCode: string; fr: bo
   );
 }
 
-/**
- * Rider photos live in a public bucket precisely so they can render here
- * without a signing round-trip that would expire mid-delivery.
+/*
+ * The `publicUrl` helper that used to live here was right — rider photos are in
+ * a public bucket precisely so they render without a signing round-trip that
+ * would expire mid-delivery. It was simply private to this one file, so the
+ * food page could not reuse it and hand-rolled the wrong thing instead. It is
+ * now `mediaSrc`, which knows every bucket rather than one.
  */
-function publicUrl(path: string): string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  return `${base}/storage/v1/object/public/${path}`;
-}

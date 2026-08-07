@@ -18,6 +18,7 @@ import { MerchantListImport } from "@/components/admin/MerchantListImport";
 import { MerchantCapture } from "@/components/admin/MerchantCapture";
 import { daysSince, PLATFORM_LABEL, STALE_AFTER_DAYS, type SocialPlatform } from "@/lib/merchants/social";
 import { missingForMerchant, describeMissing } from "@/lib/merchants/complete";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import { PharmacyDutyRoster, type DutyRow, type PharmacyOption } from "@/components/admin/PharmacyDutyRoster";
 import type { MerchantCategory } from "@prisma/client";
 
@@ -293,9 +294,13 @@ export function MerchantsManager({
             <div key={m.id} className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  {m.logoUrl && (
+                  {mediaSrc(m.logoUrl) && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.logoUrl} alt="" className="h-8 w-8 rounded-lg border border-ink-700 object-cover" />
+                    <img
+                      src={mediaSrc(m.logoUrl)!}
+                      alt=""
+                      className="h-8 w-8 rounded-lg border border-ink-700 object-cover"
+                    />
                   )}
                   <span className="font-display font-semibold">{m.merchantName}</span>
                   <Badge tone="violet">{t(`admin.merchants.categories.${m.category}`)}</Badge>

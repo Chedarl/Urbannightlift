@@ -520,7 +520,33 @@ export async function kimiStream(
 
     if (!res.ok || !res.body) {
       const data = (await res.json().catch(() => null)) as ChatResponse | null;
-      const error = `${data?.error?.message ?? `Kimi refused the call (HTTP ${res.status}).`} (${variable}, ${kimiBaseUrl()})`;
+      const provider = data?.error?.message ?? `Kimi refused the call (HTTP ${res.status}).`;
+      // Streaming refused — fall back rather than fail.
+      //
+      // This is the safety net for a real risk: `stream: true` together with
+      // `response_format: json_schema` is a combination no key here has ever
+      // been tested against, and if the provider rejects it then every message
+      // in the chat returns an apology. The unstreamed path is the one that has
+      // worked for weeks, so the honest degradation is "slower, all at once"
+      // rather than "broken". Recorded with a note, because a fallback nobody
+      // knows is happening is how a provider change stays buried.
+      // Logged under its own purpose rather than the caller's: the unstreamed
+      // retry below records the real call, and adding a second row for the same
+      // question would double every count in the AI panel. A distinct name
+      // keeps the refusal visible without inflating anything.
+      await record(
+        { ...req, purpose: `${req.purpose}.stream_refused` },
+        { ok: false, ms: Date.now() - started, error: provider }
+      );
+
+      const whole = await kimiJsonResult<unknown>(req);
+      if (whole.answer) {
+        const text = JSON.stringify(whole.answer);
+        handlers.onDelta(text);
+        return { answer: text, error: null, ms: Date.now() - started };
+      }
+
+      const error = `${provider} (${variable}, ${kimiBaseUrl()})`;
       await record(req, { ok: false, ms: Date.now() - started, error });
       return { answer: null, error, ms: Date.now() - started };
     }
