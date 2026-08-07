@@ -7,7 +7,8 @@ import { yaoundeHour } from "@/lib/orders/tonight";
 import { tonightWindow } from "@/lib/orders/tonight";
 import { isNightHour } from "@/lib/pharmacy/tonight";
 import { visibilityWhere } from "@/lib/orders/filters";
-import { kimiJsonResult, kimiConfigured } from "@/lib/ai/kimi";
+import { kimiStream, kimiConfigured } from "@/lib/ai/kimi";
+import { partialReply, sse } from "@/lib/ai/partial";
 import { redactSecrets } from "@/lib/redact";
 import {
   attentionWhere,
@@ -215,40 +216,97 @@ export async function POST(req: NextRequest) {
   };
 
   const history = shapeTurns(body.history);
-  const result = await kimiJsonResult<StaffAnswer>({
-    purpose: "assistant.staff",
-    system: `${staffSystemPrompt(facts)}\n\n${conversationBlock(history)}`,
-    user: question,
-    schema: STAFF_ANSWER_SCHEMA as unknown as Record<string, unknown>,
+
+  /*
+   * Streamed, for the same reason the customer's is.
+   *
+   * A dispatcher asking "what needs me right now?" at 1 AM watched a spinner
+   * for five to eight seconds, which is exactly as long as it takes to decide a
+   * screen is broken — and half of why the admin end was reported as not
+   * working. The words now arrive as they are written.
+   *
+   * What does **not** move is the part that matters: `acceptStaffActions` still
+   * runs on the whole object at the end, checking every id against the rows
+   * this route itself just loaded. A model asked to be helpful will invent an
+   * order id, and an invented id inside a "put Jean on this" button is a rider
+   * sent to the wrong customer. Nothing about that moved to the browser.
+   */
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let buffer = "";
+      let shown = "";
+
+      const result = await kimiStream(
+        {
+          purpose: "assistant.staff",
+          system: `${staffSystemPrompt(facts)}\n\n${conversationBlock(history)}`,
+          user: question,
+          schema: STAFF_ANSWER_SCHEMA as unknown as Record<string, unknown>,
+        },
+        {
+          onDelta(text) {
+            buffer += text;
+            const next = partialReply(buffer);
+            // Only the new characters, so the browser appends rather than
+            // re-rendering a growing string on every token.
+            if (next.length > shown.length) {
+              controller.enqueue(encoder.encode(sse("delta", { text: next.slice(shown.length) })));
+              shown = next;
+            }
+          },
+        }
+      );
+
+      function finish(reply: string, actions: unknown[]) {
+        controller.enqueue(encoder.encode(sse("done", { reply, actions })));
+        controller.close();
+      }
+
+      if (!result.answer) {
+        finish(`I couldn't answer just then${result.error ? ` — ${redactSecrets(result.error)}` : "."}`, []);
+        return;
+      }
+
+      let answer: StaffAnswer | null = null;
+      try {
+        answer = JSON.parse(result.answer) as StaffAnswer;
+      } catch {
+        // The stream finished with something that is not an object. Whatever
+        // was written stands; no buttons, because there is nothing to check
+        // them against — and an unchecked staff button is the one thing here
+        // that could actually do damage.
+        finish(shown, []);
+        return;
+      }
+
+      const actions = acceptStaffActions(answer.actions, {
+        orderIds: attentionRows.map((a) => a.id),
+        merchantIds: [...unverified.map((m) => m.id), ...stale.map((m) => m.id)],
+        caseIds: cases.map((c) => c.id),
+        customerIds: [],
+        riderIds: riders.map((r) => r.id),
+      });
+
+      finish(
+        (answer.reply ?? shown).slice(0, 1200),
+        // The button, described. Executing it is the browser's job, with the
+        // staff session — so the endpoint's own gate decides, exactly as it
+        // does on the screen this saves a walk to.
+        actions.map((a) => ({
+          label: a.label,
+          mutation: isMutation(a.kind),
+          request: staffRequest(a),
+        }))
+      );
+    },
   });
 
-  if (!result.answer) {
-    return NextResponse.json({
-      reply: `I couldn't answer just then${result.error ? ` — ${redactSecrets(result.error)}` : "."}`,
-      actions: [],
-    });
-  }
-
-  // Every reference is checked against the ids this route itself just loaded.
-  // A model asked to be helpful will invent an order id, and an invented id in
-  // a "put Jean on this" button is a rider sent to the wrong customer.
-  const actions = acceptStaffActions(result.answer.actions, {
-    orderIds: attentionRows.map((a) => a.id),
-    merchantIds: [...unverified.map((m) => m.id), ...stale.map((m) => m.id)],
-    caseIds: cases.map((c) => c.id),
-    customerIds: [],
-    riderIds: riders.map((r) => r.id),
-  });
-
-  return NextResponse.json({
-    reply: result.answer.reply.slice(0, 1200),
-    // The button, described. Executing it is the browser's job, with the staff
-    // session — so the endpoint's own gate decides, exactly as it does on the
-    // screen this replaces a walk to.
-    actions: actions.map((a) => ({
-      label: a.label,
-      mutation: isMutation(a.kind),
-      request: staffRequest(a),
-    })),
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
 }
