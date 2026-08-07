@@ -30,6 +30,24 @@ import { scoreMatch, normalizeLoose } from "@/lib/locations/normalize";
  * question, and answering it automatically would put a dish in front of a
  * customer at a price nobody ever set.
  *
+ * ## And the loop that rule accidentally closed
+ *
+ * That rule was right and its implementation was a trap. Asking was **refused
+ * outright** for a merchant with nothing listed — no items, nothing to mark, so
+ * why ask. But the way you get items is to ask, so a newly verified business
+ * sat at a dead end: a card on the food page with no menu, and the one feature
+ * that could have filled it switched off precisely because it was empty. That
+ * is why "ask what they have" and "add their menu" were reported as broken
+ * together; they are the same loop with no entry point.
+ *
+ * So an unmatched name is still never created — it is now *offered*. The
+ * reading carries `newItems`: names the merchant said, with a price where they
+ * gave one, for a person to tick into the catalogue. On a merchant's own page
+ * they go straight in, because it is their shop and their price.
+ *
+ * One WhatsApp reply now turns an empty verified merchant into a menu, which is
+ * the fastest catalogue-filling route in the product and needs no photograph.
+ *
  * ## Two ways in, one parser
  *
  * A `wa.me` ping cannot receive a reply — it opens WhatsApp with the message
@@ -49,6 +67,14 @@ export interface CatalogueItem {
 export interface AvailabilityAnswer {
   soldOut?: string[];
   available?: string[];
+  /**
+   * Dishes they named **with a price** — "gâteau chocolat 5000, croissant 500".
+   *
+   * This is what a first reply looks like, when we asked what they sell rather
+   * than what ran out. Kept separate from `available` because a price is the
+   * part that turns a name into something orderable.
+   */
+  priced?: { name?: string; priceXaf?: number }[];
   /** Anything they said that is not about a specific dish — "we close at 1am". */
   note?: string | null;
   /** They said everything is on. Saves them listing twenty items. */
@@ -60,6 +86,13 @@ const SCHEMA = {
   properties: {
     soldOut: { type: "array", items: { type: "string" } },
     available: { type: "array", items: { type: "string" } },
+    priced: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { name: { type: "string" }, priceXaf: { type: "number" } },
+      },
+    },
     note: { type: "string" },
     allAvailable: { type: "boolean" },
   },
@@ -73,6 +106,29 @@ const SCHEMA = {
  * the merchant's own list.
  */
 function system(items: CatalogueItem[]): string {
+  // Nothing listed yet: this reply is their menu, not a stock update. Asking
+  // "which of these ran out" of a business with no list is the dead end that
+  // made both halves of this feature unreachable.
+  if (items.length === 0) {
+    return `A restaurant in Yaoundé, Cameroon has been asked what they sell and
+for how much. Read their reply.
+
+They will answer in French, English or a mix, informally, often as a list:
+"gâteau chocolat 5000, croissant 500", "on a poulet DG 3500 et attiéké poisson
+4000", "cakes from 2000".
+
+Return:
+- priced: every dish or item they named, with its price in XAF as a plain
+  number when they gave one. Leave the price out when they did not — do not
+  guess it, do not convert it, and do not average a range.
+- note: anything else worth a person seeing — a closing time, a minimum order,
+  a problem. One short sentence.
+
+Use their own words for the names. Add nothing they did not say: a dish they
+did not mention is not a dish they sell. If the reply is not about what they
+sell at all, return nothing but a note saying so.`;
+  }
+
   return `A restaurant in Yaoundé, Cameroon has been asked what food they have
 available right now. Read their reply.
 
@@ -87,6 +143,9 @@ Return:
 - soldOut: the dishes they say are finished, out, or unavailable.
 - available: the dishes they say they still have.
 - allAvailable: true ONLY if they plainly say everything is available.
+- priced: any dish they name that is NOT on the menu above, with its price in
+  XAF when they gave one. A restaurant adding something is normal; we simply do
+  not put it in front of a customer until a person has looked at it.
 - note: anything else worth a person seeing — a closing time, a new dish, a
   problem. One short sentence.
 
@@ -102,13 +161,37 @@ export interface AvailabilityChange {
   soldOut: boolean;
 }
 
+/** A dish they named that we do not sell yet. Offered, never created. */
+export interface NewItem {
+  name: string;
+  /** Only when they actually said one. Never guessed, never averaged. */
+  priceXaf: number | null;
+}
+
 export interface AvailabilityReading {
   changes: AvailabilityChange[];
   /** Names they used that are not on this merchant's list. Never auto-created. */
   unmatched: string[];
+  /**
+   * The same names, shaped to be added — with a price where they gave one.
+   *
+   * This is what turns a first reply into a menu. Still nothing is written by
+   * reading: staff tick these, and on a merchant's own page they go in directly
+   * because it is their shop and their price.
+   */
+  newItems: NewItem[];
   note: string | null;
   allAvailable: boolean;
   error: string | null;
+}
+
+/** A price we are willing to repeat back. Anything odd becomes "ask them". */
+function cleanPrice(raw: unknown): number | null {
+  const n = Number(raw);
+  // No negatives, no zero, no fractions of a franc, and nothing absurd — a
+  // model that has misread "5.000" as five must not put a 5 XAF cake on a menu.
+  if (!Number.isFinite(n) || n < 50 || n > 10_000_000) return null;
+  return Math.round(n);
 }
 
 /**
@@ -195,9 +278,37 @@ export function shapeReading(answer: AvailabilityAnswer, items: CatalogueItem[])
     }
   }
 
+  /*
+   * Everything they named that we do not sell, gathered into something a person
+   * can tick. Two sources: bare names pulled out of a stock reply, and the
+   * priced list a first reply produces. A name in both appears once, and the
+   * priced version wins because a price is the useful half.
+   */
+  const priced = Array.isArray(answer.priced) ? answer.priced : [];
+  const newItems: NewItem[] = [];
+  const claimed = new Set<string>();
+
+  function offer(rawName: unknown, rawPrice: unknown) {
+    const name = typeof rawName === "string" ? rawName.trim().slice(0, 60) : "";
+    if (name.length < 2) return;
+    const key = normalizeLoose(name);
+    if (!key || claimed.has(key)) return;
+    // Something they named that we already stock is a stock change, which the
+    // matching above has already handled. It is not a new item.
+    if (matchItems([name], items).matched.length > 0) return;
+    claimed.add(key);
+    newItems.push({ name, priceXaf: cleanPrice(rawPrice) });
+  }
+
+  for (const row of priced) offer(row?.name, row?.priceXaf);
+  for (const said of [...soldOut.unmatched, ...available.unmatched]) offer(said, null);
+
   return {
     changes,
     unmatched: [...new Set([...soldOut.unmatched, ...available.unmatched])].slice(0, 10),
+    // Bounded: one reply should not be able to propose a hundred rows for
+    // somebody to read at 1 AM.
+    newItems: newItems.slice(0, 20),
     note: answer.note?.trim().slice(0, 200) || null,
     allAvailable: answer.allAvailable === true,
     error: null,
@@ -212,6 +323,7 @@ export async function readAvailability(
   const empty: AvailabilityReading = {
     changes: [],
     unmatched: [],
+    newItems: [],
     note: null,
     allAvailable: false,
     error: null,
@@ -219,12 +331,9 @@ export async function readAvailability(
 
   const body = replyText.trim().slice(0, 1500);
   if (body.length < 2) return { ...empty, error: "There is nothing to read." };
-  if (items.length === 0) {
-    return {
-      ...empty,
-      error: "This business has no items on its list yet, so there is nothing to mark available.",
-    };
-  }
+  // An empty list used to be refused here. That was the dead end: the only way
+  // to get a list is to ask, so refusing to ask kept every new merchant empty
+  // forever. With nothing listed the reply is read as a menu instead.
   if (!kimiConfigured()) return { ...empty, error: "No Kimi key is configured." };
 
   const result = await kimiJsonResult<AvailabilityAnswer>({
