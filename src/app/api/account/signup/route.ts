@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, limitMessage, trippedHoneypot } from "@/lib/security/rateLimit";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { createCustomerSession, hashPin, isValidPin } from "@/lib/auth/customer";
@@ -15,6 +16,19 @@ import { bindReferral, ensureReferralCode } from "@/lib/referrals/accrual";
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
+
+  // A field no person sees. A script fills every input it finds, so this is
+  // accepted and quietly discarded — telling it that it was caught only
+  // teaches it to leave the field alone next time.
+  if (trippedHoneypot(body as Record<string, unknown>)) return NextResponse.json({ ok: true });
+
+  const limit = await checkRateLimit(req, "signup");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: limitMessage(limit, body.preferredLanguage === "FR") },
+      { status: 429, headers: { "Retry-After": String(limit.retryInMinutes * 60) } }
+    );
+  }
 
   const whatsappNumber = normalizePhone(typeof body.whatsappNumber === "string" ? body.whatsappNumber : "");
   const pin = typeof body.pin === "string" ? body.pin.trim() : "";

@@ -8,6 +8,7 @@ import { OperatingModeControls } from "@/components/admin/OperatingModeControls"
 import { MapsStatus } from "@/components/admin/MapsStatus";
 import { MailStatus } from "@/components/admin/MailStatus";
 import { AiStatus } from "@/components/admin/AiStatus";
+import { SecurityStatus } from "@/components/admin/SecurityStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -149,6 +150,10 @@ export function SettingsManager({
       {/* The staff assistant used to sit here, which was the wrong room: this is
           a configuration page, and "what needs me right now?" is asked mid-shift
           on the console. It lives in Customer service now, as its own tab. */}
+      {/* Fourth readout, and the one with the worst failure mode: a signing
+          secret that has fallen back to a value published in the repository
+          looks exactly like a healthy one from every screen. */}
+      <SecurityStatus />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain

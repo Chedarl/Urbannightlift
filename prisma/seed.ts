@@ -516,13 +516,37 @@ async function ensureStorageBuckets() {
     },
   ];
   for (const { name: bucket, public: isPublic, types, sizeMb } of buckets) {
-    const { error } = await admin.storage.createBucket(bucket, {
+    const options = {
       public: isPublic,
       fileSizeLimit: sizeMb * 1024 * 1024,
       allowedMimeTypes: types,
-    });
-    if (error && !`${error.message}`.toLowerCase().includes("already exists")) throw error;
-    console.log(`✓ storage bucket ${bucket}`);
+    };
+    const { error } = await admin.storage.createBucket(bucket, options);
+    const exists = error && `${error.message}`.toLowerCase().includes("already exists");
+    if (error && !exists) throw error;
+
+    /*
+     * The line that makes the rules above true rather than aspirational.
+     *
+     * `createBucket` applies its options **only when it creates the bucket**.
+     * Every bucket here already exists in production, so the "already exists"
+     * error was swallowed and the type and size limits were never applied to a
+     * single one of them — they read as enforced in this file and were not
+     * enforced anywhere. A bucket made before these limits were written kept
+     * whatever it was made with, and nothing in the product would ever say so.
+     *
+     * `updateBucket` is idempotent and cheap, so it runs every seed regardless
+     * of when the bucket was made. This is the enforcement point for upload
+     * type and size: the API route can only advise, because the bytes go
+     * straight from the browser to storage and never pass through it.
+     */
+    if (exists) {
+      const { error: updateError } = await admin.storage.updateBucket(bucket, options);
+      if (updateError) throw updateError;
+      console.log(`✓ storage bucket ${bucket} (limits reapplied)`);
+    } else {
+      console.log(`✓ storage bucket ${bucket}`);
+    }
   }
 }
 

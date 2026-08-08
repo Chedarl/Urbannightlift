@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, limitMessage, trippedHoneypot } from "@/lib/security/rateLimit";
+import { isOwnStorage } from "@/lib/uploads/mediaSrc";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
 import { intakeMerchant } from "@/lib/merchants/intake";
@@ -31,6 +33,14 @@ export async function POST(req: NextRequest) {
   // A field no human sees and no real submission fills.
   if (typeof body.companyWebsite === "string" && body.companyWebsite.trim()) {
     return NextResponse.json({ ok: true });
+  }
+
+  const limit = await checkRateLimit(req, "merchantSignup");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: limitMessage(limit, false) },
+      { status: 429, headers: { "Retry-After": String(limit.retryInMinutes * 60) } }
+    );
   }
 
   const merchantName = typeof body.merchantName === "string" ? body.merchantName.trim() : "";
@@ -89,7 +99,10 @@ export async function POST(req: NextRequest) {
     nightOpen: body.nightOpen !== false,
     open24h: body.open24h === true,
     socialUrl: typeof body.socialUrl === "string" ? body.socialUrl : null,
-    logoUrl: typeof body.logoUrl === "string" ? body.logoUrl : null,
+    // Only ever a path from our own upload endpoint. A stranger posting this
+    // form directly could otherwise seed the catalogue with an off-site image
+    // that loads on the public food page.
+    logoUrl: typeof body.logoUrl === "string" && isOwnStorage(body.logoUrl) ? body.logoUrl : null,
     notes: typeof body.notes === "string" ? body.notes.slice(0, 500) : null,
     // A business vouching for itself is a lead, not an approval.
     verified: false,

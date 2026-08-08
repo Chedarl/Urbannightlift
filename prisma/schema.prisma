@@ -1539,3 +1539,32 @@ model AvailabilityPing {
 
   @@index([merchantId, sentAt])
 }
+
+/// One recorded attempt at something a stranger can do without an account.
+///
+/// The public forms in this product — signup, support, the waiting list,
+/// merchant join, rider applications, ordering, and minting an upload URL —
+/// had **no limit of any kind**. Two separate plans promised a honeypot and a
+/// per-hour cap for them and neither was ever built, so anyone could script
+/// thousands of support cases or waiting-list rows. Nothing is stolen by that,
+/// but the case inbox and the needs-attention queue are the screens this
+/// business is actually run from, and filling them with noise is enough.
+///
+/// Deliberately a table rather than Redis or an in-memory map: this runs on
+/// serverless functions where memory is per-instance and would reset
+/// constantly, and adding an external store for this would be new
+/// infrastructure to operate for a problem one indexed table solves.
+///
+/// Rows are pruned by the nightly housekeeping, so this never grows without
+/// bound.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  /// What was attempted — "signup", "support", "upload:merchant-logos".
+  purpose   String
+  /// Who by, as far as we can tell. An IP, hashed; never stored raw.
+  subject   String
+  createdAt DateTime @default(now())
+
+  @@index([purpose, subject, createdAt])
+  @@index([createdAt])
+}
