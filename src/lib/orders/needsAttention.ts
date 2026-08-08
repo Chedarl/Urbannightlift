@@ -73,6 +73,7 @@ export const CLOSED_OUT: OrderStatus[] = [
 const SHOPPING_SERVICE_TYPES: ServiceType[] = [...SHOPPING_SERVICES];
 
 export type AttentionKind =
+  | "SAFETY_FLAG"
   | "OVER_CAP_DECLINED"
   | "OVER_CAP_WAITING"
   | "RECEIPT_MISMATCH"
@@ -109,6 +110,8 @@ export const ATTENTION_SELECT = {
   goodsReceiptReadXaf: true,
   overCapApprovedXaf: true,
   overCapApprovedAt: true,
+  safetyFlag: true,
+  safetyFlaggedAt: true,
   customer: { select: { fullName: true } },
   assignedRider: { select: { fullName: true } },
 } satisfies Prisma.OrderSelect;
@@ -129,6 +132,10 @@ export function attentionWhere(visible: Prisma.OrderWhereInput, now: number): Pr
   return {
     ...visible,
     OR: [
+      // Something in the free text was worth a person's eye before a rider is
+      // sent to collect it. Never a refusal — the order is live and orderable;
+      // this only asks somebody to read one sentence.
+      { safetyFlaggedAt: { not: null } },
       // Waiting on a dispatcher to review and price it.
       { orderStatus: "AWAITING_DISPATCHER_REVIEW", createdAt: { lt: reviewCutoff } },
       // The customer says they paid and nobody has verified it.
@@ -219,8 +226,17 @@ export function classifyAttention(o: AttentionOrder, now: number): AttentionRow 
   const receipt = checkReceipt(o.goodsActualXaf, o.goodsReceiptReadXaf);
 
   let kind: AttentionKind;
-  // Money already spent and refused outranks everything: nobody else can move it.
-  if (overCapDeclined) kind = "OVER_CAP_DECLINED";
+  /*
+   * A safety concern outranks every money problem in this list, and that
+   * ordering is deliberate. Everything else here is somebody's cash sitting in
+   * the wrong place, which is recoverable at any hour. This one may be a rider
+   * about to be sent to collect something they should not carry, or a person
+   * who needs help faster than a delivery — and both stop being fixable the
+   * moment the rider leaves.
+   */
+  if (o.safetyFlaggedAt) kind = "SAFETY_FLAG";
+  // Money already spent and refused outranks the rest: nobody else can move it.
+  else if (overCapDeclined) kind = "OVER_CAP_DECLINED";
   else if (overCapWaiting) kind = "OVER_CAP_WAITING";
   else if (receipt.needsLook) kind = "RECEIPT_MISMATCH";
   else if (goodsNotRecorded) kind = "GOODS_NOT_RECORDED";
@@ -258,6 +274,8 @@ export function classifyAttention(o: AttentionOrder, now: number): AttentionRow 
 
 /** What each kind means, in one sentence, for somebody who has to act on it. */
 export const ATTENTION_MEANING: Record<AttentionKind, string> = {
+  SAFETY_FLAG:
+    "something in what the customer wrote is worth reading before a rider is sent — it is a flag for a person to judge, never a refusal",
   OVER_CAP_DECLINED:
     "the shop charged more than the customer agreed to, the customer refused, and the goods are already bought — only dispatch can settle this",
   OVER_CAP_WAITING: "the shop charged over the cap and the customer has not answered yet, so the overage is not collectable",

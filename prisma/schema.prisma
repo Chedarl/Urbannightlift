@@ -816,6 +816,22 @@ model Order {
   /// their address, so it is never public and never embedded in a shared PDF.
   voiceNoteUrl            String?
   voiceNoteSeconds        Int?
+  /// What the voice note says, in words, so a dispatcher can read it in two
+  /// seconds instead of finding somewhere quiet to listen at 1 AM — and so it
+  /// is searchable, which audio never is.
+  ///
+  /// The recording is still kept and still playable: this is a second opinion
+  /// on it, never a replacement. If transcription fails, nothing changes and a
+  /// person listens exactly as they do today.
+  voiceTranscript         String?
+  voiceTranscribedAt      DateTime?
+  /// A concern a model raised about the free text on this order.
+  ///
+  /// **Never a rejection.** A model is not a judge, and refusing a legitimate
+  /// order at 1 AM because a word looked wrong is far worse than showing a
+  /// dispatcher a sentence to glance at. Dispatch decides; this only points.
+  safetyFlag              String?
+  safetyFlaggedAt         DateTime?
   estimatedDeliveryFeeXaf Int?
   finalDeliveryFeeXaf     Int?
   totalAmountDueXaf       Int?

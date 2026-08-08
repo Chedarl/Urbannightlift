@@ -14,6 +14,7 @@ import { getCustomerId } from "@/lib/auth/customer";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
 import { notifyNewOrder } from "@/lib/notify/triggers";
+import { afterOrderCreated } from "@/lib/orders/afterCreate";
 import { resolveCode } from "@/lib/ambassadors/accrual";
 import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
 import {
@@ -398,6 +399,23 @@ export async function POST(req: NextRequest) {
   // An order nobody sees is an order nobody delivers. Alert dispatch now
   // rather than waiting for someone to reload the console.
   await notifyNewOrder(order.orderCode, order.id, input.serviceType);
+
+  /*
+   * Two opinions for the dispatcher: what the voice note says, and whether
+   * anything in the free text is worth a glance before a rider is sent.
+   *
+   * Deliberately NOT awaited. Both take seconds, both are advisory, and the
+   * customer is standing there having already pressed the button. The rule that
+   * has held across this whole codebase applies: an order must never fail, or
+   * even wait, because a model did.
+   *
+   * Only what they typed is sent — never their name, number or address.
+   */
+  void afterOrderCreated({
+    orderId: order.id,
+    voiceNoteUrl: settings.voiceOrderingEnabled ? input.voiceNoteUrl || null : null,
+    freeText: [input.itemDescription, input.specialInstructions].filter(Boolean).join(" — "),
+  });
 
   // The submitter owns this order — grant access to its private details
   // (delivery OTP, contact, addresses) on the confirmation screen.

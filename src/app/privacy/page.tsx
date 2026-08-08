@@ -73,7 +73,7 @@ export default function PrivacyPage() {
         />
         <Row
           what="Payment method and, if you send one, a reference or screenshot"
-          why="To confirm the money arrived. We see the reference and the amount — never your PIN, and never your account balance. A screenshot, and the shop receipt on a shopping order, may be read by a processor we use so the figures can be checked; nothing else you upload is."
+          why="To confirm the money arrived. We see the reference and the amount — never your PIN, and never your account balance. A screenshot, and the shop receipt on a shopping order, may be read by a processor we use so the figures can be checked. Your prescription and your parcel photo never are."
         />
         <Row
           what="A prescription, if you upload one"
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         />
         <Row
           what="A voice note, if you record one instead of typing"
-          why="So our dispatcher can hear what you need. Private to our team, never published."
+          why="So our dispatcher can hear what you need. It is also turned into text automatically, by a transcription service outside Cameroon, so the night team can read it quickly instead of playing it back — the recording and the text are seen only by our team and are never published. Both are deleted with the order they belong to."
         />
         <Row
           what="What you ask the assistant, if you use it while signed in"
