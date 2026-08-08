@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { QuickIntake } from "@/components/customer/order/QuickIntake";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -45,7 +46,16 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
     <div className="mx-auto max-w-lg px-4 pb-28 pt-6">
       <h1 className="animate-fade-up font-display text-2xl font-bold">{t("services.title")}</h1>
       <p className="animate-fade-up mt-1 text-sm text-mist-500">{t("services.subtitle")}</p>
-      <div className="animate-fade-up mt-6 flex flex-col gap-3">
+
+      {/* For somebody who already knows what they want. Deciding whether pizza
+          is "food pickup" or "merchant delivery" is our taxonomy, not theirs —
+          this lets them say it and lands them on the same form with the boxes
+          filled. Nothing is ordered by it. */}
+      <div className="animate-fade-up mt-5">
+        <QuickIntake enabledServices={enabledServices} />
+      </div>
+
+      <div className="animate-fade-up flex flex-col gap-3">
         {services.map(({ type, icon: Icon }) =>
           isLive(type) ? (
             <Link

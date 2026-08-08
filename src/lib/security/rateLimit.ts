@@ -102,6 +102,11 @@ export const LIMITS: Record<string, Limit> = {
    */
   order: { max: 40, windowMinutes: 60 },
   /**
+   * Reading a typed sentence into a form. Somebody rephrasing because the first
+   * reading was wrong is normal and must not be punished for it.
+   */
+  intake: { max: 30, windowMinutes: 60 },
+  /**
    * Minting an upload URL. A guest order can legitimately need several — a
    * payment screenshot, a voice note, a retry after a failed connection — and
    * a merchant joining uploads a logo. Set well above that and far below what
