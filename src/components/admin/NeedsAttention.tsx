@@ -27,6 +27,7 @@ export interface AttentionRow {
 const REFRESH_MS = 20_000;
 
 const KIND_LABEL: Record<string, string> = {
+  SAFETY_FLAG: "Read this before sending a rider",
   OVER_CAP_DECLINED: "Customer refused the overspend — money is already out",
   OVER_CAP_WAITING: "Shop charged over the cap — waiting on the customer",
   GOODS_NOT_RECORDED: "Shopping done, no receipt recorded",
@@ -49,6 +50,9 @@ const KIND_LABEL: Record<string, string> = {
  * or arrange a return.
  */
 const KIND_TONE: Record<string, string> = {
+  // Red, like the refused-overspend row. Nothing else in this panel outranks
+  // these two, and a rider already on the road cannot be un-sent.
+  SAFETY_FLAG: "border-restricted/50 bg-restricted/10 text-restricted",
   OVER_CAP_DECLINED: "border-restricted/50 bg-restricted/10 text-restricted",
   OVER_CAP_WAITING: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   GOODS_NOT_RECORDED: "border-gold-400/50 bg-gold-400/10 text-gold-200",

@@ -13,6 +13,7 @@ import {
   Gift,
   Package,
   Loader2,
+  Sparkles,
   ChevronDown,
   Check,
 } from "lucide-react";
@@ -106,6 +107,7 @@ export function CaseDetail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [goodwill, setGoodwill] = useState("");
+  const [drafting, setDrafting] = useState(false);
   const threadEnd = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -128,6 +130,39 @@ export function CaseDetail({
   useEffect(() => {
     threadEnd.current?.scrollIntoView({ block: "nearest" });
   }, [data?.messages.length]);
+
+  /**
+   * A first version, for a person to edit.
+   *
+   * It fills the box exactly as a canned reply does and touches nothing else —
+   * the Send button below is the same button it has always been, so what
+   * reaches a customer is what somebody read and chose to send. If the draft is
+   * wrong the cost is one delete, which is where they started.
+   *
+   * Never overwrites something already typed. Somebody half way through a reply
+   * who taps this by accident should not lose it.
+   */
+  async function draft() {
+    if (drafting || reply.trim()) return;
+    setDrafting(true);
+    setError(null);
+    try {
+      // No language sent: the server reads the customer's own stored
+      // preference. A dispatcher's screen being in English says nothing about
+      // which language the customer wrote in.
+      const res = await fetch(`/api/admin/cases/${caseId}/draft`, { method: "POST" });
+      const d = await res.json();
+      if (!res.ok || !d.draft) {
+        setError(d.error ?? "Couldn't draft a reply.");
+        return;
+      }
+      setReply(d.draft);
+    } catch {
+      setError("Couldn't reach the server.");
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   async function sendReply() {
     if (!reply.trim()) return;
@@ -291,6 +326,29 @@ export function CaseDetail({
                   </button>
                 ))}
               </div>
+            )}
+            {/* A first version to edit, for the majority of cases the canned
+                replies do not cover — where the slow part is not deciding what
+                to say but typing it politely in the customer's language. */}
+            {!internal && (
+              <button
+                type="button"
+                onClick={draft}
+                disabled={drafting || Boolean(reply.trim())}
+                title={
+                  reply.trim()
+                    ? "You have already started a reply — this will not overwrite it."
+                    : "Write a first version for you to edit"
+                }
+                className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-200 disabled:opacity-40"
+              >
+                {drafting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Draft a reply
+              </button>
             )}
             <textarea
               value={reply}

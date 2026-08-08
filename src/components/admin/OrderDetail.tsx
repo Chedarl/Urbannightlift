@@ -139,6 +139,8 @@ export interface OrderDetailData {
   otpCode: string | null;
   screenshotUrl: string | null;
   voiceNoteUrl: string | null;
+  voiceTranscript: string | null;
+  safetyFlag: string | null;
   voiceNoteSeconds: number | null;
   statusHistory: StatusHistoryRow[];
   proofs: ProofRow[];
@@ -582,7 +584,35 @@ export function OrderDetail({
                   src={`/api/media?path=${encodeURIComponent(order.voiceNoteUrl)}`}
                   className="h-9 w-full"
                 />
+                {/* The words, so a dispatcher with four orders open can read in
+                    two seconds what would take forty to listen to — and so the
+                    note is searchable, which audio never is. The player stays
+                    directly above it: this is a second opinion on the
+                    recording, never a replacement for it, and if the words look
+                    wrong the truth is one tap away. */}
+                {order.voiceTranscript && (
+                  <p className="mt-2 rounded-lg border border-ink-700 bg-ink-950 p-2 text-xs leading-relaxed text-mist-200">
+                    {order.voiceTranscript}
+                  </p>
+                )}
                 <p className="mt-1 text-[11px] text-mist-500">Staff only — never shared with anyone else.</p>
+              </div>
+            )}
+
+            {/* Something in what they wrote is worth reading before a rider is
+                sent. Never a refusal — the order is live and orderable, and
+                this only asks for a glance. Dispatch judges; the model does
+                not. */}
+            {order.safetyFlag && (
+              <div className="mb-3 rounded-xl border border-restricted/50 bg-restricted/10 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-restricted">
+                  <ShieldAlert className="h-3.5 w-3.5" /> Read this before sending a rider
+                </p>
+                <p className="text-xs leading-relaxed text-mist-200">{order.safetyFlag}</p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-mist-500">
+                  Raised automatically from what the customer typed. It is a prompt to look, not a
+                  judgement — most turn out to be fine, and the decision is yours.
+                </p>
               </div>
             )}
 

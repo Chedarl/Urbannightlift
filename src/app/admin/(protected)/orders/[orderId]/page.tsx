@@ -199,6 +199,8 @@ export default async function AdminOrderPage({
         screenshotUrl: order.screenshotUrl,
         voiceNoteUrl: order.voiceNoteUrl,
         voiceNoteSeconds: order.voiceNoteSeconds,
+        voiceTranscript: order.voiceTranscript,
+        safetyFlag: order.safetyFlag,
         statusHistory: order.statusHistory.map((h) => ({
           toStatus: h.toStatus,
           fromStatus: h.fromStatus,
