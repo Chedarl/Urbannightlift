@@ -103,7 +103,7 @@ console.log("\nA secret from the repository is refused in production");
 {
   const before = { ...process.env };
   for (const k of Object.keys(process.env)) {
-    if (/SECRET|DATABASE_URL/.test(k)) delete process.env[k];
+    if (/SECRET|SALT|DATABASE_URL/.test(k)) delete process.env[k];
   }
   const rows = secretStatus();
   check("with nothing set, every chain reports the literal", rows.every((r) => r.usingLiteral));
@@ -143,6 +143,8 @@ console.log("\nAnd a properly configured deployment is quiet");
   process.env.ORDER_ACCESS_SECRET = "a".repeat(40);
   process.env.WATCH_LINK_SECRET = "b".repeat(40);
   process.env.MERCHANT_PING_SECRET = "c".repeat(40);
+  process.env.WELCOME_LINK_SECRET = "d".repeat(40);
+  process.env.RATE_LIMIT_SALT = "e".repeat(40);
 
   const rows = secretStatus();
   check("nothing falls back", rows.every((r) => !r.usingLiteral));

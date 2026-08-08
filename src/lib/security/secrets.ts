@@ -83,6 +83,19 @@ const CHAINS: Chain[] = [
     names: ["MERCHANT_PING_SECRET", "WATCH_LINK_SECRET", "ORDER_ACCESS_SECRET", "SUPABASE_SECRET_KEY", "DATABASE_URL"],
     literal: "unl-dev-merchant-ping-secret",
   },
+  {
+    label: "Welcome card links",
+    names: ["WELCOME_LINK_SECRET", "WATCH_LINK_SECRET", "ORDER_ACCESS_SECRET", "SUPABASE_SECRET_KEY", "DATABASE_URL"],
+    literal: "unl-dev-welcome-link-secret",
+  },
+  {
+    // Not a signature — the salt that stops the rate-limit table being turned
+    // back into a list of IP addresses by anyone who obtains a copy of it. A
+    // rainbow table over the whole IPv4 space is otherwise trivial.
+    label: "Rate-limit hashing",
+    names: ["RATE_LIMIT_SALT", "CUSTOMER_SESSION_SECRET", "SUPABASE_SECRET_KEY", "DATABASE_URL"],
+    literal: "unl-dev-rate-limit-salt",
+  },
 ];
 
 export interface SecretRow {
