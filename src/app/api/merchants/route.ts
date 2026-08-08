@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isOwnStorage } from "@/lib/uploads/mediaSrc";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { buildSearchKey } from "@/lib/locations/normalize";
@@ -31,6 +32,27 @@ export async function GET() {
     },
   });
   return NextResponse.json({ merchants });
+}
+
+
+/**
+ * Image columns a merchant record carries, and the rule they answer to.
+ *
+ * Staff paste these too, so the same guard applies on the admin path as on the
+ * merchant's own: an absolute URL here renders inside an `<img src>` on the
+ * public food page, and pointing that at a third party turns our storefront
+ * into somebody else's analytics.
+ */
+const IMAGE_FIELDS = ["logoUrl", "photoUrl"] as const;
+
+function badImageField(body: Record<string, unknown>): string | null {
+  for (const field of IMAGE_FIELDS) {
+    if (!(field in body)) continue;
+    const value = body[field];
+    if (value === null || value === undefined || value === "") continue;
+    if (typeof value !== "string" || !isOwnStorage(value)) return field;
+  }
+  return null;
 }
 
 const MERCHANT_FIELDS = [
@@ -77,6 +99,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: describeMissing(missing), missing }, { status: 400 });
   }
   const data: Record<string, unknown> = {};
+  const bad = badImageField(body);
+  if (bad) {
+    return NextResponse.json(
+      { error: `${bad} has to be a picture uploaded here, not a link somewhere else.` },
+      { status: 400 }
+    );
+  }
   for (const k of MERCHANT_FIELDS) if (k in body) data[k] = body[k];
   // Keep the fuzzy search index in step with the name, the same way the
   // location catalogue does.

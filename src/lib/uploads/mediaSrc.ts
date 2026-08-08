@@ -49,6 +49,68 @@
  */
 const PUBLIC_READ = ["merchant-logos", "rider-photos"];
 
+/**
+ * Whether a stored image column is naming **our own storage** and nothing else.
+ *
+ * Written after the audit found the hole this closes. `PATCH
+ * /api/merchant-account/shop` accepted `logoUrl` and `photoUrl` as any string
+ * up to 500 characters, and `mediaSrc` hands an absolute URL straight to an
+ * `<img src>` on the **public** food page. So a signed-in merchant could point
+ * their cover photo at `https://evil.example/beacon.gif` and collect the IP and
+ * user-agent of every customer who browsed the page — a tracking beacon on our
+ * own storefront, planted through a form we built for them.
+ *
+ * Partly my own doing: before `mediaSrc`, the card wrapped these values in
+ * `/api/media`, which was broken but at least sent nothing off-site.
+ *
+ * A stored image may therefore be exactly two things:
+ *
+ *  - a `bucket/key` path in our own storage, or
+ *  - an absolute URL on the configured Supabase host.
+ *
+ * Anything else — any other host, a `data:` URI, a protocol-relative URL, a
+ * `javascript:` scheme — is refused at the API and rendered as no image.
+ *
+ * Deliberately an allow-list of one host rather than a block-list of bad ones.
+ * There is no legitimate reason for a merchant's photograph to live anywhere
+ * but the bucket we gave them to upload it to.
+ */
+export function isOwnStorage(value: string | null | undefined): boolean {
+  const raw = value?.trim();
+  if (!raw) return false;
+
+  if (/^https?:\/\//i.test(raw)) {
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!base) return false;
+    try {
+      return new URL(raw).host === new URL(base).host;
+    } catch {
+      return false;
+    }
+  }
+
+  // A bare `bucket/key`. No scheme, no host, no traversal, and a bucket we
+  // recognise — an unknown bucket is refused rather than stored and puzzled
+  // over later.
+  if (raw.includes("://") || raw.startsWith("//") || raw.includes("..")) return false;
+  const slash = raw.indexOf("/");
+  if (slash < 1 || slash === raw.length - 1) return false;
+  return KNOWN_BUCKETS.includes(raw.slice(0, slash));
+}
+
+/** Every bucket this product uploads into. Anything else is not ours. */
+const KNOWN_BUCKETS = [
+  "merchant-logos",
+  "rider-photos",
+  "order-screenshots",
+  "delivery-proofs",
+  "rider-documents",
+  "order-voice-notes",
+  "goods-receipts",
+  "merchant-menus",
+  "merchant-captures",
+];
+
 export function mediaSrc(value: string | null | undefined): string | null {
   const raw = value?.trim();
   if (!raw) return null;

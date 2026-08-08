@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { isOwnStorage } from "@/lib/uploads/mediaSrc";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMerchant } from "@/lib/auth/merchant";
 import { recordAudit } from "@/lib/audit";
@@ -49,13 +51,26 @@ export async function PATCH(req: NextRequest) {
   if (website !== undefined) data.website = website;
   const socialUrl = str(body.socialUrl, MAX.url);
   if (socialUrl !== undefined) data.socialUrl = socialUrl;
-  const logoUrl = str(body.logoUrl, MAX.url);
-  if (logoUrl !== undefined) data.logoUrl = logoUrl;
-  // Their own cover photo, behind their card on the food page. The second door
-  // the owner asked for: staff can set this, and so can the shop itself — it is
-  // their storefront and they have better pictures of it than we do.
-  const photoUrl = str(body.photoUrl, MAX.url);
-  if (photoUrl !== undefined) data.photoUrl = photoUrl;
+  /*
+   * An image column may only ever name our own storage.
+   *
+   * These used to take any string. `mediaSrc` passes an absolute URL straight
+   * to an `<img src>` on the public food page, so an arbitrary URL here is a
+   * tracking beacon pointed at every customer who browses. Refused with a
+   * sentence rather than silently dropped, because a merchant whose logo
+   * vanished with no explanation would reasonably report it as a bug.
+   */
+  for (const field of ["logoUrl", "photoUrl"] as const) {
+    const value = str(body[field], MAX.url);
+    if (value === undefined) continue;
+    if (value !== null && !isOwnStorage(value)) {
+      return NextResponse.json(
+        { error: "A picture has to be one you uploaded here." },
+        { status: 400 }
+      );
+    }
+    data[field] = value;
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to change" }, { status: 400 });

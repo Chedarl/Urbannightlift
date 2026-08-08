@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, limitMessage, trippedHoneypot } from "@/lib/security/rateLimit";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone } from "@/lib/utils";
@@ -28,6 +29,19 @@ const DISPATCH_ROLES = ["OWNER", "DISPATCHER", "SUPPORT"];
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
+
+  if (trippedHoneypot((body ?? {}) as Record<string, unknown>)) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const limit = await checkRateLimit(req, "support");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: limitMessage(limit, false) },
+      { status: 429, headers: { "Retry-After": String(limit.retryInMinutes * 60) } }
+    );
+  }
+
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Validation failed" }, { status: 400 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, limitMessage, trippedHoneypot } from "@/lib/security/rateLimit";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { orderSchema } from "@/lib/validation/orderSchema";
@@ -41,6 +42,20 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  /*
+   * The most generous limit in the product, and deliberately so. A shared
+   * office or a student hall ordering separately through one carrier NAT must
+   * never be refused — an order is the thing we actively want, and losing a
+   * real one costs more than absorbing a scripted one.
+   */
+  const limit = await checkRateLimit(req, "order");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: limitMessage(limit, false) },
+      { status: 429, headers: { "Retry-After": String(limit.retryInMinutes * 60) } }
+    );
   }
 
   const parsed = orderSchema.safeParse(body);
