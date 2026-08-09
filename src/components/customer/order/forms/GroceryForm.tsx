@@ -243,6 +243,9 @@ export function GroceryForm() {
             onChange={(n) => {
               setValue("voiceNoteUrl", n?.url ?? "");
               setValue("voiceNoteSeconds", n?.seconds ?? null);
+              // Whatever the phone managed to hear. Empty on a browser with no
+              // recogniser, which is fine.
+              setValue("voiceTranscript", n?.transcript ?? "");
             }}
           />
 

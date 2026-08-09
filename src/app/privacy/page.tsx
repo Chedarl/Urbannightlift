@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         />
         <Row
           what="A voice note, if you record one instead of typing"
-          why="So our dispatcher can hear what you need. It is also turned into text automatically, by a transcription service outside Cameroon, so the night team can read it quickly instead of playing it back — the recording and the text are seen only by our team and are never published. Both are deleted with the order they belong to."
+          why="So our dispatcher can hear what you need. While you record, your phone also turns it into text so the night team can read it quickly instead of playing it back — on most phones that step is done by the browser maker (Google or Apple) rather than by us. The recording and the text are seen only by our team, are never published, and are both deleted with the order they belong to."
         />
         <Row
           what="What you ask the assistant, if you use it while signed in"

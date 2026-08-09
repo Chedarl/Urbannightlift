@@ -35,11 +35,20 @@ import { screenOrderText } from "@/lib/ai/moderation";
 export async function afterOrderCreated(opts: {
   orderId: string;
   voiceNoteUrl: string | null;
+  /**
+   * What the customer's phone already heard, if anything.
+   *
+   * When this is present the server does not transcribe at all: the browser's
+   * recogniser ran on the live microphone and is already as good as we are
+   * going to get, and spending a second API call to overwrite it with a second
+   * opinion would cost money to make the result no better.
+   */
+  browserTranscript: string | null;
   /** Only what the customer typed. Never their name, number or address. */
   freeText: string;
 }): Promise<void> {
   await Promise.allSettled([
-    maybeTranscribe(opts.orderId, opts.voiceNoteUrl),
+    maybeTranscribe(opts.orderId, opts.voiceNoteUrl, opts.browserTranscript),
     maybeScreen(opts.orderId, opts.freeText),
   ]);
 }
@@ -52,7 +61,14 @@ export async function afterOrderCreated(opts: {
  * would reasonably stop looking for the play button, which is the one thing
  * that always works.
  */
-async function maybeTranscribe(orderId: string, voiceNoteUrl: string | null): Promise<void> {
+async function maybeTranscribe(
+  orderId: string,
+  voiceNoteUrl: string | null,
+  browserTranscript: string | null
+): Promise<void> {
+  // The phone already did it. Two transcripts of one recording is one wasted
+  // call and no better an answer.
+  if (browserTranscript && browserTranscript.trim().length > 0) return;
   if (!voiceNoteUrl || !transcriptionConfigured()) return;
 
   const read = await transcribeVoiceNote(voiceNoteUrl);

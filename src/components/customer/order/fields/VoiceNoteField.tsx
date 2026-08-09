@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { listenWhileRecording } from "@/lib/voice/speech";
 import { Mic, Square, Trash2, Loader2, Check, ShieldCheck } from "lucide-react";
 import { uploadFile } from "@/lib/uploads/client";
 import { cn } from "@/lib/utils";
@@ -49,8 +50,13 @@ export function VoiceNoteField({
 }: {
   accent: string;
   fr: boolean;
-  /** Receives the stored path and length, or nulls when the note is removed. */
-  onChange: (note: { url: string; seconds: number } | null) => void;
+  /**
+   * Receives the stored path, the length, and whatever the browser managed to
+   * hear, or nulls when the note is removed. The transcript is best-effort: an
+   * unsupported browser or a denied permission simply sends an empty string,
+   * and the order behaves exactly as it did before any of this existed.
+   */
+  onChange: (note: { url: string; seconds: number; transcript: string } | null) => void;
 }) {
   // The switch is checked here rather than by each caller, so a form can never
   // accidentally show the microphone while the feature is off.
@@ -63,6 +69,15 @@ export function VoiceNoteField({
   const [error, setError] = useState<string | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
+  /*
+   * The browser's own speech recogniser, running alongside the recorder.
+   *
+   * This is the route that cannot be blocked: no key, no account, no card and
+   * no signup flow that can refuse a Cameroonian number. It listens to the same
+   * microphone we already opened, so the words are ready the moment the
+   * customer stops speaking.
+   */
+  const heardRef = useRef<{ text: () => string; stop: () => void } | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -120,10 +135,17 @@ export function VoiceNoteField({
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         setPreviewUrl(URL.createObjectURL(blob));
-        void upload(blob, recorder.mimeType || "audio/webm");
+        // Read before the listener is discarded, so a late final segment is
+        // still counted.
+        const transcript = heardRef.current?.text() ?? "";
+        void upload(blob, recorder.mimeType || "audio/webm", transcript);
       };
       recorder.start();
       recorderRef.current = recorder;
+      // Best-effort, and never allowed to interfere: if this browser has no
+      // recogniser, or it throws, `listenWhileRecording` returns something inert
+      // and the recording carries on untouched.
+      heardRef.current = listenWhileRecording(fr);
       setRecording(true);
       setSeconds(0);
       tickRef.current = setInterval(() => {
@@ -146,10 +168,13 @@ export function VoiceNoteField({
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = null;
     setRecording(false);
+    // Stopped before the recorder, so the recogniser has settled its last
+    // segment by the time `onstop` reads the text.
+    heardRef.current?.stop();
     if (recorderRef.current?.state === "recording") recorderRef.current.stop();
   }
 
-  async function upload(blob: Blob, mime: string) {
+  async function upload(blob: Blob, mime: string, transcript = "") {
     setUploading(true);
     try {
       // Storage matches the Content-Type exactly, so the codec parameters have
@@ -159,7 +184,7 @@ export function VoiceNoteField({
       const file = new File([blob], `note.${extensionFor(type)}`, { type });
       const path = await uploadFile(file, "order-voice-notes", "voice");
       setSavedSeconds(seconds);
-      onChange({ url: path, seconds });
+      onChange({ url: path, seconds, transcript });
     } catch {
       setError(fr ? "L'envoi a échoué. Réessayez." : "That didn't upload. Try again.");
       setPreviewUrl(null);
@@ -173,6 +198,7 @@ export function VoiceNoteField({
     setPreviewUrl(null);
     setSavedSeconds(null);
     setSeconds(0);
+    heardRef.current = null;
     onChange(null);
   }
 
