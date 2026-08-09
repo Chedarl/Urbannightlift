@@ -332,6 +332,13 @@ export async function POST(req: NextRequest) {
         // Dropped silently when the feature is off, so a stale client that
         // still shows the microphone cannot smuggle a note past the switch.
         voiceNoteUrl: settings.voiceOrderingEnabled ? input.voiceNoteUrl || null : null,
+        // What the customer's own phone heard while they spoke. No key, no
+        // account, no signup that can refuse a Cameroonian number — this is the
+        // route that always works, and it arrives with the order rather than
+        // seconds later.
+        voiceTranscript: settings.voiceOrderingEnabled ? input.voiceTranscript || null : null,
+        voiceTranscribedAt:
+          settings.voiceOrderingEnabled && input.voiceTranscript ? new Date() : null,
         voiceNoteSeconds: settings.voiceOrderingEnabled ? (input.voiceNoteSeconds ?? null) : null,
         // Pre-launch rehearsals must never contaminate revenue or counts. The
         // owner switches this off on launch night.
@@ -414,6 +421,7 @@ export async function POST(req: NextRequest) {
   void afterOrderCreated({
     orderId: order.id,
     voiceNoteUrl: settings.voiceOrderingEnabled ? input.voiceNoteUrl || null : null,
+    browserTranscript: settings.voiceOrderingEnabled ? input.voiceTranscript || null : null,
     freeText: [input.itemDescription, input.specialInstructions].filter(Boolean).join(" — "),
   });
 

@@ -246,6 +246,10 @@ export function ParcelForm() {
           onChange={(n) => {
             setValue("voiceNoteUrl", n?.url ?? "");
             setValue("voiceNoteSeconds", n?.seconds ?? null);
+            // Whatever the phone managed to hear. Empty on a browser with no
+            // recogniser, which is fine: the server fills it in later if a key
+            // is ever configured, and a person can always play the recording.
+            setValue("voiceTranscript", n?.transcript ?? "");
           }}
         />
 

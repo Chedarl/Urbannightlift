@@ -61,6 +61,14 @@ export const orderSchema = z.object({
   /// A voice note instead of a filled-in form. Stored path only — the file
   /// itself lives in a private bucket and is never exposed publicly.
   voiceNoteUrl: z.string().max(500).optional().or(z.literal("")),
+  /**
+   * What the customer's own phone heard while they recorded.
+   *
+   * Best-effort and always optional. Browsers without a speech recogniser send
+   * nothing, and the server fills the gap later if a transcription key is ever
+   * configured — two independent routes to one field, neither required.
+   */
+  voiceTranscript: z.string().max(2000).optional().or(z.literal("")),
   voiceNoteSeconds: z.coerce.number().int().min(0).max(600).optional().nullable(),
 
   // Payment (tracking only — never credentials)
