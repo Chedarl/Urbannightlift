@@ -18,7 +18,7 @@ import {
 import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer } from "@/lib/i18n/legal";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
-import { estimateDeliveryFee, TIER_META, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, TIER_META, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { getExperience } from "@/lib/services/experiences";
 import { Stepper } from "@/components/customer/order/Stepper";
@@ -147,10 +147,25 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     return z ? { id: z.id, feeXaf: z.feeXaf, medicineFeeXaf: z.medicineFeeXaf, nightUrgencyFeeXaf: 0, tier: z.tier } : null;
   }, [pickup, pickupZoneId, zones]);
 
-  const estimatedFee = useMemo(
-    () => estimateDeliveryFee(effPickupZone, effDeliveryZone, { isMedicine }),
-    [effPickupZone, effDeliveryZone, isMedicine]
+  const fare = useMemo(
+    () =>
+      // The pins, so the price on screen is worked out from the same distance
+      // the server will charge on. A zone-only estimate that differs from the
+      // final fee is a worse bug than the one this replaces.
+      quoteDeliveryFee(effPickupZone, effDeliveryZone, {
+        isMedicine,
+        pickup:
+          pickupSel?.latitude != null && pickupSel?.longitude != null
+            ? { lat: pickupSel.latitude, lng: pickupSel.longitude }
+            : null,
+        delivery:
+          deliverySel?.latitude != null && deliverySel?.longitude != null
+            ? { lat: deliverySel.latitude, lng: deliverySel.longitude }
+            : null,
+      }),
+    [effPickupZone, effDeliveryZone, isMedicine, pickupSel, deliverySel]
   );
+  const estimatedFee = fare?.totalXaf ?? null;
 
   const dominantTier: ZoneTier | null = effDeliveryZone?.tier ?? effPickupZone?.tier ?? null;
 
@@ -242,6 +257,8 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     saveDraft({
       ...merged,
       estimatedFeeXaf: estimatedFee,
+      fareLines: fare?.lines,
+      fareEstimated: fare?.estimated,
       pickupZoneName: pickup?.zoneName ?? zones.find((z) => z.id === effPickupZone?.id)?.zoneName ?? undefined,
       deliveryZoneName: delivery?.zoneName ?? zones.find((z) => z.id === effDeliveryZone?.id)?.zoneName ?? undefined,
       merchantName: selectedMerchant?.merchantName,

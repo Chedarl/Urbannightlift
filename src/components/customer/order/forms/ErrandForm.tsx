@@ -12,7 +12,7 @@ import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { priceCopy } from "@/lib/orders/priceCopy";
-import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
@@ -26,6 +26,20 @@ import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/type
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
+
+/**
+ * The dropped pin, when there is one.
+ *
+ * Passed into the fee so the price on screen is worked out from the same
+ * distance the server will use. Without this the customer sees a zone-only
+ * estimate and is charged something else, which is a worse bug than the one
+ * this whole change is fixing.
+ */
+function pin(sel: SelectedLocation | null): { lat: number; lng: number } | null {
+  return sel?.latitude != null && sel?.longitude != null
+    ? { lat: sel.latitude, lng: sel.longitude }
+    : null;
+}
 
 const ACCENT = "#c084fc";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -68,7 +82,8 @@ export function ErrandForm() {
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
 
   const effZone = (sel: SelectedLocation | null) => sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } : null;
-  const estimatedFee = useMemo(() => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel)), [pickupSel, deliverySel]);
+  const fare = useMemo(() => quoteDeliveryFee(effZone(pickupSel), effZone(deliverySel), { pickup: pin(pickupSel), delivery: pin(deliverySel) }), [pickupSel, deliverySel]);
+  const estimatedFee = fare?.totalXaf ?? null;
   /**
    * Whether that fee is the final zone tariff, using the same rule the server
    * applies on submit. Wording only — the server re-decides authoritatively.
@@ -124,7 +139,8 @@ export function ErrandForm() {
       deliveryLocation: data.deliveryLocation?.trim() || asDescribed,
       pickupLat: pickupSel?.latitude ?? null, pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null, deliveryLng: deliverySel?.longitude ?? null,
-      estimatedFeeXaf: estimatedFee, priceFirm, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
+      estimatedFeeXaf: estimatedFee, priceFirm,
+      fareLines: fare?.lines, fareEstimated: fare?.estimated, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
     router.push("/order/review");
   }
