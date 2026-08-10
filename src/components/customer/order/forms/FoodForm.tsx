@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, Search, Store, Loader2 } from "lucide-react";
+import { UtensilsCrossed, Search, Store } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
@@ -61,6 +61,15 @@ export function FoodForm() {
 
   const [merchants, setMerchants] = useState<FoodMerchant[] | null>(null);
   const [query, setQuery] = useState("");
+  /**
+   * "Who is actually cooking right now."
+   *
+   * At 1 AM that is the only question, and the browse route already sorts open
+   * restaurants first — but sorted-first still means scrolling past nine closed
+   * ones on a phone. Off by default, because a closed kitchen we can call in
+   * the morning is still worth seeing.
+   */
+  const [openOnly, setOpenOnly] = useState(false);
   const [openMerchantId, setOpenMerchantId] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
 
@@ -107,14 +116,18 @@ export function FoodForm() {
   const shown = useMemo(() => {
     if (!merchants) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return merchants;
-    return merchants.filter(
-      (m) =>
+    return merchants.filter((m) => {
+      if (openOnly && !m.openNow) return false;
+      if (!q) return true;
+      return (
         m.name.toLowerCase().includes(q) ||
         (m.neighbourhood ?? "").toLowerCase().includes(q) ||
         m.items.some((i) => i.name.toLowerCase().includes(q))
-    );
-  }, [merchants, query]);
+      );
+    });
+  }, [merchants, query, openOnly]);
+
+  const openCount = useMemo(() => (merchants ?? []).filter((m) => m.openNow).length, [merchants]);
 
   const lines = useMemo<CartLine[]>(() => {
     if (!merchants) return [];
@@ -238,9 +251,24 @@ export function FoodForm() {
       </header>
 
       {merchants === null ? (
-        <p className="flex items-center gap-2 py-8 text-sm text-mist-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> {fr ? "Chargement…" : "Loading…"}
-        </p>
+        /* Shaped like what is coming rather than a spinner. On Cameroonian
+           mobile data this is on screen for a couple of seconds, and a page
+           that already has the right silhouette feels loaded before it is. */
+        <div className="flex flex-col gap-3" aria-busy="true">
+          <span className="sr-only">{fr ? "Chargement…" : "Loading…"}</span>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="overflow-hidden rounded-3xl border border-ink-700 bg-ink-900">
+              <div className="h-36 w-full animate-pulse bg-ink-800/70" />
+              <div className="flex items-start gap-3 px-4 pb-4 pt-0">
+                <div className="-mt-8 h-16 w-16 shrink-0 animate-pulse rounded-2xl border-2 border-ink-900 bg-ink-800" />
+                <div className="flex-1 pt-2">
+                  <div className="h-4 w-2/5 animate-pulse rounded bg-ink-800" />
+                  <div className="mt-2 h-3 w-3/5 animate-pulse rounded bg-ink-800/70" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : merchants.length === 0 ? (
         /* The honest empty state. Filling this in with invented restaurants is
            exactly what went wrong before, so it says what is true and then takes
@@ -268,19 +296,43 @@ export function FoodForm() {
             />
           </div>
 
-          <div className="flex flex-col gap-3">
-            {shown.map((m) => (
-              <RestaurantCard
-                key={m.id}
-                merchant={m}
-                fr={fr}
-                open={openMerchantId === m.id}
-                onToggle={() => setOpenMerchantId(openMerchantId === m.id ? null : m.id)}
-                quantities={cart}
-                onBump={bump}
-              />
-            ))}
-          </div>
+          {/* Only offered when it would actually change the list. A filter that
+              does nothing teaches people not to press filters. */}
+          {openCount > 0 && openCount < merchants.length && (
+            <div className="mb-3 flex gap-2">
+              <FilterChip active={!openOnly} onClick={() => setOpenOnly(false)}>
+                {fr ? `Tout (${merchants.length})` : `All (${merchants.length})`}
+              </FilterChip>
+              <FilterChip active={openOnly} onClick={() => setOpenOnly(true)}>
+                {fr ? `Ouvert maintenant (${openCount})` : `Open now (${openCount})`}
+              </FilterChip>
+            </div>
+          )}
+
+          {shown.length === 0 ? (
+            /* Searching for something nobody has is normal, and the page used
+               to answer it with nothing at all — which reads as broken rather
+               than as "not here". The free-text box below still takes it. */
+            <p className="rounded-2xl border border-ink-700 bg-ink-900 px-4 py-5 text-center text-xs leading-relaxed text-mist-400">
+              {fr
+                ? "Rien ne correspond. Dites-nous quand même ce que vous voulez plus bas — nous allons le chercher."
+                : "Nothing matches that. Tell us what you want below anyway — we will go and get it."}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {shown.map((m) => (
+                <RestaurantCard
+                  key={m.id}
+                  merchant={m}
+                  fr={fr}
+                  open={openMerchantId === m.id}
+                  onToggle={() => setOpenMerchantId(openMerchantId === m.id ? null : m.id)}
+                  quantities={cart}
+                  onBump={bump}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -426,5 +478,29 @@ export function FoodForm() {
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+        active
+          ? "border-amber-400 bg-amber-400/15 text-amber-200"
+          : "border-ink-700 text-mist-400 hover:text-mist-200"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
