@@ -176,6 +176,26 @@ console.log("\nA merchant's pickup line can never read as a broken field");
   );
 }
 
+console.log("\nEvery scheduled endpoint is actually scheduled");
+{
+  // A cron route with nothing calling it is the same defect as an uncalled
+  // function, and harder to spot: the file exists, the handler is correct, and
+  // it never runs. Both schedulers count — Vercel for the daily job, GitHub
+  // Actions for the ten-minute one the Hobby plan refused.
+  const vercel = readFileSync("vercel.json", "utf8");
+  const workflows = readdirSync(".github/workflows")
+    .map((f) => readFileSync(join(".github/workflows", f), "utf8"))
+    .join("\n");
+  const scheduled = (path: string) => vercel.includes(path) || workflows.includes(path);
+
+  for (const [path, why] of [
+    ["/api/cron/nightly-summary", "the owner never finds out how the night went"],
+    ["/api/cron/watch", "a stalled order is noticed by the customer rather than by us"],
+  ] as [string, string][]) {
+    check(`${path} has a schedule`, scheduled(path), `nothing fires it — ${why}`);
+  }
+}
+
 console.log("\nEvery form that sets a trap has a server that reads it");
 {
   // Three public join forms rendered a hidden `companyWebsite` input and not one

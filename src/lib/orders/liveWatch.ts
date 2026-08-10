@@ -116,6 +116,33 @@ const minutes = (from: Date, now: Date) => Math.floor((now.getTime() - from.getT
 export function concernOf(o: LiveOrderInput, now: Date): Concern {
   const payOnDelivery = o.paymentMethod === "CASH";
 
+  /*
+   * An offer nobody has answered, checked FIRST — and it has to be first.
+   *
+   * `RIDER_ASSIGNED` is in `OUT_WITH_RIDER`, so this branch used to be
+   * unreachable for the one status it was written for: an assigned order fell
+   * into the tracking check below and came back as WATCH ("the rider has never
+   * shared their location"), which is a fair description of a rider who is
+   * riding and a badly wrong one for a rider who never opened the app.
+   *
+   * That is precisely the stall the assignment endpoint's own note describes —
+   * *"an order sitting still while everyone assumes someone else has it"* — and
+   * the alarm for it was dead code.
+   *
+   * A rider who has not accepted is not out with the order. They have been
+   * offered it.
+   */
+  if (o.assignedRiderId && o.assignedAt && !o.riderAcceptedAt) {
+    const waited = minutes(o.assignedAt, now);
+    return waited >= 10
+      ? {
+          level: "URGENT",
+          message: `Offered ${waited} minutes ago and the rider has not accepted.`,
+          action: "Call the rider or reassign",
+        }
+      : { level: "CALM", message: "Waiting for the rider to accept.", action: "" };
+  }
+
   // Out with a rider: the only thing that matters is whether we still know
   // where they are.
   if (isOutWithRider(o.orderStatus) && o.assignedRiderId) {
