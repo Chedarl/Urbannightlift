@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/nightly-summary",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/watch",
+      "schedule": "*/10 17-23,0-4 * * *"
     }
   ]
 }

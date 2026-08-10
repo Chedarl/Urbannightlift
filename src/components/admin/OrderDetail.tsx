@@ -23,6 +23,7 @@ import { OrderStageBar } from "@/components/admin/OrderStageBar";
 import { WorkflowStep, WorkflowProgress } from "@/components/admin/WorkflowStep";
 import type { StepKey, StepState } from "@/lib/orders/workflow";
 import { dispatchBlocker, isPayOnDelivery, stageOf } from "@/lib/orders/dispatchRules";
+import { RiderSuggestions } from "@/components/admin/RiderSuggestions";
 import { formatDetailedStatus } from "@/lib/orders/statusLabels";
 import { formatSlot } from "@/lib/orders/timeSlots";
 import { Button } from "@/components/shared/Button";
@@ -882,6 +883,18 @@ export function OrderDetail({
               </p>
             )}
             <div className="flex flex-col gap-2">
+              {/* The shortcut past the dropdown: who should take this, ranked,
+                  with the reasons written out. It proposes and a person
+                  presses — picking one only fills the select below, so the
+                  same Assign button and the same money gate still apply. */}
+              {!order.assignedRiderId && (
+                <RiderSuggestions
+                  orderId={order.id}
+                  disabled={pending || dispatchStop != null}
+                  onPick={setRiderId}
+                  fr={false}
+                />
+              )}
               {/* Riders who cover this zone come first, then whoever is
                   online. A rider who knows the area finds a landmark address
                   the next name on the list would spend twenty minutes on. */}
