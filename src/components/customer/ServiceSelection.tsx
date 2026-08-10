@@ -32,7 +32,21 @@ const services: { type: ServiceType; icon: React.ElementType }[] = [
   { type: "MERCHANT_DELIVERY", icon: Store },
 ];
 
-export function ServiceSelection({ enabledServices }: { enabledServices: ServiceType[] }) {
+export function ServiceSelection({
+  enabledServices,
+  /**
+   * Whether the one-sentence box has a model behind it.
+   *
+   * Decided on the server, because the browser has no way of knowing and the
+   * alternative is a box that accepts a sentence and answers "not available" —
+   * a worse first impression than the tiles on their own, which have always
+   * been the way in and always work.
+   */
+  intakeEnabled = false,
+}: {
+  enabledServices: ServiceType[];
+  intakeEnabled?: boolean;
+}) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
   // A paused service opens the interest sheet instead of the order form.
@@ -51,9 +65,11 @@ export function ServiceSelection({ enabledServices }: { enabledServices: Service
           is "food pickup" or "merchant delivery" is our taxonomy, not theirs —
           this lets them say it and lands them on the same form with the boxes
           filled. Nothing is ordered by it. */}
-      <div className="animate-fade-up mt-5">
-        <QuickIntake enabledServices={enabledServices} />
-      </div>
+      {intakeEnabled && (
+        <div className="animate-fade-up mt-5">
+          <QuickIntake enabledServices={enabledServices} />
+        </div>
+      )}
 
       <div className="animate-fade-up flex flex-col gap-3">
         {services.map(({ type, icon: Icon }) =>

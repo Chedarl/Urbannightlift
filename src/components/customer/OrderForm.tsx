@@ -24,6 +24,7 @@ import { getExperience } from "@/lib/services/experiences";
 import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
@@ -128,6 +129,22 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
+
+  /*
+   * And what they said in the intake box, when that is how they got here. Same
+   * discipline as the profile prefill directly above: an empty box only, so a
+   * late-arriving value can never land on top of something they have typed.
+   */
+  const intake = useIntakePrefill(service);
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.itemDescription && blank(getValues("itemDescription")))
+      setValue("itemDescription", intake.itemDescription, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+    if (intake.quantity > 1 && (getValues("quantity") ?? 1) === 1)
+      setValue("quantity", intake.quantity, { shouldValidate: true });
+  }, [intake, getValues, setValue]);
 
   const isMedicine = watch("isMedicine");
   const acceptedTerms = watch("acceptedTerms");
@@ -389,6 +406,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
               value={pickupSel}
               error={!!errors.pickupLocation}
               onChange={applyPickup}
+              suggestion={intake?.pickupSuggestion}
             />
           )}
 
@@ -404,6 +422,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
             value={deliverySel}
             error={!!errors.deliveryLocation}
             onChange={applyDelivery}
+            suggestion={intake?.deliverySuggestion}
           />
 
           {sameLocError && (

@@ -65,6 +65,7 @@ export function LocationField({
   accent = "#9645de",
   error,
   mode = "delivery",
+  suggestion,
 }: {
   label: string;
   value: SelectedLocation | null;
@@ -73,6 +74,18 @@ export function LocationField({
   error?: boolean;
   /** Which side this field collects. The prompt should never offer both. */
   mode?: "pickup" | "delivery";
+  /**
+   * A place *name* somebody mentioned — from the intake box, a voice note, a
+   * merchant they picked. Offered as a one-tap search, never accepted as an
+   * answer.
+   *
+   * The distinction is the whole point. A word like "Bastos" has no
+   * coordinates, no zone and no tier, and this product computes the fee from
+   * all three. Filling the field with it would mean inventing a price. Opening
+   * the search with it already typed saves the customer the typing and leaves
+   * the confirming — which is theirs — exactly where it was.
+   */
+  suggestion?: string | null;
 }) {
   const { locale } = useTranslation();
   const fr = locale === "fr";
@@ -276,6 +289,25 @@ export function LocationField({
             {mode === "pickup"
               ? fr ? "Où devons-nous récupérer ?" : "Where should we pick up?"
               : fr ? "Où devons-nous livrer ?" : "Where should we deliver?"}
+          </button>
+        )}
+
+        {/* What they already told us, offered rather than assumed. One tap opens
+            the search with the word typed in; nothing is selected until they
+            choose a real place, so the fee is still computed from a pin. */}
+        {!value && suggestion && suggestion.trim().length > 1 && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery(suggestion.trim());
+              setTab("search");
+              setOpen(true);
+            }}
+            className="mt-2 flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-950/30 px-3 py-1.5 text-xs text-violet-200"
+          >
+            <Search className="h-3 w-3" />
+            <span className="max-w-[16rem] truncate">{suggestion.trim()}</span>
+            <span className="text-violet-400/70">{fr ? "· chercher" : "· find it"}</span>
           </button>
         )}
       </div>

@@ -15,6 +15,7 @@ import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { PharmacyTonight } from "@/components/customer/pharmacy/PharmacyTonight";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
@@ -99,6 +100,21 @@ export function MedicineForm() {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
+
+  /*
+   * What they typed in the intake box, if that is how they arrived. Only empty
+   * boxes are filled, so nothing here can overwrite something they have already
+   * corrected.
+   */
+  const intake = useIntakePrefill("MEDICINE_PICKUP");
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.pickupSuggestion) setPharmacyName((v) => (blank(v) ? intake.pickupSuggestion : v));
+    if (intake.itemDescription && blank(getValues("serviceDetails.meds.0.name" as never)))
+      setValue("serviceDetails.meds.0.name" as never, intake.itemDescription as never, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+  }, [intake, getValues, setValue]);
 
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
@@ -388,7 +404,7 @@ export function MedicineForm() {
         {!merchant && (
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
-            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
             <p className="mt-2 text-[11px] text-mist-500">
               {fr
                 ? "Vous ne savez pas laquelle est ouverte ? Laissez vide — nous trouvons la pharmacie de garde la plus proche."
@@ -499,7 +515,7 @@ export function MedicineForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
+            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
         </div>
 

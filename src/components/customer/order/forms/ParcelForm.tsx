@@ -15,6 +15,7 @@ import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank, asSentence } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -83,6 +84,18 @@ export function ParcelForm() {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
+
+  /*
+   * The intake sentence. `itemDescription` here is composed from the category
+   * and size chips further down, so what they said about the parcel goes into
+   * the instructions rather than fighting that composition for the same field.
+   */
+  const intake = useIntakePrefill("SMALL_PARCEL");
+  useEffect(() => {
+    if (!intake) return;
+    const said = asSentence(intake);
+    if (said && blank(getValues("specialInstructions"))) setValue("specialInstructions", said.slice(0, 200));
+  }, [intake, getValues, setValue]);
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
   useEffect(() => {
@@ -195,7 +208,7 @@ export function ParcelForm() {
             </div>
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de ramassage" : "Pickup address"}</p>
-          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} />
+          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
         </div>
 
         {/* Receiver */}
@@ -213,7 +226,7 @@ export function ParcelForm() {
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de dépôt" : "Drop-off address"}</p>
           <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-          <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} />
+          <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
         </div>
 
         {/* Category + size */}

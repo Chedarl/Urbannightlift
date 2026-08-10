@@ -2,6 +2,7 @@ import { CustomerHeader } from "@/components/customer/CustomerHeader";
 import { BottomNav } from "@/components/customer/BottomNav";
 import { OrderGate } from "@/components/customer/OrderGate";
 import { ServiceSelection } from "@/components/customer/ServiceSelection";
+import { intakeConfigured } from "@/lib/ai/intake";
 import { getOperatingSettings } from "@/lib/settings";
 import { getCustomerId } from "@/lib/auth/customer";
 import { serverIsFrench } from "@/lib/i18n/server";
@@ -35,7 +36,7 @@ export default async function ServiceSelectionPage() {
       <main>
         {/* Which services run tonight is a setting, not a constant — a paused
             one shows as "coming soon" rather than vanishing. */}
-        <ServiceSelection enabledServices={settings.enabledServices} />
+        <ServiceSelection enabledServices={settings.enabledServices} intakeEnabled={intakeConfigured()} />
       </main>
       <BottomNav signedIn={Boolean(customerId)} />
     </>

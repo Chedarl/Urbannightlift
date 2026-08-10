@@ -23,9 +23,9 @@ const ALL_SERVICES: ServiceType[] = [
 export default async function OrderFormPage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string }>;
+  searchParams: Promise<{ service?: string; from?: string }>;
 }) {
-  const [{ service }, settings, merchants, customerId] = await Promise.all([
+  const [{ service, from }, settings, merchants, customerId] = await Promise.all([
     searchParams,
     getOperatingSettings(),
     // The picker shows a shortlist; the merchant autocomplete on the food and
@@ -42,7 +42,14 @@ export default async function OrderFormPage({
   // Account-first: nobody fills in an order they cannot place. The gate carries
   // them back here the moment they are signed in.
   if (settings.requireAccountToOrder && !customerId) {
-    const next = service ? `/order/new?service=${service}` : "/order/new";
+    // `from` travels with them. Without it the intake marker is lost at the
+    // sign-in door, and somebody who typed a sentence, signed in, and came back
+    // would find the blank form this whole change exists to stop.
+    const params = new URLSearchParams();
+    if (service) params.set("service", service);
+    if (from) params.set("from", from);
+    const query = params.toString();
+    const next = query ? `/order/new?${query}` : "/order/new";
     return <OrderGate next={next} fr={await serverIsFrench()} />;
   }
 

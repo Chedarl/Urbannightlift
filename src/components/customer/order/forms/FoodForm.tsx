@@ -6,6 +6,7 @@ import { UtensilsCrossed, Search, Store, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
+import { useIntakePrefill, keepTyped } from "@/lib/orders/intakePrefill";
 import { formatXaf } from "@/lib/utils";
 import type { SelectedLocation } from "@/lib/locations/types";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
@@ -75,6 +76,18 @@ export function FoodForm() {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [attempted, setAttempted] = useState(false);
+
+  /*
+   * What the customer typed in the intake box upstairs, if that is how they got
+   * here. Until now this screen ignored it entirely and they retyped the lot.
+   */
+  const intake = useIntakePrefill("FOOD_PICKUP");
+  useEffect(() => {
+    if (!intake) return;
+    setVendorName((v) => keepTyped(v, intake.pickupSuggestion));
+    setFreeItems((v) => keepTyped(v, intake.itemDescription));
+    setNotes((v) => keepTyped(v, intake.notes));
+  }, [intake]);
 
   useEffect(() => {
     let live = true;
@@ -294,6 +307,7 @@ export function FoodForm() {
             onChange={setPickup}
             accent={ACCENT}
             mode="pickup"
+            suggestion={intake?.pickupSuggestion}
           />
           <label className="text-xs text-mist-500">
             {fr ? "Ce que vous voulez" : "What you want"}
@@ -315,6 +329,7 @@ export function FoodForm() {
           onChange={setDelivery}
           accent={ACCENT}
           mode="delivery"
+          suggestion={intake?.deliverySuggestion}
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs text-mist-500">

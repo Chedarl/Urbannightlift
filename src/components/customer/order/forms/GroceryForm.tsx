@@ -14,6 +14,7 @@ import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -92,6 +93,16 @@ export function GroceryForm() {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
+
+  /* The intake sentence, when they came through the box rather than a tile. */
+  const intake = useIntakePrefill("GROCERY_PICKUP");
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.itemDescription && blank(getValues("serviceDetails.groceryItems.0.name" as never)))
+      setValue("serviceDetails.groceryItems.0.name" as never, intake.itemDescription as never, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+  }, [intake, getValues, setValue]);
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
   useEffect(() => {
@@ -192,7 +203,7 @@ export function GroceryForm() {
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-green-300" /> {fr ? "Lieu du magasin" : "Store location"}</p>
-            <LocationField mode="pickup" label={fr ? "Lieu du magasin" : "Store location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du magasin" : "Store location")} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu du magasin" : "Store location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu du magasin" : "Store location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
           </div>
         </div>
 
@@ -301,7 +312,7 @@ export function GroceryForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-green-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
+            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
           <div className={card}>
             <p className={label}><Phone className="h-3.5 w-3.5 text-green-300" /> {fr ? "Numéro du destinataire" : "Recipient phone number"}</p>

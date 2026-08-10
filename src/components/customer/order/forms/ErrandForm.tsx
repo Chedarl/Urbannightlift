@@ -15,6 +15,7 @@ import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -78,6 +79,16 @@ export function ErrandForm() {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
+
+  /* The intake sentence, dropped straight into the box that asks for it. */
+  const intake = useIntakePrefill("CUSTOM_ERRAND");
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.itemDescription && blank(getValues("itemDescription")))
+      setValue("itemDescription", intake.itemDescription, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+  }, [intake, getValues, setValue]);
 
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
 
@@ -200,12 +211,12 @@ export function ErrandForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Lieu de départ" : "Pickup location"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
-            <LocationField mode="pickup" label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><Flag className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Destination" : "Destination / drop-off"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Destination" : "Destination"} accent={ACCENT} value={deliverySel} onChange={(l) => applySel("delivery", l)} />
+            <LocationField label={fr ? "Destination" : "Destination"} accent={ACCENT} value={deliverySel} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
         </div>
 
