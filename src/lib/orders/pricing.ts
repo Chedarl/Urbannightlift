@@ -77,8 +77,26 @@ export function quoteDeliveryFee(
     busy?: boolean;
   } = {}
 ) {
-  const zone = deliveryZone ?? pickupZone;
-  if (!zone) return null;
+  const km =
+    options.pickup && options.delivery
+      ? distanceKm(options.pickup.lat, options.pickup.lng, options.delivery.lat, options.delivery.lng)
+      : null;
+
+  /*
+   * What we need before a price exists — and this changed with the fee model.
+   *
+   * Under the old rule the fee *was* the zone tariff, so no zone meant no
+   * price and this function bailed out. That early return survived the v37
+   * rewrite and became a real defect: a customer who drops **two pins** hands
+   * us the exact distance, which is now the whole basis of the fee, and was
+   * still being told the order needed a human to price it. Every such order
+   * landed in the dispatcher review queue for somebody to type a number the
+   * system had already worked out.
+   *
+   * So the requirement is now: a distance **or** a zone. With neither there is
+   * genuinely nothing to go on and a person prices it, as before.
+   */
+  if (km == null && !deliveryZone && !pickupZone) return null;
 
   // The harder of the two ends decides the modifier: a rider has to reach both.
   const tiers: FareTier[] = [pickupZone?.tier, deliveryZone?.tier].filter(Boolean) as FareTier[];
@@ -87,11 +105,6 @@ export function quoteDeliveryFee(
     : tiers.includes("YELLOW")
       ? "YELLOW"
       : "GREEN";
-
-  const km =
-    options.pickup && options.delivery
-      ? distanceKm(options.pickup.lat, options.pickup.lng, options.delivery.lat, options.delivery.lng)
-      : null;
 
   const surchargeXaf = options.isMedicine
     ? Math.max(pickupZone?.medicineFeeXaf ?? 0, deliveryZone?.medicineFeeXaf ?? 0)

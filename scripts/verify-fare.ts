@@ -124,6 +124,23 @@ check(
   "nobody in this market quotes 1,347, and a to-the-franc price invites an argument about the franc"
 );
 
+console.log("\nTwo pins are enough, even with no zone row behind them");
+{
+  // The regression this section exists for: `quoteDeliveryFee` kept an
+  // `if (!zone) return null` from the zone-only model. Under the distance model
+  // that is wrong — a customer who drops two pins has told us everything the
+  // fee needs — and it was quietly routing those orders into the dispatcher
+  // review queue for a human to type a number the system already knew.
+  const q = quoteFare({ km: 8.3, tier: null });
+  check("a pinned trip with no zone is still priced", q.totalXaf > DEFAULT_FARE.minimumXaf, String(q.totalXaf));
+  check("and is not marked an estimate, because the distance is real", !q.estimated);
+  check(
+    "an unknown zone is treated as the cheapest, never the dearest",
+    quoteFare({ km: 8.3, tier: null }).totalXaf === quoteFare({ km: 8.3, tier: "GREEN" }).totalXaf,
+    "guessing a customer into a surcharge because we could not identify their quartier is the postcode lottery again"
+  );
+}
+
 console.log("\nAnd the old rule is still readable, for comparison");
 check("the legacy fee is the higher of the two zones", legacyZoneFee(1000, 2500) === 2500);
 check("with one zone it is that zone", legacyZoneFee(null, 1500) === 1500);

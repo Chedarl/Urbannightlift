@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit, limitMessage, trippedHoneypot } from "@/lib/security/rateLimit";
+import { checkRateLimit, limitMessage } from "@/lib/security/rateLimit";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { orderSchema } from "@/lib/validation/orderSchema";
@@ -7,6 +7,7 @@ import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { orderMoney } from "@/lib/orders/goodsMoney";
 import { canChargeToFloat } from "@/lib/merchants/float";
+import { merchantPickupLabel } from "@/lib/merchants/complete";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
@@ -16,6 +17,7 @@ import { normalizePreferredTime } from "@/lib/orders/timeSlots";
 import { notifyNewOrder } from "@/lib/notify/triggers";
 import { afterOrderCreated } from "@/lib/orders/afterCreate";
 import { resolveCode } from "@/lib/ambassadors/accrual";
+import { creditToApply } from "@/lib/referrals/rules";
 import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
 import {
   ORDER_ACCESS_COOKIE,
@@ -296,17 +298,47 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    /*
+     * Credit this customer earned by bringing a friend, actually spent.
+     *
+     * `spendCredit` existed, was proved, and had **no caller outside its own
+     * verify script** — so `/account/referrals` showed people a balance that
+     * could never be applied to anything. The ledger write is inlined here
+     * rather than calling that helper because it opens its own transaction, and
+     * a credit that is deducted outside the transaction that creates the order
+     * can be spent against an order that then fails to exist.
+     *
+     * Bounded by `creditToApply`: never more than they have, and never more
+     * than the fee. Credit reduces a bill; it never becomes a payout.
+     */
+    const creditXaf = creditToApply(
+      customer.referralCreditXaf ?? 0,
+      // Only against our own fee, and only what the ambassador discount has not
+      // already taken off it — two discounts must never add up to more than the
+      // thing they are discounting.
+      Math.max(0, (estimatedFee ?? 0) - (referral?.discountXaf ?? 0))
+    );
+
+    /**
+     * Everything taken off this order, from both schemes at once.
+     *
+     * Stored as one figure because that is what it is to the customer and to
+     * the night's accounts — the `ReferralLedger` row above is the record of
+     * how much of it was credit, and `ambassadorCommissionXaf` records the
+     * other half. Both come out of the company's share; the rider is paid on
+     * the full undiscounted fee, which is the rule that has held since v13.
+     */
+    const discountXaf = (referral?.discountXaf ?? 0) + creditXaf;
+
     const created = await tx.order.create({
       data: {
         orderCode,
         customerId: customer.id,
         ambassadorId: referral?.ambassadorId ?? null,
-        discountXaf: referral?.discountXaf || null,
+        discountXaf: discountXaf || null,
         ambassadorCommissionXaf: referral?.commissionXaf || null,
         serviceType: input.serviceType,
-        pickupLocation: merchant
-          ? `${merchant.merchantName} — ${merchant.address}`
-          : input.pickupLocation,
+        pickupLocation: merchant ? merchantPickupLabel(merchant) : input.pickupLocation,
         pickupLandmark: (merchant?.landmark || input.pickupLandmark) || null,
         pickupZoneId: effectivePickupZone?.id ?? null,
         pickupLat: input.pickupLat ?? pickupGeo?.latitude ?? null,
@@ -385,7 +417,7 @@ export async function POST(req: NextRequest) {
               // The trail has to say who set the price and on what basis, so a
               // dispatcher reading it later knows this was the zone tariff and
               // not somebody's guess.
-              note: `Auto-priced ${priceDecision.feeXaf} XAF from the zone tariff; agreed by the customer at checkout`,
+              note: `Auto-priced ${priceDecision.feeXaf} XAF from the distance and zone; agreed by the customer at checkout`,
             }
           : {
               orderId: created.id,
@@ -397,12 +429,42 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    // The credit, spent. Written here rather than through `spendCredit` because
+    // that helper opens its own transaction, and a balance decremented outside
+    // this one could be spent against an order that then fails to be created.
+    if (creditXaf > 0) {
+      await tx.referralLedger.create({
+        data: {
+          customerId: customer.id,
+          orderId: created.id,
+          amountXaf: -creditXaf,
+          type: "SPENT",
+          note: `Applied to ${created.orderCode}`,
+        },
+      });
+      await tx.customer.update({
+        where: { id: customer.id },
+        data: { referralCreditXaf: { decrement: creditXaf } },
+      });
+    }
+
     await tx.payment.create({
       data: {
         orderId: created.id,
         customerId: customer.id,
         paymentMethod: input.paymentMethod,
-        amountXaf: payableNowXaf,
+        /*
+         * **Net of the discount, which it was not.**
+         *
+         * `discountXaf` was written onto the order and the payable was computed
+         * from the gross fee, so a customer who used an ambassador code was
+         * recorded as having a 500 XAF discount and then asked for the full
+         * amount — on the payment card, in the USSD string, and in this row.
+         * The ambassador was paid a commission on a saving their customer never
+         * received. Every screen reads the payable from here, so this is the
+         * one place it had to be fixed.
+         */
+        amountXaf: Math.max(0, payableNowXaf - discountXaf),
         paymentPhone: input.paymentPhone || null,
         transactionReference: input.transactionReference || null,
         status: "PENDING",

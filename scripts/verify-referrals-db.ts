@@ -6,7 +6,8 @@
  * rider's. Then Alice spends it.
  */
 import { PrismaClient } from "@prisma/client";
-import { ensureReferralCode, bindReferral, awardReferral, spendCredit, referralBalance } from "../src/lib/referrals/accrual";
+import { ensureReferralCode, bindReferral, awardReferral, referralBalance } from "../src/lib/referrals/accrual";
+import { creditToApply } from "../src/lib/referrals/rules";
 
 const prisma = new PrismaClient();
 let failures = 0;
@@ -101,12 +102,42 @@ async function main() {
       isTest: false,
     },
   });
-  const spent = await spendCredit(alice.id, own.id, 1500);
+  /*
+   * Spending, done the way `POST /api/orders` does it — inside the order's own
+   * transaction rather than through a helper with its own. The helper was
+   * deleted; this exercises the same two writes so the ledger's arithmetic is
+   * still proved against a real database.
+   */
+  const spend = async (feeXaf: number) => {
+    const c = await prisma.customer.findUnique({
+      where: { id: alice.id },
+      select: { referralCreditXaf: true },
+    });
+    const amount = creditToApply(c?.referralCreditXaf ?? 0, feeXaf);
+    if (amount <= 0) return 0;
+    await prisma.$transaction([
+      prisma.referralLedger.create({
+        data: { customerId: alice.id, orderId: own.id, amountXaf: -amount, type: "SPENT", note: "Applied to an order" },
+      }),
+      prisma.customer.update({
+        where: { id: alice.id },
+        data: { referralCreditXaf: { decrement: amount } },
+      }),
+    ]);
+    return amount;
+  };
+
+  const spent = await spend(1500);
   check("she spends her 75", spent === 75, String(spent));
   bal = await referralBalance(alice.id);
   check("the balance is now empty", bal.balanceXaf === 0, JSON.stringify(bal));
   check("and the ledger remembers both sides", bal.earnedXaf === 75 && bal.spentXaf === 75, JSON.stringify(bal));
-  check("spending again gets nothing", (await spendCredit(alice.id, own.id, 1500)) === 0);
+  check("spending again gets nothing", (await spend(1500)) === 0);
+  check(
+    "credit can never exceed the fee it is discounting",
+    creditToApply(5000, 1200) === 1200 && creditToApply(300, 1200) === 300,
+    "credit reduces a bill; it never becomes a payout"
+  );
 
   console.log("\n— a test order earns nobody anything —");
   const test = await prisma.order.create({

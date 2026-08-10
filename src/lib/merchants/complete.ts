@@ -107,3 +107,44 @@ export function describeMissing(missing: MissingField[], fr = false): string {
   const last = list.pop()!;
   return list.length === 0 ? `Still needs ${last}.` : `Still needs ${list.join(", ")} and ${last}.`;
 }
+
+/**
+ * How a merchant is written into an order's pickup field.
+ *
+ * ## The bug this replaces, which was live
+ *
+ * Three places did `` `${m.merchantName} — ${m.address}` `` — the order route,
+ * and two in the shared order form. `Merchant.address` became **nullable** in
+ * the v33 migration, deliberately: Yaoundé does not use street addresses, and
+ * demanding one was the reason a business captured from its own Instagram page
+ * could not be saved at all.
+ *
+ * So the normal case — a merchant who signed themselves up, which is the whole
+ * onboarding route — produced:
+ *
+ * ```
+ * Cake Princess — null
+ * ```
+ *
+ * stored on the order, shown to the customer at checkout, and read by the rider
+ * as the place to collect from. The one field the migration made optional was
+ * the one field three call sites assumed was always there.
+ *
+ * ## What it does instead
+ *
+ * Uses whatever locates the place, in the order a rider would actually want it:
+ * a street address if there is one, otherwise the quartier, otherwise the
+ * landmark. With none of them it is just the name — which is honest, and the
+ * pin on the order carries the rest.
+ */
+export function merchantPickupLabel(m: {
+  merchantName: string;
+  address?: string | null;
+  neighbourhood?: string | null;
+  landmark?: string | null;
+}): string {
+  const where = [m.address, m.neighbourhood, m.landmark]
+    .map((v) => (v ?? "").trim())
+    .find((v) => v.length > 0);
+  return where ? `${m.merchantName} — ${where}` : m.merchantName;
+}

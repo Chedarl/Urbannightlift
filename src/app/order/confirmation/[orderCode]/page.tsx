@@ -123,7 +123,20 @@ export default async function ConfirmationPage({
             orderCode: order.orderCode,
             paymentMethod: order.paymentMethod,
             paymentStatus: order.paymentStatus,
-            amountXaf: order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
+            /*
+             * What they are actually asked to pay, read from the payment row.
+             *
+             * This used to be the raw fee, so a customer who used a referral
+             * code saw the full amount on the card and in the USSD string while
+             * the order recorded a discount they never received. The payment
+             * row is the one place the payable is decided, so it is the one
+             * place this may be read from.
+             */
+            amountXaf:
+              payment?.amountXaf ??
+              order.finalDeliveryFeeXaf ??
+              order.estimatedDeliveryFeeXaf ??
+              null,
             mtnMerchantCode: settings.mtnMerchantCode,
             mtnUssdTemplate: settings.mtnUssdTemplate,
             orangeMerchantCode: settings.orangeMerchantCode,

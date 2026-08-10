@@ -171,33 +171,18 @@ export async function awardReferral(orderId: string): Promise<number> {
   }
 }
 
-/**
- * Spends credit against an order, writing the ledger row and the new balance
- * together so the two can never disagree.
+/*
+ * `spendCredit` used to live here, and it is deliberately gone.
+ *
+ * It opened its own transaction, which meant credit could be deducted from a
+ * balance and the order it was spent on could then fail to be created. The
+ * deduction now happens inside the order's own transaction in
+ * `POST /api/orders`, alongside the ledger row, so the two can never disagree.
+ *
+ * It is deleted rather than kept "in case": two implementations of spending
+ * somebody's money is precisely how the two stop agreeing about how much was
+ * spent.
  */
-export async function spendCredit(customerId: string, orderId: string, feeXaf: number): Promise<number> {
-  const customer = await prisma.customer.findUnique({
-    where: { id: customerId },
-    select: { referralCreditXaf: true },
-  });
-  const amount = creditToApply(customer?.referralCreditXaf ?? 0, feeXaf);
-  if (amount <= 0) return 0;
-
-  try {
-    await prisma.$transaction([
-      prisma.referralLedger.create({
-        data: { customerId, orderId, amountXaf: -amount, type: "SPENT", note: "Applied to an order" },
-      }),
-      prisma.customer.update({
-        where: { id: customerId },
-        data: { referralCreditXaf: { decrement: amount } },
-      }),
-    ]);
-    return amount;
-  } catch {
-    return 0;
-  }
-}
 
 /** What a customer has earned, spent and has left — summed from the ledger. */
 export async function referralBalance(customerId: string): Promise<{
