@@ -12,6 +12,13 @@ export const maxDuration = 30;
  * exactly useless for an order stuck at 11 PM. This is the one thing in the
  * product that has to run *while* the night is happening.
  *
+ * **Scheduled from `.github/workflows/watchman.yml`, not `vercel.json`.** The
+ * Vercel Hobby plan permits only daily crons and refused the deployment
+ * outright — and a daily round cannot watch a night in progress. GitHub Actions
+ * costs nothing, this repository already uses it, and the endpoint is identical
+ * either way: if the project ever moves to Vercel Pro, the schedule moves back
+ * and nothing here changes.
+ *
  * Guarded by CRON_SECRET like the summary — it reads every live order and can
  * push to every dispatcher's phone, so it is not left open.
  */

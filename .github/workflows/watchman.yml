@@ -1,0 +1,83 @@
+name: Watchman
+
+# Calls the watchman round through the night, so a stalled order is noticed by
+# the system rather than by the customer.
+#
+# ## Why this is here and not in vercel.json
+#
+# It was in `vercel.json` first, and Vercel refused the deployment outright:
+#
+#     Hobby accounts are limited to daily cron jobs. This cron expression
+#     (*/10 17-23,0-4 * * *) would run more than once per day.
+#
+# A daily cron cannot watch a night in progress — the whole point is to notice
+# an order that has been sitting unpriced since 11 PM *before* the customer
+# does. So the schedule moved here, where it costs nothing: this repository
+# already runs Actions, the job is one `curl`, and it needs no plan change.
+#
+# ## The honest limitations, stated rather than discovered later
+#
+#  - **GitHub's scheduler is best-effort.** A run can be delayed by five or ten
+#    minutes when their queue is busy. That is acceptable here: the thresholds
+#    this triggers on are twelve to twenty-five minutes, so a late round still
+#    catches the stall well before anybody would have noticed by hand.
+#  - **GitHub disables scheduled workflows after 60 days of no repository
+#    activity.** On an actively developed repo that never happens; if the
+#    project ever goes quiet, this is the thing that stops silently. Enabling
+#    Vercel Pro moves the schedule back into `vercel.json` and removes that
+#    caveat entirely — the endpoint is unchanged either way.
+#  - **It does nothing without secrets.** With `CRON_SECRET` unset the endpoint
+#    refuses in production, which is correct: this reads every live order.
+
+on:
+  schedule:
+    # Every ten minutes through the operating window, in **UTC**.
+    # Yaoundé is UTC+1, so 6 PM–4 AM local is 17:00–03:00 UTC — expressed as
+    # two ranges because the night crosses midnight.
+    - cron: "*/10 17-23,0-3 * * *"
+  # So it can be proved working without waiting for the next slot.
+  workflow_dispatch:
+
+# Two rounds at once would double every alert. If one is somehow still running,
+# the next is skipped rather than queued.
+concurrency:
+  group: watchman
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the site to look at tonight
+        env:
+          SECRET: ${{ secrets.CRON_SECRET }}
+          # Only ever the real domain. A preview URL would read preview data and
+          # push alerts about orders nobody placed.
+          SITE: https://urbannighlift.com
+        run: |
+          set -uo pipefail
+
+          if [ -z "${SECRET:-}" ]; then
+            echo "::error::CRON_SECRET is not set on this repository."
+            echo "Add it under Settings → Secrets and variables → Actions, with"
+            echo "the same value as the CRON_SECRET environment variable in Vercel."
+            echo "They are two separate stores and both need it."
+            exit 1
+          fi
+
+          RESPONSE=$(curl -sS -m 45 -w '\n%{http_code}' \
+            -H "Authorization: Bearer $SECRET" \
+            "$SITE/api/cron/watch")
+
+          STATUS=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+
+          echo "HTTP $STATUS"
+          printf '%s\n' "$BODY" | head -c 2000
+
+          if [ "$STATUS" != "200" ]; then
+            # 401 means the two secrets disagree; 503 means Vercel has none set.
+            # Those need different fixes, so the status is not swallowed.
+            echo "::error::The watchman round did not run."
+            exit 1
+          fi
