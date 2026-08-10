@@ -25,6 +25,7 @@ import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
+import { merchantPickupLabel } from "@/lib/merchants/complete";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
@@ -65,6 +66,12 @@ export interface MerchantOption {
   merchantName: string;
   category: MerchantCategory;
   address: string | null;
+  /**
+   * The quartier. Carried because `address` is optional by design — Yaoundé
+   * mostly does not use street addresses, and this is the field a self-signed-up
+   * merchant actually has.
+   */
+  neighbourhood: string | null;
   landmark: string | null;
   openingHours: string | null;
 }
@@ -254,9 +261,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
       }
     }
 
-    const pickupLoc = selectedMerchant
-      ? `${selectedMerchant.merchantName} — ${selectedMerchant.address}`
-      : data.pickupLocation;
+    const pickupLoc = selectedMerchant ? merchantPickupLabel(selectedMerchant) : data.pickupLocation;
 
     const merged: OrderInput = {
       ...data,
@@ -350,7 +355,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
                   onClick={() => {
                     const next = selectedMerchant?.id === m.id ? null : m;
                     setSelectedMerchant(next);
-                    setValue("pickupLocation", next ? `${next.merchantName} — ${next.address}` : "", { shouldValidate: true });
+                    setValue("pickupLocation", next ? merchantPickupLabel(next) : "", { shouldValidate: true });
                     setValue("pickupLandmark", next?.landmark ?? "");
                   }}
                   className={cn(

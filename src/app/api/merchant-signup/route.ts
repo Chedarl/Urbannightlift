@@ -30,6 +30,20 @@ const COOLDOWN_MS = 60 * 60 * 1000;
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
+  /*
+   * The trap, actually read.
+   *
+   * All three public join forms already **rendered** a hidden `companyWebsite`
+   * field — the honeypot two earlier rounds promised — and not one of their
+   * servers ever looked at it. `merchant-signup` even imported
+   * `trippedHoneypot` and never called it. A trap nobody checks is not a trap;
+   * it is a hidden input.
+   *
+   * A filled one is accepted and discarded in silence. Telling a script it was
+   * caught only teaches it to stop filling the field.
+   */
+  if (trippedHoneypot(body as Record<string, unknown>)) return NextResponse.json({ ok: true });
+
   // A field no human sees and no real submission fills.
   if (typeof body.companyWebsite === "string" && body.companyWebsite.trim()) {
     return NextResponse.json({ ok: true });

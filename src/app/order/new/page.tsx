@@ -34,7 +34,7 @@ export default async function OrderFormPage({
       where: { verified: true, active: true, acceptingOrders: true },
       orderBy: [{ popularityRank: "desc" }, { merchantName: "asc" }],
       take: 100,
-      select: { id: true, merchantName: true, category: true, address: true, landmark: true, openingHours: true },
+      select: { id: true, merchantName: true, category: true, address: true, neighbourhood: true, landmark: true, openingHours: true },
     }),
     getCustomerId(),
   ]);

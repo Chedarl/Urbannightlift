@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendNightlySummary } from "@/lib/email/nightlySummary";
+import { runHousekeeping } from "@/lib/maintenance/housekeeping";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,5 +26,19 @@ export async function GET(req: NextRequest) {
   }
 
   const result = await sendNightlySummary();
-  return NextResponse.json(result);
+
+  /*
+   * The tidy-up, on the one schedule that already exists.
+   *
+   * Deliberately after the summary and never able to affect it: housekeeping
+   * swallows its own failures and returns what it managed, so a sweep that
+   * cannot reach a table does not stop the owner getting the night's takings.
+   *
+   * It rides this cron rather than getting its own because a second schedule is
+   * a second thing that can be silently not running — which is the exact defect
+   * this is fixing.
+   */
+  const swept = await runHousekeeping();
+
+  return NextResponse.json({ ...result, swept });
 }

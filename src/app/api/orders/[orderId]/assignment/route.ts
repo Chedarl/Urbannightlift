@@ -30,6 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     select: {
       id: true,
       orderCode: true,
+      orderStatus: true,
+      paymentMethod: true,
       assignedRiderId: true,
       riderAcceptedAt: true,
       riderDeclinedAt: true,
@@ -43,6 +45,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     return NextResponse.json({ ok: true, alreadyAccepted: true });
   }
 
+  /*
+   * Where a declined order goes back to.
+   *
+   * This used to be `PAYMENT_VERIFIED`, unconditionally. On a **cash** order
+   * nothing is verified before the rider goes out — the money arrives at the
+   * door — so declining one stamped the console with a verification that had
+   * never happened, and wrote it into the status history as fact. The money
+   * gate itself was never fooled (`dispatchBlocker` reads the payment row, not
+   * this), but a dispatcher reading the board was.
+   *
+   * A cash order goes back to APPROVED, which is what it was: priced, agreed,
+   * and waiting for a rider. Everything else returns to PAYMENT_VERIFIED, which
+   * for those orders is true.
+   */
+  const returnTo = order.paymentMethod === "CASH" ? "APPROVED" : "PAYMENT_VERIFIED";
+
   // Declining hands the order back to dispatch rather than leaving it attached
   // to a rider who has said they cannot do it.
   const now = new Date();
@@ -55,14 +73,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
             riderDeclinedAt: now,
             riderDeclineReason: reason || null,
             assignedRiderId: null,
-            orderStatus: "PAYMENT_VERIFIED",
+            orderStatus: returnTo,
           },
     });
     await tx.orderStatusHistory.create({
       data: {
         orderId,
-        fromStatus: "RIDER_ASSIGNED",
-        toStatus: accept ? "RIDER_ASSIGNED" : "PAYMENT_VERIFIED",
+        // The status it was actually in, not an assumption about it. A trail
+        // that reports a transition that did not happen is worse than none.
+        fromStatus: order.orderStatus,
+        toStatus: accept ? order.orderStatus : returnTo,
         changedByUserId: user.id,
         changedByRole: "RIDER",
         note: accept
