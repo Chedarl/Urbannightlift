@@ -113,6 +113,18 @@ export const LIMITS: Record<string, Limit> = {
    * would make this worth using as free image hosting.
    */
   upload: { max: 30, windowMinutes: 60 },
+  /**
+   * Asking the assistant a question.
+   *
+   * A real conversation is several turns — ask, follow up, rephrase because the
+   * first answer missed the point. Forty an hour is a long conversation and
+   * nowhere near what a script does. Applied **per caller**, which is the whole
+   * point: the public cap used to be twenty counted across every visitor on the
+   * site at once, so on a busy night the twenty-first person to open the chat
+   * was told it was busy while nineteen of those twenty questions were somebody
+   * else's.
+   */
+  assistant: { max: 40, windowMinutes: 60 },
 };
 
 export interface LimitResult {
@@ -132,12 +144,22 @@ export interface LimitResult {
 export async function checkRateLimit(
   req: Request,
   purpose: keyof typeof LIMITS | string,
-  limit?: Limit
+  limit?: Limit,
+  /**
+   * Something better than an address to count against, when we have one.
+   *
+   * A signed-in customer *is* identified, so counting them by IP inherits the
+   * Yaoundé NAT problem for no reason — one household on one connection would
+   * share a budget they each have an account for. Passed a customer id, this
+   * counts the person. It is hashed exactly like an address, so the table still
+   * cannot be read back into a list of who asked what.
+   */
+  subjectKey?: string | null
 ): Promise<LimitResult> {
   const rule = limit ?? LIMITS[purpose];
   if (!rule) return { ok: true, retryInMinutes: 0 };
 
-  const subject = subjectOf(callerIp(req));
+  const subject = subjectOf(subjectKey || callerIp(req));
   const since = new Date(Date.now() - rule.windowMinutes * 60_000);
 
   try {

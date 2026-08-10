@@ -3,8 +3,9 @@ import type { ZoneTier } from "@/lib/orders/pricing";
 /**
  * When the price is already certain, nobody should have to wait for it.
  *
- * The delivery fee is not a guess: it is the delivery zone's admin-set tier fee
- * (plus the medicine surcharge), computed by `estimateDeliveryFee`. Yet every
+ * The delivery fee is not a guess: it is worked out by `estimateDeliveryFee`
+ * from how far the rider actually has to ride, nudged by the zone tier and with
+ * the medicine surcharge on top. Yet every
  * order used to be parked in AWAITING_DISPATCHER_REVIEW until a human sent the
  * customer that same number as a "quote", and the customer then had to accept
  * it — so the least app-like moment in the product was waiting to be told a
@@ -64,10 +65,10 @@ export interface AutoPriceDecision {
 /**
  * Whether this order's price is firm enough to skip the human quote.
  *
- * The fee-bearing zone is the delivery zone when there is one, otherwise the
- * pickup zone — mirroring `estimateDeliveryFee`, so the tier we check is the
- * tier the customer was actually charged on. When both are known the fee takes
- * the higher of the two, so *both* have to be firm for the total to be firm.
+ * Both ends are checked, not just the one the fee was computed from, because a
+ * rider has to reach both — and `estimateDeliveryFee` already takes the harder
+ * of the two tiers as its modifier for the same reason. So a RED zone anywhere
+ * on the trip means a person prices it, whatever the distance worked out to.
  */
 export function decideAutoPrice(input: AutoPriceInput): AutoPriceDecision {
   const { pickupZone, deliveryZone, estimatedFeeXaf, highValueFlag, riskFlag } = input;

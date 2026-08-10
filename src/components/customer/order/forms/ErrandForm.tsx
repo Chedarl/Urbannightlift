@@ -12,9 +12,10 @@ import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { priceCopy } from "@/lib/orders/priceCopy";
-import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -26,6 +27,20 @@ import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/type
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
+
+/**
+ * The dropped pin, when there is one.
+ *
+ * Passed into the fee so the price on screen is worked out from the same
+ * distance the server will use. Without this the customer sees a zone-only
+ * estimate and is charged something else, which is a worse bug than the one
+ * this whole change is fixing.
+ */
+function pin(sel: SelectedLocation | null): { lat: number; lng: number } | null {
+  return sel?.latitude != null && sel?.longitude != null
+    ? { lat: sel.latitude, lng: sel.longitude }
+    : null;
+}
 
 const ACCENT = "#c084fc";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -65,10 +80,21 @@ export function ErrandForm() {
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
 
+  /* The intake sentence, dropped straight into the box that asks for it. */
+  const intake = useIntakePrefill("CUSTOM_ERRAND");
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.itemDescription && blank(getValues("itemDescription")))
+      setValue("itemDescription", intake.itemDescription, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+  }, [intake, getValues, setValue]);
+
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
 
   const effZone = (sel: SelectedLocation | null) => sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } : null;
-  const estimatedFee = useMemo(() => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel)), [pickupSel, deliverySel]);
+  const fare = useMemo(() => quoteDeliveryFee(effZone(pickupSel), effZone(deliverySel), { pickup: pin(pickupSel), delivery: pin(deliverySel) }), [pickupSel, deliverySel]);
+  const estimatedFee = fare?.totalXaf ?? null;
   /**
    * Whether that fee is the final zone tariff, using the same rule the server
    * applies on submit. Wording only — the server re-decides authoritatively.
@@ -124,7 +150,8 @@ export function ErrandForm() {
       deliveryLocation: data.deliveryLocation?.trim() || asDescribed,
       pickupLat: pickupSel?.latitude ?? null, pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null, deliveryLng: deliverySel?.longitude ?? null,
-      estimatedFeeXaf: estimatedFee, priceFirm, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
+      estimatedFeeXaf: estimatedFee, priceFirm,
+      fareLines: fare?.lines, fareEstimated: fare?.estimated, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
     router.push("/order/review");
   }
@@ -184,12 +211,12 @@ export function ErrandForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Lieu de départ" : "Pickup location"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
-            <LocationField mode="pickup" label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu de départ" : "Pickup location"} accent={ACCENT} value={pickupSel} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
           </div>
           <div className={card}>
             <p className={cn(label, "mb-2")}><Flag className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Destination" : "Destination / drop-off"} <span className="text-mist-500">({fr ? "si applicable" : "if applicable"})</span></p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Destination" : "Destination"} accent={ACCENT} value={deliverySel} onChange={(l) => applySel("delivery", l)} />
+            <LocationField label={fr ? "Destination" : "Destination"} accent={ACCENT} value={deliverySel} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
         </div>
 

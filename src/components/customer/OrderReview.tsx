@@ -261,6 +261,8 @@ export function OrderReview() {
         items={goodsItems(draft)}
         capXaf={draft.goodsCapXaf ?? null}
         goodsAtDoor={goodsAtDoor}
+        fareLines={draft.fareLines ?? []}
+        fareEstimated={draft.fareEstimated === true}
         fr={fr}
       />
 

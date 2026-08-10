@@ -21,21 +21,24 @@ export const runtime = "nodejs";
  * has signed in. Rate-limited for the same reason.
  */
 export async function POST(req: NextRequest) {
+  // Read before limiting, so even the refusal comes back in the language the
+  // customer is using the app in.
+  const body = await req.json().catch(() => ({}));
+  const sentence = typeof body.text === "string" ? body.text : "";
+  const fr = body.fr === true;
+
   const limit = await checkRateLimit(req, "intake");
   if (!limit.ok) {
     return NextResponse.json(
-      { error: limitMessage(limit, false) },
+      { error: limitMessage(limit, fr) },
       { status: 429, headers: { "Retry-After": String(limit.retryInMinutes * 60) } }
     );
   }
 
-  const body = await req.json().catch(() => ({}));
-  const sentence = typeof body.text === "string" ? body.text : "";
-
   // The enabled list comes from settings here rather than from the caller, so a
   // hand-crafted request cannot talk itself into a service the owner paused.
   const settings = await getOperatingSettings();
-  const read = await readIntake(sentence, settings.enabledServices);
+  const read = await readIntake(sentence, settings.enabledServices, fr);
 
   if (!read.data) return NextResponse.json({ error: read.error }, { status: 400 });
   return NextResponse.json({ draft: read.data });

@@ -12,9 +12,10 @@ import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { priceCopy } from "@/lib/orders/priceCopy";
-import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { PharmacyTonight } from "@/components/customer/pharmacy/PharmacyTonight";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
@@ -31,6 +32,20 @@ import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
+
+/**
+ * The dropped pin, when there is one.
+ *
+ * Passed into the fee so the price on screen is worked out from the same
+ * distance the server will use. Without this the customer sees a zone-only
+ * estimate and is charged something else, which is a worse bug than the one
+ * this whole change is fixing.
+ */
+function pin(sel: SelectedLocation | null): { lat: number; lng: number } | null {
+  return sel?.latitude != null && sel?.longitude != null
+    ? { lat: sel.latitude, lng: sel.longitude }
+    : null;
+}
 
 const ACCENT = "#2dd4bf";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -86,6 +101,21 @@ export function MedicineForm() {
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
 
+  /*
+   * What they typed in the intake box, if that is how they arrived. Only empty
+   * boxes are filled, so nothing here can overwrite something they have already
+   * corrected.
+   */
+  const intake = useIntakePrefill("MEDICINE_PICKUP");
+  useEffect(() => {
+    if (!intake) return;
+    if (intake.pickupSuggestion) setPharmacyName((v) => (blank(v) ? intake.pickupSuggestion : v));
+    if (intake.itemDescription && blank(getValues("serviceDetails.meds.0.name" as never)))
+      setValue("serviceDetails.meds.0.name" as never, intake.itemDescription as never, { shouldValidate: true });
+    if (intake.notes && blank(getValues("specialInstructions")))
+      setValue("specialInstructions", intake.notes);
+  }, [intake, getValues, setValue]);
+
   useEffect(() => {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
   }, []);
@@ -100,10 +130,11 @@ export function MedicineForm() {
     sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } :
     zones.find((z) => z.id === zoneId) ? (() => { const z = zones.find((z) => z.id === zoneId)!; return { id: z.id, feeXaf: z.feeXaf, medicineFeeXaf: z.medicineFeeXaf, nightUrgencyFeeXaf: 0, tier: z.tier }; })() : null;
 
-  const estimatedFee = useMemo(
-    () => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel), { isMedicine: true }),
+  const fare = useMemo(
+    () => quoteDeliveryFee(effZone(pickupSel), effZone(deliverySel), { isMedicine: true, pickup: pin(pickupSel), delivery: pin(deliverySel) }),
     [pickupSel, deliverySel, zones]
   );
+  const estimatedFee = fare?.totalXaf ?? null;
   /**
    * Whether that fee is the final zone tariff, using the same rule the server
    * applies on submit. Wording only — the server re-decides authoritatively.
@@ -256,6 +287,7 @@ export function MedicineForm() {
       deliveryLat: deliverySel?.latitude ?? null,
       deliveryLng: deliverySel?.longitude ?? null,
       estimatedFeeXaf: estimatedFee, priceFirm,
+      fareLines: fare?.lines, fareEstimated: fare?.estimated,
       pickupZoneName: pickupSel?.zoneName ?? undefined,
       deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
@@ -372,7 +404,7 @@ export function MedicineForm() {
         {!merchant && (
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
-            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} />
+            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
             <p className="mt-2 text-[11px] text-mist-500">
               {fr
                 ? "Vous ne savez pas laquelle est ouverte ? Laissez vide — nous trouvons la pharmacie de garde la plus proche."
@@ -483,7 +515,7 @@ export function MedicineForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} />
+            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
         </div>
 

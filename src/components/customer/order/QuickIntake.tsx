@@ -58,14 +58,19 @@ export function QuickIntake({ enabledServices }: { enabledServices: ServiceType[
       const res = await fetch("/api/intake", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sentence }),
+        body: JSON.stringify({ text: sentence, fr }),
       });
       const data = await res.json();
 
       if (!res.ok || !data.draft) {
+        // `data.error` is already a customer-facing sentence in their own
+        // language — the route no longer forwards the provider's wording.
         setError(
-          data.error ??
-            (fr ? "Nous n'avons pas compris. Choisissez ci-dessous." : "We didn't catch that. Pick below.")
+          typeof data.error === "string" && data.error.length > 0
+            ? data.error
+            : fr
+              ? "Nous n'avons pas compris. Choisissez ci-dessous."
+              : "We didn't catch that. Pick below."
         );
         return;
       }

@@ -12,9 +12,10 @@ import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { priceCopy } from "@/lib/orders/priceCopy";
-import { estimateDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { useIntakePrefill, blank, asSentence } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -26,6 +27,20 @@ import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/type
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn } from "@/lib/utils";
+
+/**
+ * The dropped pin, when there is one.
+ *
+ * Passed into the fee so the price on screen is worked out from the same
+ * distance the server will use. Without this the customer sees a zone-only
+ * estimate and is charged something else, which is a worse bug than the one
+ * this whole change is fixing.
+ */
+function pin(sel: SelectedLocation | null): { lat: number; lng: number } | null {
+  return sel?.latitude != null && sel?.longitude != null
+    ? { lat: sel.latitude, lng: sel.longitude }
+    : null;
+}
 
 const ACCENT = "#3b82f6";
 const card = "rounded-2xl border border-ink-700 bg-ink-900/50 p-4";
@@ -70,6 +85,18 @@ export function ParcelForm() {
     if (!getValues("whatsappNumber")) setValue("whatsappNumber", localPhone(p.whatsappNumber), { shouldValidate: true });
   });
 
+  /*
+   * The intake sentence. `itemDescription` here is composed from the category
+   * and size chips further down, so what they said about the parcel goes into
+   * the instructions rather than fighting that composition for the same field.
+   */
+  const intake = useIntakePrefill("SMALL_PARCEL");
+  useEffect(() => {
+    if (!intake) return;
+    const said = asSentence(intake);
+    if (said && blank(getValues("specialInstructions"))) setValue("specialInstructions", said.slice(0, 200));
+  }, [intake, getValues, setValue]);
+
   useEffect(() => { fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {}); }, []);
   useEffect(() => {
     const catLabel = CATS.find((c) => c.v === category);
@@ -77,7 +104,8 @@ export function ParcelForm() {
   }, [category, size, fr, setValue]);
 
   const effZone = (sel: SelectedLocation | null) => sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } : null;
-  const estimatedFee = useMemo(() => estimateDeliveryFee(effZone(pickupSel), effZone(deliverySel)), [pickupSel, deliverySel]);
+  const fare = useMemo(() => quoteDeliveryFee(effZone(pickupSel), effZone(deliverySel), { pickup: pin(pickupSel), delivery: pin(deliverySel) }), [pickupSel, deliverySel]);
+  const estimatedFee = fare?.totalXaf ?? null;
   /**
    * Whether that fee is the final zone tariff, using the same rule the server
    * applies on submit. Wording only — the server re-decides authoritatively.
@@ -128,7 +156,8 @@ export function ParcelForm() {
       fullName: (sd?.senderName as string)?.trim() || data.fullName?.trim() || (fr ? "Expéditeur" : "Sender"),
       pickupLat: pickupSel?.latitude ?? null, pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null, deliveryLng: deliverySel?.longitude ?? null,
-      estimatedFeeXaf: estimatedFee, priceFirm, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
+      estimatedFeeXaf: estimatedFee, priceFirm,
+      fareLines: fare?.lines, fareEstimated: fare?.estimated, pickupZoneName: pickupSel?.zoneName ?? undefined, deliveryZoneName: deliverySel?.zoneName ?? undefined,
     });
     router.push("/order/review");
   }
@@ -179,7 +208,7 @@ export function ParcelForm() {
             </div>
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de ramassage" : "Pickup address"}</p>
-          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} />
+          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
         </div>
 
         {/* Receiver */}
@@ -197,7 +226,7 @@ export function ParcelForm() {
           </div>
           <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de dépôt" : "Drop-off address"}</p>
           <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-          <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} />
+          <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
         </div>
 
         {/* Category + size */}

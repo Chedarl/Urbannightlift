@@ -150,15 +150,42 @@ export function shapeIntake(answer: Answer, enabled: ServiceType[]): IntakeDraft
   };
 }
 
+/** Whether the box should be offered at all. */
+export function intakeConfigured(): boolean {
+  return kimiConfigured();
+}
+
+/**
+ * Everything this can say to a customer, in both languages.
+ *
+ * Deliberately a closed set. The provider's own error text is a sentence like
+ * *"Invalid request: prepare image failed, status code 400"* — true, useful in
+ * the AI panel where it already lands, and meaningless under an order box at
+ * 1 AM. Putting it on a customer's screen is how a working fallback reads as a
+ * broken product.
+ */
+const SAY = {
+  short: { en: "Tell us what you need in a few words.", fr: "Dites-nous en quelques mots ce qu'il vous faut." },
+  closed: { en: "Nothing is being delivered right now.", fr: "Aucune livraison n'est possible en ce moment." },
+  off: { en: "Not available right now — pick a service below.", fr: "Indisponible pour l'instant — choisissez un service ci-dessous." },
+  unread: {
+    en: "We couldn't tell what you need from that. Try naming the item — or just pick a service below.",
+    fr: "Nous n'avons pas compris. Nommez l'article — ou choisissez simplement un service ci-dessous.",
+  },
+} as const;
+
 /** One sentence, read into the fields of a form. Nothing is saved by this. */
 export async function readIntake(
   sentence: string,
-  enabled: ServiceType[]
+  enabled: ServiceType[],
+  fr = false
 ): Promise<AiRead<IntakeDraft>> {
+  const say = (k: keyof typeof SAY): AiRead<IntakeDraft> => none<IntakeDraft>(fr ? SAY[k].fr : SAY[k].en);
+
   const body = sentence.trim().slice(0, 600);
-  if (body.length < 4) return none("Tell us what you need in a few words.");
-  if (enabled.length === 0) return none("Nothing is being delivered right now.");
-  if (!kimiConfigured()) return none("This is not switched on at the moment.");
+  if (body.length < 4) return say("short");
+  if (enabled.length === 0) return say("closed");
+  if (!kimiConfigured()) return say("off");
 
   const result = await kimiJsonResult<Answer>({
     purpose: "order.intake",
@@ -167,9 +194,13 @@ export async function readIntake(
     schema: SCHEMA as unknown as Record<string, unknown>,
   });
 
-  if (!result.answer) return none(result.error ?? "We couldn't read that.");
+  // `result.error` is not forwarded. Every failure already records itself to
+  // `AiCall` with the provider's exact words, which is where a person debugging
+  // this should read it — and the customer gets a sentence that tells them what
+  // to do next instead.
+  if (!result.answer) return say("unread");
 
   const draft = shapeIntake(result.answer, enabled);
-  if (!draft) return none("We couldn't tell what you need from that. Try naming the item.");
+  if (!draft) return say("unread");
   return got(draft);
 }

@@ -1,8 +1,21 @@
 /**
- * Tier-based zone pricing. The delivery fee is driven by the DELIVERY zone's
- * tier fee (GREEN 1000–1500, YELLOW 1600–2000, RED 2500+), with an optional
- * medicine surcharge. All figures are admin-editable on the Zone model.
+ * Where a delivery fee comes from.
+ *
+ * **The rule changed.** It used to be the zone tier and nothing else, which
+ * meant a 600 m hop across a RED zone cost more than an 8 km ride inside a
+ * GREEN one, and two neighbours either side of a zone line paid double each
+ * other. Customers complained and were right.
+ *
+ * The fee is now distance-led — see `src/lib/orders/fare.ts` for the model and
+ * the reasoning. This module keeps the same entry point so every screen that
+ * already asks for a fee carries on working, and hands the actual decision to
+ * `quoteFare`.
+ *
+ * Zones did not go away. They still decide which tier a place is in, and the
+ * tier is still a modifier on the total — it is simply no longer the whole
+ * answer.
  */
+import { quoteFare, type FareRules, type ZoneTier as FareTier } from "@/lib/orders/fare";
 export type ZoneTier = "GREEN" | "YELLOW" | "RED";
 
 export interface ZonePricing {
@@ -20,24 +33,71 @@ export const TIER_META: Record<ZoneTier, { label: string; labelFr: string; tone:
 };
 
 /**
- * Delivery fee = delivery zone tier fee, or the higher of pickup/delivery when
- * both are known. Medicine surcharge added on top.
+ * The fee for a delivery.
+ *
+ * Distance decides it when both ends are pinned; the zone tier nudges it; the
+ * medicine surcharge is added on top as it always was. With no pins it falls
+ * back to the minimum plus the tier modifier and the caller is told, through
+ * `quoteDeliveryFee`, that the figure is an estimate.
+ *
+ * The signature is unchanged apart from two optional arguments, so all six
+ * existing call sites keep working while the ones that know where the customer
+ * actually is start pricing honestly.
  */
 export function estimateDeliveryFee(
   pickupZone: ZonePricing | null,
   deliveryZone: ZonePricing | null,
-  options: { isMedicine?: boolean } = {}
+  options: {
+    isMedicine?: boolean;
+    /** Both ends, when the customer has pinned them. */
+    pickup?: { lat: number; lng: number } | null;
+    delivery?: { lat: number; lng: number } | null;
+    rules?: FareRules;
+    busy?: boolean;
+  } = {}
 ): number | null {
+  return quoteDeliveryFee(pickupZone, deliveryZone, options)?.totalXaf ?? null;
+}
+
+/**
+ * The same answer, with its working shown.
+ *
+ * Preferred wherever there is room on the screen for it: a customer who can see
+ * *why* a price is what it is argues with it far less than one handed a number.
+ * "You are 6 km away" is a reason; "you are in the red zone" is a rule.
+ */
+export function quoteDeliveryFee(
+  pickupZone: ZonePricing | null,
+  deliveryZone: ZonePricing | null,
+  options: {
+    isMedicine?: boolean;
+    pickup?: { lat: number; lng: number } | null;
+    delivery?: { lat: number; lng: number } | null;
+    rules?: FareRules;
+    busy?: boolean;
+  } = {}
+) {
   const zone = deliveryZone ?? pickupZone;
   if (!zone) return null;
 
-  let base = deliveryZone?.feeXaf ?? pickupZone?.feeXaf ?? 0;
-  if (pickupZone && deliveryZone) base = Math.max(pickupZone.feeXaf, deliveryZone.feeXaf);
+  // The harder of the two ends decides the modifier: a rider has to reach both.
+  const tiers: FareTier[] = [pickupZone?.tier, deliveryZone?.tier].filter(Boolean) as FareTier[];
+  const tier: FareTier = tiers.includes("RED")
+    ? "RED"
+    : tiers.includes("YELLOW")
+      ? "YELLOW"
+      : "GREEN";
 
-  if (options.isMedicine) {
-    base += Math.max(pickupZone?.medicineFeeXaf ?? 0, deliveryZone?.medicineFeeXaf ?? 0);
-  }
-  return base;
+  const km =
+    options.pickup && options.delivery
+      ? distanceKm(options.pickup.lat, options.pickup.lng, options.delivery.lat, options.delivery.lng)
+      : null;
+
+  const surchargeXaf = options.isMedicine
+    ? Math.max(pickupZone?.medicineFeeXaf ?? 0, deliveryZone?.medicineFeeXaf ?? 0)
+    : 0;
+
+  return quoteFare({ km, tier, surchargeXaf, busy: options.busy }, options.rules);
 }
 
 /** Haversine distance in km between two lat/lng points. */

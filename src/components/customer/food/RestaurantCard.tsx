@@ -1,38 +1,43 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Clock, Plus, Minus, Radio } from "lucide-react";
+import { MapPin, Clock, Plus, Minus, Radio, ChevronDown } from "lucide-react";
 
 import { formatXaf } from "@/lib/utils";
 import { freshLabel } from "@/lib/merchants/freshness";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
+import { artworkFor, artworkStyle } from "@/lib/food/artwork";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 
 /**
  * A restaurant, the way somebody scrolling at 1 AM decides where to eat.
  *
- * The previous card was a row: a small logo, a name, an accordion of text
- * lines. Correct, and nothing anybody browses. Food is chosen by looking, so
- * this is built the way the delivery apps people here already use are built —
- * a cover, a logo, a category strip, and dishes as cards with a picture and a
- * price.
+ * ## What was actually wrong with it
  *
- * Three rules survive the redesign unchanged, because they are the reason this
- * catalogue is trustworthy at all:
+ * The structure was already right — cover, logo, category strip, dishes as
+ * cards. What made it read as broken was that **the catalogue has almost no
+ * photographs**, so in practice every cover was a flat gradient and every dish
+ * was a letter on a flat tile. A page of grey rectangles does not look like a
+ * design decision; it looks like the images failed to load.
  *
- *  - **Nothing appears that a human has not verified.** Enforced upstream, in
- *    the browse query. An empty page is a correct page.
- *  - **No stock photography, ever.** A dish without a photo gets its own
- *    initial on a warm tile. Putting a beautiful picture of somebody else's
- *    food next to a real business's name is how a customer is disappointed at
- *    the door, and it was live in this product once already.
+ * So the absence is now the thing that is designed. `artworkFor` turns each
+ * name into its own layered night gradient — stable, so a restaurant looks the
+ * same every night and a customer recognises it before reading it; distinct, so
+ * no two on a screen look alike; and plainly a graphic, so nobody mistakes it
+ * for a photograph of the food. When a business does send a photo, it wins and
+ * the art disappears underneath it.
+ *
+ * Four rules survive unchanged, because they are why this catalogue can be
+ * trusted at all:
+ *
+ *  - **Nothing appears that a human has not verified.** Enforced upstream.
+ *  - **No stock photography, ever.** This screen shipped invented restaurants
+ *    illustrated with hot-linked stock food once already. Generated art is the
+ *    answer precisely because it cannot be mistaken for a promise.
  *  - **A sold-out dish is shown as sold out, not removed.** "They ran out
- *    tonight" is information. A dish that silently vanishes reads as one we
- *    never had.
- *
- * And one that is new: the card says when the kitchen last told us what they
- * have. That line is the whole differentiator, so it sits beside the name
- * rather than buried at the bottom.
+ *    tonight" is information. A dish that vanishes reads as one we never had.
+ *  - **The card says when the kitchen last told us what they have.** That line
+ *    is the whole differentiator, so it sits with the name.
  */
 
 export function RestaurantCard({
@@ -81,54 +86,95 @@ export function RestaurantCard({
    */
   const cover = mediaSrc(merchant.photoUrl);
   const logo = mediaSrc(merchant.logoUrl);
+  const art = artworkFor(merchant.name);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
+    <section
+      className={`overflow-hidden rounded-3xl border bg-ink-900 transition-colors ${
+        open ? "border-amber-400/40" : "border-ink-700"
+      }`}
+    >
       <button type="button" onClick={onToggle} className="block w-full text-left">
-        {/* Their own cover photo if they sent one. Never a stock kitchen. */}
-        <span className="relative block h-28 w-full overflow-hidden bg-gradient-to-br from-amber-500/20 to-ink-800">
-          {cover && (
+        {/* Their own cover if they sent one; otherwise this restaurant's own
+            art. Never a stock kitchen, and never a blank grey box either. */}
+        <span className="relative block h-36 w-full overflow-hidden" style={artworkStyle(art)}>
+          {cover ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={cover} alt="" className="h-full w-full object-cover" />
+          ) : (
+            /* The initials, set enormous and low-contrast — a mark rather than
+               a caption. It reads as intentional at a glance, which a small
+               centred letter never did. */
+            <span
+              aria-hidden
+              className="absolute -right-2 bottom-[-1.5rem] select-none font-display text-[7rem] font-bold leading-none text-white/[0.10]"
+            >
+              {art.initials}
+            </span>
           )}
-          <span className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-ink-900 to-transparent" />
+
+          {/* Grounds the card into the panel below so the cover does not float. */}
+          <span className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-ink-900 via-ink-900/70 to-transparent" />
+
+          <span className="absolute left-3 top-3 flex items-center gap-1.5">
+            <span
+              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur ${
+                merchant.openNow ? "bg-safe/25 text-safe" : "bg-ink-950/70 text-mist-400"
+              }`}
+            >
+              <Clock className="h-2.5 w-2.5" />
+              {merchant.openNow ? (fr ? "Ouvert" : "Open now") : fr ? "Fermé" : "Closed"}
+            </span>
+            {merchant.open24h && (
+              <span className="rounded-full bg-ink-950/70 px-2 py-0.5 text-[10px] font-semibold text-violet-200 backdrop-blur">
+                24h
+              </span>
+            )}
+          </span>
+
           {inCart > 0 && (
-            <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-ink-950">
+            <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-0.5 text-[11px] font-bold text-ink-950 shadow-lg">
               {inCart}
             </span>
           )}
         </span>
 
-        <span className="flex items-start gap-3 px-3 pb-3 pt-0">
-          <span className="-mt-6 shrink-0">
+        <span className="flex items-start gap-3 px-4 pb-4 pt-0">
+          <span className="-mt-8 shrink-0">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo}
                 alt=""
-                className="h-14 w-14 rounded-2xl border-2 border-ink-900 object-cover"
+                className="h-16 w-16 rounded-2xl border-2 border-ink-900 object-cover shadow-xl"
               />
             ) : (
-              <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-ink-900 bg-amber-500/20 text-xl font-bold text-amber-300">
-                {merchant.name.charAt(0)}
+              /* Their own art again, one shade deeper, so a business with no
+                 logo still has a mark of its own rather than a grey square. */
+              <span
+                className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-ink-900 font-display text-lg font-bold text-white/80 shadow-xl"
+                style={artworkStyle(artworkFor(merchant.name, "badge"))}
+              >
+                {art.initials}
               </span>
             )}
           </span>
 
-          <span className="min-w-0 flex-1 pt-1">
-            <span className="block truncate font-display text-base font-bold text-mist-100">
-              {merchant.name}
+          <span className="min-w-0 flex-1 pt-1.5">
+            <span className="flex items-center gap-1.5">
+              <span className="min-w-0 flex-1 truncate font-display text-lg font-bold leading-tight text-mist-100">
+                {merchant.name}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-mist-500 transition-transform ${open ? "rotate-180" : ""}`}
+              />
             </span>
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+            <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
               {merchant.neighbourhood && (
-                <span className="flex items-center gap-1 text-mist-500">
+                <span className="flex items-center gap-1 text-mist-400">
                   <MapPin className="h-3 w-3" /> {merchant.neighbourhood}
                 </span>
               )}
-              <span className={`flex items-center gap-1 ${merchant.openNow ? "text-safe" : "text-mist-500"}`}>
-                <Clock className="h-3 w-3" />
-                {merchant.openNow ? (fr ? "Ouvert" : "Open now") : fr ? "Fermé" : "Closed"}
-              </span>
               {/*
                 The line no competitor here can show. A kitchen that told us
                 what is on the fire in the last couple of hours says so; one
@@ -137,23 +183,28 @@ export function RestaurantCard({
               <span className={`flex items-center gap-1 ${fresh.fresh ? "text-violet-300" : "text-mist-600"}`}>
                 <Radio className="h-3 w-3" /> {fresh.text}
               </span>
+              {merchant.items.length > 0 && (
+                <span className="text-mist-600">
+                  {merchant.items.length} {fr ? "plats" : "dishes"}
+                </span>
+              )}
             </span>
           </span>
         </span>
       </button>
 
       {open && (
-        <div className="border-t border-ink-700">
+        <div className="border-t border-ink-800">
           {merchant.items.length === 0 ? (
-            <p className="p-3 text-xs text-mist-500">
+            <p className="px-4 py-5 text-center text-xs leading-relaxed text-mist-500">
               {fr
-                ? "Pas encore de carte ici. Écrivez ce que vous voulez plus bas."
-                : "No menu here yet. Write what you want below."}
+                ? "Nous n'avons pas encore leur carte. Écrivez ce que vous voulez plus bas — nous appelons et nous confirmons le prix avant d'acheter."
+                : "We don't have their menu yet. Write what you want below — we call them and confirm the price before buying anything."}
             </p>
           ) : (
             <>
               {categories.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto px-3 py-2.5">
+                <div className="flex gap-2 overflow-x-auto px-4 py-3">
                   <Chip active={category === null} onClick={() => setCategory(null)}>
                     {fr ? "Tout" : "All"}
                   </Chip>
@@ -165,20 +216,31 @@ export function RestaurantCard({
                 </div>
               )}
 
-              <ul className="grid grid-cols-2 gap-2 p-3 pt-0">
+              <ul className="grid grid-cols-2 gap-2.5 p-4 pt-0">
                 {items.map((item) => {
                   const qty = quantities[item.id] ?? 0;
                   const name = (fr && item.nameFr) || item.name;
                   const description = (fr && item.descriptionFr) || item.description;
                   const photo = mediaSrc(item.photoUrl);
+                  // Seeded with the restaurant too, so the same dish name at two
+                  // different places does not come out identical — and so one
+                  // restaurant's menu reads as a set rather than a jumble.
+                  const dishArt = artworkFor(`${merchant.name} ${item.name}`, "tile");
                   return (
                     <li
                       key={item.id}
-                      className={`flex flex-col overflow-hidden rounded-xl border ${
-                        item.soldOut ? "border-ink-800 bg-ink-950 opacity-60" : "border-ink-700 bg-ink-950"
+                      className={`flex flex-col overflow-hidden rounded-2xl border transition-colors ${
+                        item.soldOut
+                          ? "border-ink-800 bg-ink-950 opacity-55"
+                          : qty > 0
+                            ? "border-amber-400/50 bg-ink-950"
+                            : "border-ink-800 bg-ink-950"
                       }`}
                     >
-                      <span className="relative block h-20 w-full bg-amber-500/10">
+                      <span
+                        className="relative block h-24 w-full overflow-hidden"
+                        style={photo ? undefined : artworkStyle(dishArt)}
+                      >
                         {photo ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -187,9 +249,12 @@ export function RestaurantCard({
                             className={`h-full w-full object-cover ${item.soldOut ? "grayscale" : ""}`}
                           />
                         ) : (
-                          // A letter, not somebody else's photograph.
-                          <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-amber-400/40">
-                            {name.charAt(0)}
+                          // A letter of ours, not somebody else's photograph.
+                          <span
+                            aria-hidden
+                            className="absolute -bottom-3 right-1 select-none font-display text-5xl font-bold leading-none text-white/[0.13]"
+                          >
+                            {dishArt.initials}
                           </span>
                         )}
                         {item.soldOut && (
@@ -199,7 +264,7 @@ export function RestaurantCard({
                         )}
                       </span>
 
-                      <span className="flex flex-1 flex-col gap-0.5 p-2">
+                      <span className="flex flex-1 flex-col gap-0.5 p-2.5">
                         <span
                           className={`text-xs font-semibold leading-tight ${
                             item.soldOut ? "text-mist-500" : "text-mist-100"
@@ -212,8 +277,8 @@ export function RestaurantCard({
                             {description}
                           </span>
                         )}
-                        <span className="mt-auto flex items-center justify-between gap-1 pt-1.5">
-                          <span className="text-[11px] font-semibold text-amber-300">
+                        <span className="mt-auto flex items-center justify-between gap-1 pt-2">
+                          <span className="font-display text-sm font-bold text-amber-300">
                             {item.priceXaf != null
                               ? formatXaf(item.priceXaf)
                               : fr
@@ -227,7 +292,7 @@ export function RestaurantCard({
                                   <button
                                     type="button"
                                     onClick={() => onBump(item.id, -1)}
-                                    className="flex h-6 w-6 items-center justify-center rounded-lg border border-ink-700 text-mist-300"
+                                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-ink-700 text-mist-300"
                                     aria-label={fr ? "Retirer" : "Remove one"}
                                   >
                                     <Minus className="h-3 w-3" />
@@ -240,10 +305,10 @@ export function RestaurantCard({
                               <button
                                 type="button"
                                 onClick={() => onBump(item.id, 1)}
-                                className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/25 text-amber-200"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-ink-950"
                                 aria-label={fr ? "Ajouter" : "Add one"}
                               >
-                                <Plus className="h-3 w-3" />
+                                <Plus className="h-3.5 w-3.5" />
                               </button>
                             </span>
                           )}
@@ -274,7 +339,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium ${
+      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
         active
           ? "border-amber-400 bg-amber-400/15 text-amber-200"
           : "border-ink-700 text-mist-400 hover:text-mist-200"

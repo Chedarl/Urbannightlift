@@ -3,6 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import { formatXaf, cn } from "@/lib/utils";
 import type { OrderMoney } from "@/lib/orders/goodsMoney";
+import type { FareLine } from "@/lib/orders/fare";
 
 /**
  * The arithmetic, shown rather than asserted.
@@ -31,6 +32,19 @@ export function MoneyBreakdown({
   capXaf = null,
   /** On mobile money the goods are handed over in cash at the door. */
   goodsAtDoor = false,
+  /**
+   * How the delivery fee was arrived at, step by step.
+   *
+   * This is the answer to the actual complaint about pricing. A customer handed
+   * a bare number compares it with what they paid last week and concludes they
+   * are being charged at random; a customer shown "up to 2 km, 1,000 · 6.9 km
+   * further, 1,380" is being told the reason, and the reason is one they can
+   * check against the map in their own head. "You are far away" is an argument
+   * a person can accept. "You are in the red zone" is not.
+   */
+  fareLines = [],
+  /** True when nothing was pinned, so the figure is honestly approximate. */
+  fareEstimated = false,
   fr,
   className,
 }: {
@@ -38,6 +52,8 @@ export function MoneyBreakdown({
   items?: { name: string; qty?: number }[];
   capXaf?: number | null;
   goodsAtDoor?: boolean;
+  fareLines?: FareLine[];
+  fareEstimated?: boolean;
   fr: boolean;
   className?: string;
 }) {
@@ -81,7 +97,31 @@ export function MoneyBreakdown({
           label={fr ? "Frais de livraison (notre part)" : "Delivery fee (ours)"}
           value={formatXaf(money.deliveryFeeXaf)}
         />
+        {/* The fee, broken into the reasons for it. Indented under the fee it
+            explains, so it reads as the working rather than as extra charges —
+            these are the parts of that one number, not additions to it. */}
+        {fareLines.length > 1 && (
+          <ul className="ml-3 flex flex-col gap-1 border-l border-ink-700 pl-3">
+            {fareLines.map((l, i) => (
+              <li key={i} className="flex justify-between gap-3 text-xs text-mist-400">
+                <span className="min-w-0 truncate">{fr ? l.labelFr : l.label}</span>
+                <span className="shrink-0 tabular-nums">{formatXaf(l.amountXaf)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      {/* Said plainly rather than hidden, because a fee that moves once the
+          rider knows where they are going is the thing customers most resent
+          being surprised by. */}
+      {fareEstimated && (
+        <p className="mt-2 text-[11px] leading-relaxed text-mist-400">
+          {fr
+            ? "Estimation : nous n'avons pas encore de point précis pour les deux adresses. Placez un repère et le prix se calcule sur la distance réelle."
+            : "An estimate: we don't have a precise point for both addresses yet. Drop a pin and the price is worked out on the real distance."}
+        </p>
+      )}
 
       <div className="my-3 border-t border-ink-700" />
 

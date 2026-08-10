@@ -7,6 +7,7 @@ import { isNightHour } from "@/lib/pharmacy/tonight";
 import { kimiStream, kimiConfigured } from "@/lib/ai/kimi";
 import { acceptActions } from "@/lib/ai/assistant/actions";
 import { partialReply, sse } from "@/lib/ai/partial";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 import {
   systemPrompt,
   ANSWER_SCHEMA,
@@ -43,9 +44,22 @@ export const runtime = "nodejs";
  * about who may press what moved to the browser.
  */
 
-/** Cost control on the open door. Counted against the calls we already log. */
-const PUBLIC_HOURLY_LIMIT = 20;
-const SIGNED_IN_HOURLY_LIMIT = 60;
+/**
+ * The spend ceiling — and it is **not** the same thing as a per-person limit.
+ *
+ * These two were conflated, and the result was the reported bug. There was one
+ * counter: twenty public calls an hour, counted across **every visitor on the
+ * site at once**. So on any night with traffic, the twenty-first person to open
+ * the chat was told it was busy — having asked nothing — because nineteen of
+ * those twenty questions belonged to somebody else. A shared budget of twenty
+ * is not a rate limit, it is a queue of one.
+ *
+ * They are separated now. Fairness is per caller, through the v35 limiter.
+ * These numbers are what they were always meant to be: a backstop on the bill,
+ * set high enough that a real night never reaches them and a runaway does.
+ */
+const PUBLIC_HOURLY_CEILING = 400;
+const SIGNED_IN_HOURLY_CEILING = 1200;
 
 /**
  * GET — the conversation as it stood when they last closed the sheet.
@@ -93,15 +107,26 @@ export async function POST(req: NextRequest) {
   const customerId = await getCustomerId();
   const signedIn = Boolean(customerId);
 
-  // An hour's worth of calls, from the table every call already writes to. No
-  // new model, no new counter to drift — and the public path is held far
-  // tighter than the signed-in one, because a chat box on a landing page is an
-  // open door onto somebody else's balance.
+  // Fairness first, and per person. A signed-in customer is counted by their
+  // own id rather than their address, so a household or an office sharing one
+  // connection is not sharing one conversation.
+  const mine = await checkRateLimit(req, "assistant", undefined, customerId);
+  if (!mine.ok) {
+    return NextResponse.json({
+      reply: fr
+        ? `Vous avez posé beaucoup de questions d'affilée. Réessayez dans ${mine.retryInMinutes} minute${mine.retryInMinutes === 1 ? "" : "s"} — et la page d'aide reste disponible, avec une personne au bout.`
+        : `That's a lot of questions in a row. Try again in ${mine.retryInMinutes} minute${mine.retryInMinutes === 1 ? "" : "s"} — the help page is still there, with a person at the end of it.`,
+      actions: [],
+    });
+  }
+
+  // Then the bill. Counted from the table every call already writes to, so
+  // there is no second counter to drift out of step with reality.
   const since = new Date(Date.now() - 3_600_000);
   const recent = await prisma.aiCall.count({
     where: { purpose: signedIn ? "assistant.customer" : "assistant.public", createdAt: { gte: since } },
   });
-  if (recent >= (signedIn ? SIGNED_IN_HOURLY_LIMIT : PUBLIC_HOURLY_LIMIT)) {
+  if (recent >= (signedIn ? SIGNED_IN_HOURLY_CEILING : PUBLIC_HOURLY_CEILING)) {
     return NextResponse.json({
       reply: fr
         ? "L'assistant est très sollicité en ce moment. La page d'aide répond à la plupart des questions, et une personne lit chaque message."

@@ -129,8 +129,32 @@ export async function POST(req: NextRequest) {
     deliveryZone ??
     (deliveryGeo?.zoneId ? await prisma.zone.findUnique({ where: { id: deliveryGeo.zoneId } }) : null);
 
+  /*
+   * The fee, priced by how far the rider actually rides.
+   *
+   * Coordinates come from the pin the customer dropped, or from whatever the
+   * address resolver managed to find — the same two sources the order row
+   * itself stores. With neither, `quoteFare` falls back to the minimum plus the
+   * zone modifier and marks the result an estimate, which is the honest answer
+   * when nobody knows where the parcel is going.
+   */
+  const pickupPoint =
+    input.pickupLat != null && input.pickupLng != null
+      ? { lat: input.pickupLat, lng: input.pickupLng }
+      : pickupGeo?.latitude != null && pickupGeo?.longitude != null
+        ? { lat: pickupGeo.latitude, lng: pickupGeo.longitude }
+        : null;
+  const deliveryPoint =
+    input.deliveryLat != null && input.deliveryLng != null
+      ? { lat: input.deliveryLat, lng: input.deliveryLng }
+      : deliveryGeo?.latitude != null && deliveryGeo?.longitude != null
+        ? { lat: deliveryGeo.latitude, lng: deliveryGeo.longitude }
+        : null;
+
   const estimatedFee = estimateDeliveryFee(effectivePickupZone, effectiveDeliveryZone, {
     isMedicine: input.isMedicine,
+    pickup: pickupPoint,
+    delivery: deliveryPoint,
   });
 
   const highValueFlag = input.declaredValueXaf > INSURED_VALUE_CAP_XAF;
