@@ -7,6 +7,7 @@ import { loadRiderFloat } from "@/lib/riders/floatAccount";
 import { canCoverPurchase } from "@/lib/riders/float";
 import { notifyCustomerStatus } from "@/lib/notify/triggers";
 import { readReceipt } from "@/lib/ai/receipt";
+import { groupXaf } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
           error:
             float.limitXaf <= 0
               ? "You have no float yet. Ask dispatch to give you one before buying anything."
-              : `Your float only covers ${float.spendableXaf.toLocaleString("fr-FR")} XAF right now. Call dispatch before you pay.`,
+              : `Your float only covers ${groupXaf(float.spendableXaf)} XAF right now. Call dispatch before you pay.`,
           spendableXaf: float.spendableXaf,
         },
         { status: 409 }
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
     await notifyCustomerStatus(
       order.customerId,
       order.orderCode,
-      `The shop charged ${amountXaf.toLocaleString("fr-FR")} XAF — ${money.overCapByXaf.toLocaleString("fr-FR")} over your cap. Please approve.`
+      `The shop charged ${groupXaf(amountXaf)} XAF — ${groupXaf(money.overCapByXaf)} over your cap. Please approve.`
     ).catch(() => {});
   }
 

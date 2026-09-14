@@ -29,7 +29,7 @@ import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
-import { cn } from "@/lib/utils";
+import { cn, groupXaf } from "@/lib/utils";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
 
@@ -573,7 +573,7 @@ export function MedicineForm() {
         {estimatedFee != null && (
           <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
             <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, true).label}</span>
-            <span className="font-display text-base font-bold text-mist-100">{estimatedFee.toLocaleString("fr-FR")} XAF</span>
+            <span className="font-display text-base font-bold text-mist-100">{groupXaf(estimatedFee)} XAF</span>
           </div>
         )}
         <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 font-display text-base font-bold text-ink-950">

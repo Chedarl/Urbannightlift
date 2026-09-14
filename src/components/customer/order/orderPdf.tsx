@@ -11,6 +11,7 @@
  * only states that such images are provided securely at pickup.
  */
 import { createElement as h } from "react";
+import { groupXaf } from "@/lib/utils";
 
 export interface OrderPdfData {
   orderCode: string; // real code, or "PENDING" pre-submit
@@ -32,7 +33,7 @@ export interface OrderPdfData {
   legalNotice: string;
 }
 
-const xaf = (n: number) => `${n.toLocaleString("fr-FR")} XAF`;
+const xaf = (n: number) => `${groupXaf(n)} XAF`;
 
 /** Flatten the structured serviceDetails into printable "label: value" rows. */
 function detailRows(data: OrderPdfData): [string, string][] {

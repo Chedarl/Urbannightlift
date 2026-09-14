@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ScanLine, Loader2, Copy, Check } from "lucide-react";
+import { groupXaf } from "@/lib/utils";
 
 /**
  * Reads the payment screenshot so a dispatcher does not have to squint at one.
@@ -90,14 +91,14 @@ export function ProofReader({ orderId }: { orderId: string }) {
           {reading.amountXaf != null && (
             <p className="mt-1">
               <span className="text-mist-500">Amount </span>
-              <span className="text-mist-100">{reading.amountXaf.toLocaleString("fr-FR")} XAF</span>
+              <span className="text-mist-100">{groupXaf(reading.amountXaf)} XAF</span>
               {/* The one comparison worth surfacing: a screenshot for a
                   different amount than the order expects is the thing a
                   dispatcher is really checking for. */}
               {result?.amountMatches === false && result.expectedXaf != null && (
                 <span className="text-caution">
                   {" "}
-                  — the order expects {result.expectedXaf.toLocaleString("fr-FR")} XAF
+                  — the order expects {groupXaf(result.expectedXaf)} XAF
                 </span>
               )}
               {result?.amountMatches === true && <span className="text-safe"> — matches</span>}

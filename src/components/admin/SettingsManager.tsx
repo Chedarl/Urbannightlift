@@ -12,6 +12,7 @@ import { SecurityStatus } from "@/components/admin/SecurityStatus";
 import { WatchmanStatus } from "@/components/admin/WatchmanStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
+import { groupXaf } from "@/lib/utils";
 
 /** 0–23, labelled so nobody has to translate 18 into 6 PM in their head. */
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -449,8 +450,8 @@ export function SettingsManager({
           </label>
           <p className="mt-2 text-xs text-mist-400">
             Rider keeps {form.riderSharePercent}% · Urban Night Lift keeps {100 - form.riderSharePercent}%. On a 2,000
-            XAF delivery that is {Math.ceil((2000 * form.riderSharePercent) / 100).toLocaleString("fr-FR")} XAF to the
-            rider and {(2000 - Math.ceil((2000 * form.riderSharePercent) / 100)).toLocaleString("fr-FR")} XAF to you.
+            XAF delivery that is {groupXaf(Math.ceil((2000 * form.riderSharePercent) / 100))} XAF to the
+            rider and {groupXaf(2000 - Math.ceil((2000 * form.riderSharePercent) / 100))} XAF to you.
           </p>
           <p className="mt-1 text-[11px] text-mist-500">
             Applies to deliveries completed from now on. Rounding favours the rider.

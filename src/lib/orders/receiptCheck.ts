@@ -1,3 +1,4 @@
+import { groupXaf } from "@/lib/utils";
 /**
  * Does the receipt say what the rider said it says?
  *
@@ -76,7 +77,7 @@ export function checkReceipt(typedXaf: number | null, readXaf: number | null): R
 
 /** One line a dispatcher can act on, in the order they need it. */
 export function describeCheck(check: ReceiptCheck, typedXaf: number | null): string {
-  const xaf = (n: number) => `${Math.abs(n).toLocaleString("fr-FR")} XAF`;
+  const xaf = (n: number) => `${groupXaf(Math.abs(n))} XAF`;
 
   if (check.verdict === "unreadable") {
     return "The receipt could not be read. Nothing is wrong — it just was not checked.";

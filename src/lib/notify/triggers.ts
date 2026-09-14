@@ -1,6 +1,7 @@
 import "server-only";
 
 import { sendPush } from "@/lib/notify/push";
+import { groupXaf } from "@/lib/utils";
 import {
   emailNewOrder,
   emailRiderApplication,
@@ -87,7 +88,7 @@ export async function notifyPaymentSubmitted(orderCode: string, orderId: string,
     {
       title: `Payment sent for ${orderCode}`,
       body: amountXaf
-        ? `The customer says they paid ${amountXaf.toLocaleString("fr-FR")} XAF. Verify it to release the order.`
+        ? `The customer says they paid ${groupXaf(amountXaf)} XAF. Verify it to release the order.`
         : "The customer submitted proof of payment. Verify it to release the order.",
       url: `/admin/orders/${orderId}`,
       tag: `payment-${orderId}`,
@@ -159,7 +160,7 @@ export async function notifyQuoteSent(customerId: string, orderCode: string, fee
     { customerIds: [customerId] },
     {
       title: `Order ${orderCode} accepted`,
-      body: `Delivery is ${feeXaf.toLocaleString("fr-FR")} XAF. Tap to confirm and we'll assign a rider.`,
+      body: `Delivery is ${groupXaf(feeXaf)} XAF. Tap to confirm and we'll assign a rider.`,
       url: `/order/confirmation/${orderCode}`,
       tag: `quote-${orderCode}`,
     }

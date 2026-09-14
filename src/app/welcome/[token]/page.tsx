@@ -4,6 +4,7 @@ import { Download, MoonStar, Clock, ShieldCheck } from "lucide-react";
 import { readWelcomeToken } from "@/lib/welcome/card";
 import { loadWelcome } from "@/lib/welcome/deliver";
 import { Logo } from "@/components/shared/Logo";
+import { groupXaf } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +147,7 @@ export default async function WelcomePage({ params }: { params: Promise<{ token:
           <p className="text-xs leading-relaxed text-mist-400">
             {card.friendDiscountXaf && card.friendDiscountXaf > 0
               ? fr
-                ? `Donnez-le à un ami : il économise ${card.friendDiscountXaf.toLocaleString("fr-FR")} XAF sur sa première nuit.`
+                ? `Donnez-le à un ami : il économise ${groupXaf(card.friendDiscountXaf)} XAF sur sa première nuit.`
                 : `Give it to a friend: they save ${card.friendDiscountXaf.toLocaleString("en-GB")} XAF on their first night.`
               : fr
                 ? "Donnez-le à un ami pour qu'il commence avec nous."

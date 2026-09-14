@@ -29,6 +29,7 @@
  * held against the order, not something to hand around in a shareable file.
  */
 import { createElement as h } from "react";
+import { groupXaf } from "@/lib/utils";
 
 export interface ReceiptLineItem {
   name: string;
@@ -83,7 +84,7 @@ export interface ReceiptPdfData {
   goodsDueAtDoorXaf?: number | null;
 }
 
-const xaf = (n: number) => `${n.toLocaleString("fr-FR")} XAF`;
+const xaf = (n: number) => `${groupXaf(n)} XAF`;
 
 function methodLabel(method: string | null, fr: boolean): string {
   if (method === "SIGNATURE") return fr ? "Signature du client" : "Customer signature";
