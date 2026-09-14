@@ -5,36 +5,49 @@ name: Watchman
 #
 # ## Why this is here and not in vercel.json
 #
-# It was in `vercel.json` first, and Vercel refused the deployment outright:
+# Vercel's Hobby plan refused the deployment outright: "Hobby accounts are
+# limited to daily cron jobs." A daily round cannot watch a night in progress,
+# so the schedule lives here, where it costs nothing.
 #
-#     Hobby accounts are limited to daily cron jobs. This cron expression
-#     (*/10 17-23,0-4 * * *) would run more than once per day.
+# ## What this file got wrong the first time, and it mattered
 #
-# A daily cron cannot watch a night in progress — the whole point is to notice
-# an order that has been sitting unpriced since 11 PM *before* the customer
-# does. So the schedule moved here, where it costs nothing: this repository
-# already runs Actions, the job is one `curl`, and it needs no plan change.
+# It was written to **fail loudly** when `CRON_SECRET` was missing, on the
+# principle that a job which cannot run must not pretend it did. The principle
+# was right and the execution was a mistake: the secret was never added, and
+# this workflow then failed **374 times over a month**, sending a failure
+# notification every time. That is the exact error the watchman itself is
+# designed around — an alarm that cries constantly teaches its audience to stop
+# reading alarms — and here it trained the owner to distrust the whole project.
 #
-# ## The honest limitations, stated rather than discovered later
+# So the two cases are now told apart, because they are genuinely different:
 #
-#  - **GitHub's scheduler is best-effort.** A run can be delayed by five or ten
-#    minutes when their queue is busy. That is acceptable here: the thresholds
-#    this triggers on are twelve to twenty-five minutes, so a late round still
-#    catches the stall well before anybody would have noticed by hand.
-#  - **GitHub disables scheduled workflows after 60 days of no repository
-#    activity.** On an actively developed repo that never happens; if the
-#    project ever goes quiet, this is the thing that stops silently. Enabling
-#    Vercel Pro moves the schedule back into `vercel.json` and removes that
-#    caveat entirely — the endpoint is unchanged either way.
-#  - **It does nothing without secrets.** With `CRON_SECRET` unset the endpoint
-#    refuses in production, which is correct: this reads every live order.
+#   - **Not configured** is a *state*, not a malfunction. It warns, writes the
+#     instruction into the run summary, and exits 0. Nobody is paged about a
+#     setting.
+#   - **Configured but refused** is a real fault — the secret is wrong, or the
+#     site is down — and still fails loudly, because somebody needs to know.
+#
+# The absence is not swallowed: `/admin/settings` shows when the watchman last
+# ran, so an unconfigured watchman is visible where the owner actually looks
+# rather than only in an inbox they have learned to ignore.
+#
+# ## The honest limitations
+#
+#  - **GitHub's scheduler is best-effort, and far more so than expected.** The
+#    first version asked for every 10 minutes — 66 runs a night — and GitHub
+#    delivered about 11 a day. Asking for more than it will give buys nothing
+#    and deprioritises the queue further, so this now asks for every 30 minutes
+#    and expects fewer.
+#  - **GitHub disables scheduled workflows after 60 days of repository
+#    inactivity.** Vercel Pro would move this back into `vercel.json` and remove
+#    that caveat; the endpoint is identical either way.
 
 on:
   schedule:
-    # Every ten minutes through the operating window, in **UTC**.
-    # Yaoundé is UTC+1, so 6 PM–4 AM local is 17:00–03:00 UTC — expressed as
-    # two ranges because the night crosses midnight.
-    - cron: "*/10 17-23,0-3 * * *"
+    # Every 30 minutes through the operating window, in **UTC**. Yaoundé is
+    # UTC+1, so 6 PM–4 AM local is 17:00–03:00 UTC — two ranges, because the
+    # night crosses midnight.
+    - cron: "*/30 17-23,0-3 * * *"
   # So it can be proved working without waiting for the next slot.
   workflow_dispatch:
 
@@ -58,11 +71,26 @@ jobs:
           set -uo pipefail
 
           if [ -z "${SECRET:-}" ]; then
-            echo "::error::CRON_SECRET is not set on this repository."
-            echo "Add it under Settings → Secrets and variables → Actions, with"
-            echo "the same value as the CRON_SECRET environment variable in Vercel."
-            echo "They are two separate stores and both need it."
-            exit 1
+            {
+              echo "### Watchman is not configured"
+              echo
+              echo "\`CRON_SECRET\` is not set on **this repository**, so the"
+              echo "watchman did not run. Nothing is broken — it is switched off."
+              echo
+              echo "To switch it on:"
+              echo "1. Settings → Secrets and variables → **Actions** → New repository secret"
+              echo "2. Name it \`CRON_SECRET\`"
+              echo "3. Use the **same value** as the \`CRON_SECRET\` environment variable in Vercel"
+              echo
+              echo "Vercel and GitHub are two separate secret stores. Vercel already has it;"
+              echo "this one does not. Until then \`/admin/settings\` will show the watchman"
+              echo "as never having run."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            # A warning, not a failure. This is a setting, and nobody should get
+            # a failure email every half hour about a setting.
+            echo "::warning::CRON_SECRET is not set on this repository — the watchman is switched off. See the run summary for the two-minute fix."
+            exit 0
           fi
 
           RESPONSE=$(curl -sS -m 45 -w '\n%{http_code}' \
@@ -76,8 +104,11 @@ jobs:
           printf '%s\n' "$BODY" | head -c 2000
 
           if [ "$STATUS" != "200" ]; then
-            # 401 means the two secrets disagree; 503 means Vercel has none set.
-            # Those need different fixes, so the status is not swallowed.
-            echo "::error::The watchman round did not run."
+            # Configured and refused is a real fault. 401 means the two secrets
+            # disagree; 503 means Vercel has none set. Different fixes, so the
+            # status is not swallowed.
+            echo "::error::The watchman round did not run (HTTP $STATUS)."
             exit 1
           fi
+
+          printf '### Watchman ran\n\n```json\n%s\n```\n' "$BODY" >> "$GITHUB_STEP_SUMMARY"

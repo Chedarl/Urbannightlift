@@ -81,6 +81,21 @@ export async function runWatchman(now = new Date()): Promise<WatchResult> {
     },
   });
 
+  /*
+   * Stamp the round, before anything can go wrong with it.
+   *
+   * Recorded on every round — alert or not — because the fact worth surfacing
+   * is the *silence*. This workflow failed 374 times over a month with its only
+   * symptom a GitHub inbox nobody read; `/admin/settings` now shows when the
+   * watchman last ran, so "it has never run" is visible where somebody looks.
+   *
+   * Swallowed on failure: a tidy-up timestamp must never stop the round that
+   * matters.
+   */
+  await prisma.operatingSettings
+    .update({ where: { id: 1 }, data: { watchmanRanAt: now } })
+    .catch(() => {});
+
   const live = orders.filter(isLive);
   const urgent = live
     .map((o) => ({ order: o, concern: concernOf(o as never, now) }))

@@ -42,8 +42,31 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   compress: true,
+  /*
+   * The image optimiser is switched off, and that removes a critical RCE.
+   *
+   * Next 15.5.21 carries an advisory for **unauthenticated remote code
+   * execution in the Image Optimization API when AVIF files are used**, and
+   * this config was explicitly asking for AVIF. `/_next/image` was live in
+   * production and answering 200.
+   *
+   * The saving grace, confirmed by grep rather than assumed: **`next/image` is
+   * imported nowhere in this codebase.** All thirteen images are raw `<img>`
+   * tags, because every one of them is either a merchant's uploaded logo served
+   * from Supabase storage or our own generated artwork. So the optimiser was
+   * pure attack surface with no user — the endpoint existed, was reachable, and
+   * optimised nothing anybody looked at.
+   *
+   * Turning it off closes the vector today, at zero cost and with no breaking
+   * upgrade. The remaining advisories (postcss, sharp) are build-time or reached
+   * only through this same optimiser, so with it off the case for deferring
+   * Next 16 is honest again rather than negligent — see `docs/SECURITY.md`.
+   *
+   * If `next/image` is ever wanted, this line comes out and Next 16 goes in
+   * first, in that order.
+   */
   images: {
-    formats: ["image/avif", "image/webp"],
+    unoptimized: true,
   },
 };
 

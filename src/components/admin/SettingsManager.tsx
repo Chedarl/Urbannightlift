@@ -9,6 +9,7 @@ import { MapsStatus } from "@/components/admin/MapsStatus";
 import { MailStatus } from "@/components/admin/MailStatus";
 import { AiStatus } from "@/components/admin/AiStatus";
 import { SecurityStatus } from "@/components/admin/SecurityStatus";
+import { WatchmanStatus } from "@/components/admin/WatchmanStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 
@@ -154,6 +155,7 @@ export function SettingsManager({
           secret that has fallen back to a value published in the repository
           looks exactly like a healthy one from every screen. */}
       <SecurityStatus />
+      <WatchmanStatus />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
         {/* Named hours, not bare numbers. These are 24-hour values, so a plain

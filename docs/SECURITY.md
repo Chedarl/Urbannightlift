@@ -7,6 +7,76 @@ that are wrong.
 
 ---
 
+## September 2026 — the audit that mattered, and what the earlier ones missed
+
+**The whole database was readable and writable by anybody, for the life of the
+project, and every previous security round passed.**
+
+Supabase exposes the `public` schema over PostgREST using the **anon key** —
+the key that ships in the browser bundle of every page. Row Level Security was
+off on all 38 tables and the default grants were in place, which makes that a
+complete second API onto the same data. Probed against production before it was
+closed:
+
+```
+GET   /rest/v1/Customer               200   fullName, whatsappNumber, pinHash
+GET   /rest/v1/User                   200   idCardNumber, idCardFrontUrl, role
+GET   /rest/v1/Order                  200   (empty then; otpCode is a column)
+POST  /rest/v1/ServiceInterest        400   NOT NULL — permission had passed
+PATCH /rest/v1/User {"role":"OWNER"}  204   accepted
+```
+
+Read **and** write. Anyone could have lifted the customer list with their PIN
+hashes, read every rider's ID card number and document URLs, taken delivery OTPs
+the moment real orders existed, marked payments verified, changed fees, or
+promoted themselves to OWNER — without touching one of the 107 gated routes.
+
+### Why four previous audits missed it
+
+Because each of them audited **the application**, exhaustively and correctly.
+Routes, gates, roles, tokens — all sound, and all beside the point. The database
+was reachable through a door the application does not own and cannot see.
+
+The lesson worth keeping is not "enable RLS". It is that **auditing the front
+door proves nothing about the building**, and that a security review of a
+managed-backend product has to include the backend's own surface: PostgREST,
+Storage policies, and the Auth schema, not only the code in this repository.
+
+### What was done
+
+Two layers, because one can be undone by accident:
+
+1. **RLS enabled with no policies** on all 38 tables — default-deny.
+2. **The grants revoked outright** from `anon` and `authenticated`, so the
+   privilege is absent rather than merely filtered.
+
+Plus `ALTER DEFAULT PRIVILEGES`, which is the part that stops it returning:
+without it the next table Prisma creates inherits the default grant and is
+exposed again on day one.
+
+Prisma is unaffected — it connects as `postgres`, which owns the tables and
+bypasses RLS. `FORCE ROW LEVEL SECURITY` is deliberately not set. Supabase Auth
+(`auth` schema) and Storage (`storage` schema) are untouched, and the app's only
+Supabase calls are `.storage.from(...)`.
+
+Migration: `prisma/migrations/20260914150000_lock_public_schema_from_anon`.
+
+### The check that would have caught it
+
+`scripts/verify-db-exposure.ts` asserts the property **from the outside** — not
+"is the setting on" but "can a stranger with the public key read anything". It
+is the one suite in this project that makes real network calls, deliberately: a
+local reimplementation of PostgREST's permission model would only prove the same
+bug could be written twice. It skips cleanly when no key is present.
+
+**Rotate the keys.** The anon key was not itself the vulnerability, but it was
+the credential in every request that could have exploited this, and it has been
+public since launch. Rotating it in the Supabase dashboard and updating
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel is cheap and closes the window on
+anything already copied.
+
+---
+
 ## What was audited, and what it found
 
 ### Auth gating — sound
@@ -123,7 +193,33 @@ healthy. Total compromise, zero signal.
 
 ---
 
-## Accepted risk: 4 high-severity dependency advisories
+## Dependency advisories — revised September 2026
+
+The August position was "defer and document": four high-severity advisories, all
+transitive through Next 15.5.21, judged low-exploitability because postcss is
+build-time and sharp was only reached by Next's own image optimiser "on images
+we control".
+
+**That position no longer held.** The count grew to seven, and one became
+**critical: unauthenticated remote code execution in the Image Optimization API
+when AVIF files are used.** The August reasoning had also quietly assumed the
+optimiser was a minor surface; it was live at `/_next/image`, answering 200, and
+`next.config.ts` was explicitly asking for AVIF.
+
+What made the fix cheap was checking rather than assuming: **`next/image` is
+imported nowhere in this codebase.** All thirteen images are raw `<img>` tags,
+because every one is either a merchant's uploaded logo from Supabase Storage or
+our own generated artwork. The optimiser was pure attack surface with no user.
+
+So `images: { unoptimized: true }` removes the critical vector today, at no cost
+and with no breaking upgrade. With it off, postcss is build-time only and sharp
+is no longer reachable from a request — and deferring Next 16 becomes an honest
+call again rather than a negligent one.
+
+**Revisit when:** `next/image` is wanted (Next 16 goes in first, in that order),
+or a new advisory lands that is reachable without the optimiser.
+
+## Historic: the four advisories accepted in August
 
 | Package | Advisories | Reached how |
 |---|---|---|

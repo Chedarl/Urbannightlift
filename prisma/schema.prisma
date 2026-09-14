@@ -1352,6 +1352,16 @@ model OperatingSettings {
   /// designed around 60% rider / 40% company; changing it here applies to
   /// future deliveries only, never to ones already completed.
   riderSharePercent            Int           @default(60)
+  /// When the watchman last completed a round.
+  ///
+  /// Written on every run, alert or not, because the thing worth seeing is the
+  /// **silence**. The watchman is scheduled from GitHub Actions and needs a
+  /// secret in a store separate from Vercel's; the first version of that
+  /// workflow failed 374 times over a month because the secret was never added,
+  /// and the only symptom was an inbox nobody was reading. A timestamp on
+  /// /admin/settings turns "it has never run" into something visible where the
+  /// owner actually looks.
+  watchmanRanAt                DateTime?
   /// Ambassador terms. Editable by the owner, frozen onto each order when used.
   referralDiscountXaf          Int           @default(500)
   ambassadorCommissionPercent  Int           @default(10)
