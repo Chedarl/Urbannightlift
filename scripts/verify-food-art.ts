@@ -132,6 +132,57 @@ console.log("\nIt produces a style a browser can use");
   );
 }
 
+/*
+  The check above counted the word "gradient" and was green for months while
+  this module rendered **nothing**. The style builder wrote `${art.glow}55` —
+  hex-alpha, which is valid after `#7b2cbf` and meaningless after
+  `hsl(303 80% 44%)`. CSS drops a declaration whose value does not parse, so one
+  bad stop took the entire `background-image` with it and every restaurant card
+  fell back to a flat rectangle of its base colour.
+
+  "The string mentions a gradient" was never the property worth proving. This is:
+  every colour in the value is one a CSS parser accepts. Checked by construction
+  rather than with a parser, because pulling one in for six colours is the
+  heavier half of the trade — but checked on the shape that actually broke, at
+  every scale, for names that hash to every branch.
+*/
+console.log("\nAnd every colour in that style is one CSS can actually read");
+{
+  // `#rgb`/`#rrggbb`/`#rrggbbaa`, or an hsl()/rgb() whose alpha is given the
+  // only way those functions accept it — after a slash, inside the parens.
+  const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+  const FUNC = /^(?:hsla?|rgba?)\([^()]*\)$/i;
+  const TRAILING_ALPHA = /\)\s*[0-9a-f]{2}\b/i;
+
+  for (const scale of ["cover", "tile", "badge"] as const) {
+    for (const name of ["Dolcezza", "Chez Maman Josephine", "Mvan Braise House", "Le Grill de Bastos", "Tantine Rose"]) {
+      const art = artworkFor(name, scale);
+      const style = artworkStyle(art);
+      const value = `${style.backgroundColor} ${style.backgroundImage}`;
+
+      // The exact fault, named so a regression reads as itself.
+      check(
+        `${scale}/${name}: no alpha is stuck on after a closing bracket`,
+        !TRAILING_ALPHA.test(value),
+        `hex-alpha after hsl() does not parse, and one bad stop drops the whole declaration:\n       ${value}`
+      );
+
+      for (const [field, colour] of [
+        ["from", art.from],
+        ["to", art.to],
+        ["glow", art.glow],
+        ["glowSoft", art.glowSoft],
+      ] as const) {
+        check(
+          `${scale}/${name}: ${field} is a colour on its own`,
+          HEX.test(colour) || FUNC.test(colour),
+          `"${colour}" is not something a browser will read as a colour`
+        );
+      }
+    }
+  }
+}
+
 console.log("\nNothing here can throw on a strange name");
 for (const odd of ["", "   ", "🔥🔥🔥", "،", "a".repeat(500), "Ω"]) {
   let ok = true;

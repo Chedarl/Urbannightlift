@@ -49,6 +49,21 @@ export interface Artwork {
   to: string;
   /** A third tone for the mesh blob, lifted off the base. */
   glow: string;
+  /**
+   * The same tone at the opacity the mesh is actually drawn with.
+   *
+   * This exists because of a bug that made the whole module do nothing. The
+   * style builder used to write `` `${art.glow}55` `` — the hex-alpha trick,
+   * which works on `#7b2cbf` and is **invalid on `hsl(303 80% 44%)`**. A colour
+   * stop of `hsl(303 80% 44%)55` does not parse, an unparsable stop invalidates
+   * its gradient, and an invalid value drops the entire `background-image`
+   * declaration — so *both* gradients vanished and every card in the catalogue
+   * rendered as one flat block of colour. The generated art was never once seen.
+   *
+   * The alpha is baked in here, by the code that knows the colour's syntax,
+   * rather than concatenated by the code that consumes it.
+   */
+  glowSoft: string;
   /** Degrees for the linear sweep, so no two neighbours share a direction. */
   angle: number;
   /** Where the glow sits, in percent, so the light is not always top-left. */
@@ -119,6 +134,9 @@ export function artworkFor(seed: string, scale: ArtScale = "cover"): Artwork {
     from: `hsl(${hue} 62% ${22 - depth}%)`,
     to: `hsl(${hue2} 54% ${11 - depth / 2}%)`,
     glow: `hsl(${hue2} 80% ${44 - depth}%)`,
+    // 0.33 is the same weight `55` was reaching for (0x55/0xff ≈ 0.33), written
+    // in the one syntax that is legal inside `hsl()`.
+    glowSoft: `hsl(${hue2} 80% ${44 - depth}% / 0.33)`,
     // 12 directions rather than 360, so the variation is felt without any card
     // ending up with an awkward near-horizontal band.
     angle: ((h >>> 4) % 12) * 30,
@@ -179,7 +197,7 @@ export function artworkStyle(art: Artwork): Record<string, string> {
     backgroundColor: art.from,
     backgroundImage: [
       // The mesh blob first, so it sits over the sweep.
-      `radial-gradient(60% 80% at ${art.glowX}% ${art.glowY}%, ${art.glow}55, transparent 70%)`,
+      `radial-gradient(60% 80% at ${art.glowX}% ${art.glowY}%, ${art.glowSoft}, transparent 70%)`,
       `linear-gradient(${art.angle}deg, ${art.from}, ${art.to})`,
     ].join(", "),
   };
