@@ -12,6 +12,7 @@ import type { SelectedLocation } from "@/lib/locations/types";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 import { RestaurantCard } from "@/components/customer/food/RestaurantCard";
 import type { PaymentMethod } from "@prisma/client";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
 /**
  * Browsing food, from the businesses we have actually confirmed exist.
@@ -56,6 +57,8 @@ interface CartLine {
 
 export function FoodForm() {
   const { locale } = useTranslation();
+  // Never offer a way to pay that has no merchant code behind it.
+  const payMethods = usePaymentMethods();
   const fr = locale === "fr";
   const router = useRouter();
 
@@ -413,7 +416,7 @@ export function FoodForm() {
           />
         </label>
         <div className="flex gap-2">
-          {(["CASH", "MTN_MOMO", "ORANGE_MONEY"] as PaymentMethod[]).map((m) => (
+          {(payMethods as PaymentMethod[]).map((m) => (
             <button
               key={m}
               type="button"
