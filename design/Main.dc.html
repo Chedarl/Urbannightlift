@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #08060e; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    a { color: #ac66ec; } a:hover { color: #c6a6ef; }
+    .mono { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 844px; box-sizing: border-box; background: #08060e; color: #f6f4fb; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- the night glow, kept from the existing portal -->
+  <div style="position: absolute; inset: 0 0 auto; height: 300px; background: radial-gradient(120% 90% at 50% -20%, rgba(150,69,222,0.26), rgba(46,15,82,0.05) 55%, transparent 80%); pointer-events: none;"></div>
+
+  <div style="position: relative; padding: 22px 18px 96px; display: flex; flex-direction: column; gap: 18px;">
+
+    <!-- header -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c6a6ef" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+          <span style="font-size: 14px; color: #c6a6ef;">Good evening,</span>
+        </div>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #f6f4fb;">Alice</h1>
+        <span style="font-size: 14px; color: #b4a9c6;">Your 6th night with us</span>
+      </div>
+      <div style="flex: 0 0 auto; width: 46px; height: 46px; border-radius: 99px; background: linear-gradient(135deg, #5b1e8c, #9645de); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: #f6f4fb; box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);">A</div>
+    </div>
+
+    <!-- tonight band: hours + credit, one honest line -->
+    <div style="display: flex; align-items: center; gap: 10px; background: #110b1c; border: 1px solid #271a44; border-radius: 14px; padding: 11px 13px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+      <span style="width: 7px; height: 7px; border-radius: 99px; background: #2fae60; box-shadow: 0 0 0 3px rgba(47,174,96,0.18);"></span>
+      <span style="font-size: 14px; color: #e3dced;">Open until 4:00</span>
+      <span style="width: 3px; height: 3px; border-radius: 99px; background: #462e6b;"></span>
+      <span class="mono" style="font-size: 14px; color: #d4af37; font-weight: 600;">500 XAF credit</span>
+    </div>
+
+    <!-- live order — the single most important card -->
+    <div style="border-radius: 18px; padding: 1px; background: linear-gradient(135deg, rgba(150,69,222,0.85), rgba(212,175,55,0.4));">
+      <div style="background: #1a1130; border-radius: 17px; padding: 16px; display: flex; flex-direction: column; gap: 13px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 7px; height: 7px; border-radius: 99px; background: #2fae60; box-shadow: 0 0 0 3px rgba(47,174,96,0.2);"></span>
+            <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #b4a9c6;">On the way</span>
+          </div>
+          <span class="mono" style="font-size: 13px; color: #9a8fb0;">UNL-K4M2XP</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="flex: 0 0 auto; width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #3c1361, #7b2cbf); display: flex; align-items: center; justify-content: center;">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ece1fa" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 17.5h-6l-2-7h11l-1.5 4"/><path d="M5 6h3l1 3"/></svg>
+          </div>
+          <div style="min-width: 0; flex: 1;">
+            <p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; color: #f6f4fb;">Emmanuel is 6 min away</p>
+            <p style="margin: 2px 0 0; font-size: 14px; color: #b4a9c6;">Poulet DG · Chez Maman Josephine</p>
+          </div>
+        </div>
+
+        <!-- progress: four beats, current one lit -->
+        <div style="display: flex; gap: 5px;">
+          <div style="flex: 1; height: 4px; border-radius: 99px; background: #9645de;"></div>
+          <div style="flex: 1; height: 4px; border-radius: 99px; background: #9645de;"></div>
+          <div style="flex: 1; height: 4px; border-radius: 99px; background: #9645de;"></div>
+          <div style="flex: 1; height: 4px; border-radius: 99px; background: #362356;"></div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; background: #9645de; border-radius: 12px; height: 46px; font-size: 15px; font-weight: 600; color: #f6f4fb;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Track
+          </div>
+          <div style="flex: 0 0 auto; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; border: 1px solid #362356; border-radius: 12px; color: #cfc6db;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- your usual -->
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #f6f4fb;">Your usual</h2>
+      <div style="display: flex; align-items: center; gap: 12px; background: #110b1c; border: 1px solid #271a44; border-radius: 15px; padding: 13px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+        <div style="flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(140deg, hsl(32 62% 22%), hsl(52 54% 11%)); display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px; box-sizing: border-box;">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.22); line-height: 1;">MJ</span>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <p style="margin: 0; font-size: 15px; font-weight: 600; color: #f6f4fb;">Poulet DG ×2</p>
+          <p style="margin: 1px 0 0; font-size: 13px; color: #9a8fb0;">Ordered 4 times · about 1 950 XAF</p>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; align-items: center; height: 38px; padding: 0 14px; border-radius: 11px; background: #d4af37; font-size: 14px; font-weight: 700; color: #08060e;">Again</div>
+      </div>
+    </div>
+
+    <!-- services -->
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: #f6f4fb;">What do you need tonight?</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+
+        <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 15px; padding: 14px; display: flex; flex-direction: column; gap: 9px; min-height: 96px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(212,175,55,0.14); display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1a2 2 0 0 0 2-2V2"/><path d="M5.5 2v20"/><path d="M17 2c-1.7 0-3 2.5-3 6s1.3 5 3 5 3 0 3 0v9"/></svg>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 15px; font-weight: 600; color: #f6f4fb;">Food</p>
+            <p style="margin: 1px 0 0; font-size: 13px; color: #9a8fb0;">7 kitchens open</p>
+          </div>
+        </div>
+
+        <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 15px; padding: 14px; display: flex; flex-direction: column; gap: 9px; min-height: 96px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(47,174,96,0.14); display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2fae60" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 15px; font-weight: 600; color: #f6f4fb;">Medicine</p>
+            <p style="margin: 1px 0 0; font-size: 13px; color: #9a8fb0;">2 on duty</p>
+          </div>
+        </div>
+
+        <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 15px; padding: 14px; display: flex; flex-direction: column; gap: 9px; min-height: 96px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(150,69,222,0.16); display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ac66ec" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 15px; font-weight: 600; color: #f6f4fb;">Groceries</p>
+            <p style="margin: 1px 0 0; font-size: 13px; color: #9a8fb0;">Shops &amp; markets</p>
+          </div>
+        </div>
+
+        <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 15px; padding: 14px; display: flex; flex-direction: column; gap: 9px; min-height: 96px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(179,153,255,0.12); display: flex; align-items: center; justify-content: center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#cfc6db" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 15px; font-weight: 600; color: #f6f4fb;">Parcel</p>
+            <p style="margin: 1px 0 0; font-size: 13px; color: #9a8fb0;">Across Yaoundé</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- bottom nav -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(17,11,28,0.93); border-top: 1px solid #271a44; backdrop-filter: blur(14px); display: flex; padding: 9px 8px 22px;">
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ac66ec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      <span style="font-size: 13px; font-weight: 600; color: #ac66ec;">Home</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9a8fb0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <span style="font-size: 13px; color: #9a8fb0;">Order</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9a8fb0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span style="font-size: 13px; color: #9a8fb0;">Track</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#9a8fb0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg>
+      <span style="font-size: 13px; color: #9a8fb0;">Account</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
