@@ -5,6 +5,7 @@
  */
 import { getLegalNotice } from "@/lib/i18n/legal";
 import type { Locale } from "@/lib/i18n";
+import { groupXaf } from "@/lib/utils";
 
 export interface OrderMessageInput {
   orderCode: string;
@@ -72,7 +73,7 @@ export function buildOrderMessage(order: OrderMessageInput): string {
     `Service Type: ${order.serviceTypeLabel}`,
     `Item Description: ${order.itemDescription}`,
     `Quantity: ${order.quantity}`,
-    `Declared Value: ${order.declaredValueXaf.toLocaleString("fr-FR")} XAF`,
+    `Declared Value: ${groupXaf(order.declaredValueXaf)} XAF`,
     `Fragile: ${yesNo(order.isFragile, locale)}`,
     `Medicine: ${yesNo(order.isMedicine, locale)}`,
     `Prescription Required: ${prescriptionLabel(order.prescriptionRequired, locale)}`,

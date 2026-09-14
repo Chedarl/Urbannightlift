@@ -28,7 +28,7 @@ import { formatDetailedStatus } from "@/lib/orders/statusLabels";
 import { formatSlot } from "@/lib/orders/timeSlots";
 import { Button } from "@/components/shared/Button";
 import { Badge } from "@/components/shared/Badge";
-import { formatXaf, normalizePhone, cn } from "@/lib/utils";
+import { formatXaf, normalizePhone, cn, groupXaf } from "@/lib/utils";
 import { ProofReader } from "@/components/admin/ProofReader";
 import type {
   OrderStatus,
@@ -739,7 +739,7 @@ export function OrderDetail({
                     <a
                       href={buildWaLink(
                         normalizePhone(order.customerWhatsapp),
-                        `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${(order.quotedFeeXaf ?? 0).toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
+                        `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${groupXaf(order.quotedFeeXaf ?? 0)} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
                       )}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -780,7 +780,7 @@ export function OrderDetail({
                 href={buildWaLink(
                   normalizePhone(order.customerWhatsapp),
                   order.quotedFeeXaf != null
-                    ? `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${order.quotedFeeXaf.toLocaleString("fr-FR")} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
+                    ? `Urban Night Lift — order ${order.orderCode}.\n\nGood news, we've accepted your order. Delivery is ${groupXaf(order.quotedFeeXaf)} XAF.\n\nTap to see the details and confirm:\n${quoteLink}\n\nWe'll assign a rider as soon as you accept.`
                     : `Urban Night Lift — order ${order.orderCode}. We've received your order and are reviewing it now.`
                 )}
                 target="_blank"

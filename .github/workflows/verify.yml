@@ -1,0 +1,93 @@
+name: Verify
+
+# Runs the 53 proofs in `scripts/` on every pull request and every push to main.
+#
+# ## Why this did not exist until now
+#
+# No reason anybody decided on — the suites accumulated one at a time, each run
+# by hand when it was written, and nothing was ever put in place to run them
+# together. The result is that for months the only thing running them was a
+# person who already suspected a problem, which is the moment a test is least
+# useful.
+#
+# ## What this is careful about
+#
+# The watchman workflow in this repository failed 374 times in a row over a
+# month because it treated a missing setting as a malfunction. Every one of
+# those failures sent a notification, and the lesson learned was the one the
+# watchman itself is built around: an alarm that cries constantly teaches its
+# audience to stop reading alarms.
+#
+# So this workflow distinguishes the same three outcomes `verify-all.mts` does:
+#
+#   - **passed** — nothing to say.
+#   - **could not run** — the 7 suites needing Postgres, with no DATABASE_URL
+#     here. Reported in the summary, never as a failure. A database is not
+#     configured for CI and does not need to be: those 7 test database wiring,
+#     and the other 46 are pure.
+#   - **failed** — a real assertion failed. Red, loudly, with the output.
+#
+# Only the third fails the run, which is the only way the red cross keeps
+# meaning something.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second run on the same branch makes the first one's result worthless, so the
+# first is cancelled rather than left to finish and confuse the checks list.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` and not `npm install`: the lockfile is the point. An install
+      # that quietly resolves a different tree tests something other than what
+      # deploys.
+      - name: Install
+        run: npm ci
+
+      # Prisma's generated client is imported by the suites even where they
+      # never open a connection, so it has to exist before anything runs.
+      - name: Generate the Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # The runner stubs `server-only` for the duration and restores it, sorts
+      # "no database" from "failed", and exits non-zero only for the latter.
+      #
+      # `pipefail` is not optional here. GitHub runs these steps under `bash -e`
+      # with pipefail OFF, so `verify-all | tee` would report `tee`'s exit code
+      # — always 0 — and a failing suite would show a green tick. A workflow
+      # that cannot go red is worse than no workflow, because it is trusted.
+      - name: Run every proof
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx scripts/verify-all.mts | tee /tmp/verify.log
+
+      - name: Write the summary
+        if: always()
+        run: |
+          {
+            echo "### Verification"
+            echo
+            echo '```'
+            tail -n 30 /tmp/verify.log 2>/dev/null || echo "the run produced no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
