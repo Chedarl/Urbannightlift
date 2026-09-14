@@ -28,8 +28,10 @@
  * shop-receipt photo are deliberately NOT embedded. They are private evidence
  * held against the order, not something to hand around in a shareable file.
  */
-import { createElement as h } from "react";
+import { createElement as h, type ComponentProps, type ReactNode } from "react";
 import { groupXaf } from "@/lib/utils";
+import { pdfSafe } from "@/lib/pdf/safeText";
+
 
 export interface ReceiptLineItem {
   name: string;
@@ -97,6 +99,23 @@ function methodLabel(method: string | null, fr: boolean): string {
 export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob> {
   const RP = await import("@react-pdf/renderer");
   const { Document, Page, View, Text, Image, StyleSheet, pdf } = RP;
+
+  /**
+   * Every string drawn in this document passes through `pdfSafe` first.
+   *
+   * Applied at the one primitive that draws text, rather than at the fifteen
+   * fields that supply it — a field added later is covered without anybody
+   * remembering this exists, which is the only version of this that stays true.
+   *
+   * `Helvetica` is a PDF base font restricted to WinAnsiEncoding, and a
+   * character it lacks is not dropped or replaced with a placeholder — it is
+   * drawn as a *different* character. Rendered and read back, "Ngonnso' Ɛtaŋ
+   * Ɔbi" came out as "Ngonnso' taK bi" and a 🙏 in a delivery note as "=O".
+   * A wrong letter in a customer's name is worse than a missing one, because it
+   * looks correct. See `src/lib/pdf/safeText.ts`.
+   */
+  const SafeText = (props: ComponentProps<typeof Text>, ...children: ReactNode[]) =>
+    h(Text, props, ...children.map((c) => (typeof c === "string" ? pdfSafe(c) : c)));
   const fr = data.locale === "fr";
 
   const INK = "#1a1523";
@@ -150,14 +169,14 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         })
       : "—";
 
-  const kv = (k: string, v: string) => h(View, { style: s.kv }, h(Text, { style: s.k }, k), h(Text, { style: s.v }, v));
+  const kv = (k: string, v: string) => h(View, { style: s.kv }, SafeText( { style: s.k }, k), SafeText( { style: s.v }, v));
 
   const money = (label: string, value: string, bold = false) =>
     h(
       View,
       { style: s.itemRow },
-      h(Text, { style: s.itemName }, label),
-      h(Text, { style: bold ? s.amountBold : s.amount }, value)
+      SafeText( { style: s.itemName }, label),
+      SafeText( { style: bold ? s.amountBold : s.amount }, value)
     );
 
   const logoSrc = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png";
@@ -182,16 +201,16 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
           View,
           null,
           h(Image, { src: logoSrc, style: s.logo }),
-          h(Text, { style: s.brand }, "URBAN NIGHT LIFT"),
-          h(Text, { style: s.brandSub }, fr ? "Livraison de nuit · Yaoundé · 18h–4h" : "Night delivery · Yaoundé · 6PM–4AM")
+          SafeText( { style: s.brand }, "URBAN NIGHT LIFT"),
+          SafeText( { style: s.brandSub }, fr ? "Livraison de nuit · Yaoundé · 18h–4h" : "Night delivery · Yaoundé · 6PM–4AM")
         ),
         h(
           View,
           null,
-          h(Text, { style: s.docType }, (delivered ? (fr ? "REÇU FINAL" : "FINAL RECEIPT") : (fr ? "REÇU DE PAIEMENT" : "PAYMENT RECEIPT")).toUpperCase()),
-          h(Text, { style: s.docNo }, data.receiptNumber),
-          h(Text, { style: s.docDate }, dt(data.issuedAt)),
-          h(Text, { style: s.docDate }, `${fr ? "Commande" : "Order"} ${data.orderCode}`)
+          SafeText( { style: s.docType }, (delivered ? (fr ? "REÇU FINAL" : "FINAL RECEIPT") : (fr ? "REÇU DE PAIEMENT" : "PAYMENT RECEIPT")).toUpperCase()),
+          SafeText( { style: s.docNo }, data.receiptNumber),
+          SafeText( { style: s.docDate }, dt(data.issuedAt)),
+          SafeText( { style: s.docDate }, `${fr ? "Commande" : "Order"} ${data.orderCode}`)
         )
       ),
 
@@ -208,13 +227,13 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         ? h(
             View,
             null,
-            h(Text, { style: [s.sectionLabel, { marginTop: 0 }] }, (fr ? "CE QUE NOUS AVONS ACHETÉ POUR VOUS" : "WHAT WE BOUGHT FOR YOU").toUpperCase()),
+            SafeText( { style: [s.sectionLabel, { marginTop: 0 }] }, (fr ? "CE QUE NOUS AVONS ACHETÉ POUR VOUS" : "WHAT WE BOUGHT FOR YOU").toUpperCase()),
             ...(data.lineItems ?? []).map((it, i) =>
               h(
                 View,
                 { style: s.itemRow, key: `li-${i}` },
-                h(Text, { style: s.itemName }, `${it.qty && it.qty > 1 ? `${it.qty} × ` : ""}${it.name}`),
-                h(Text, { style: s.amount }, "")
+                SafeText( { style: s.itemName }, `${it.qty && it.qty > 1 ? `${it.qty} × ` : ""}${it.name}`),
+                SafeText( { style: s.amount }, "")
               )
             ),
             h(View, { style: s.rule })
@@ -222,9 +241,9 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         : h(
             View,
             null,
-            h(Text, { style: [s.sectionLabel, { marginTop: 0 }] }, (fr ? "PRESTATION" : "SERVICE").toUpperCase()),
+            SafeText( { style: [s.sectionLabel, { marginTop: 0 }] }, (fr ? "PRESTATION" : "SERVICE").toUpperCase()),
             money(data.serviceLabel, ""),
-            h(Text, { style: { color: MUTED, marginBottom: 4 } }, data.itemDescription),
+            SafeText( { style: { color: MUTED, marginBottom: 4 } }, data.itemDescription),
             h(View, { style: s.rule })
           ),
 
@@ -235,8 +254,8 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
       h(
         View,
         { style: s.itemRow },
-        h(Text, { style: s.totalLabel }, fr ? "TOTAL" : "TOTAL"),
-        h(Text, { style: s.totalAmount }, xaf(total))
+        SafeText( { style: s.totalLabel }, fr ? "TOTAL" : "TOTAL"),
+        SafeText( { style: s.totalAmount }, xaf(total))
       ),
 
       // Charging less than we were allowed to is worth stating.
@@ -261,14 +280,14 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         : null,
 
       // ── Payment
-      h(Text, { style: s.sectionLabel }, (fr ? "PAIEMENT" : "PAYMENT").toUpperCase()),
+      SafeText( { style: s.sectionLabel }, (fr ? "PAIEMENT" : "PAYMENT").toUpperCase()),
       kv(fr ? "Méthode" : "Method", data.paymentMethodLabel),
       data.paymentReference ? kv(fr ? "Référence" : "Reference", data.paymentReference) : null,
       kv(fr ? "Montant réglé" : "Amount paid", data.amountPaidXaf != null ? xaf(data.amountPaidXaf) : "—"),
       data.paymentVerifiedAt ? kv(fr ? "Vérifié le" : "Verified", dt(data.paymentVerifiedAt)) : null,
 
       // ── Delivery
-      h(Text, { style: s.sectionLabel }, (fr ? "LIVRAISON" : "DELIVERY").toUpperCase()),
+      SafeText( { style: s.sectionLabel }, (fr ? "LIVRAISON" : "DELIVERY").toUpperCase()),
       kv(fr ? "Client" : "Customer", `${data.customerName} · ${data.customerWhatsapp}`),
       kv(fr ? "Ramassage" : "Pickup", data.pickupLocation),
       kv(fr ? "Livraison" : "Drop-off", data.deliveryLocation),
@@ -282,8 +301,8 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
         ? h(
             View,
             { style: s.otpBox },
-            h(Text, { style: s.otpLabel }, (fr ? "CODE DE LIVRAISON" : "DELIVERY CODE").toUpperCase()),
-            h(Text, { style: s.otp }, data.otpCode),
+            SafeText( { style: s.otpLabel }, (fr ? "CODE DE LIVRAISON" : "DELIVERY CODE").toUpperCase()),
+            SafeText( { style: s.otp }, data.otpCode),
             h(
               Text,
               { style: { fontSize: 7.5, color: MUTED, marginTop: 6, textAlign: "center" } },
@@ -305,7 +324,7 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
           )
         : null,
 
-      h(Text, { style: s.legal }, data.legalNotice),
+      SafeText( { style: s.legal }, data.legalNotice),
       h(
         Text,
         { style: s.foot },

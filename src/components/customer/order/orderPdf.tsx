@@ -10,8 +10,10 @@
  * SECURITY: never embeds the uploaded prescription or parcel photo. The document
  * only states that such images are provided securely at pickup.
  */
-import { createElement as h } from "react";
+import { createElement as h, type ComponentProps, type ReactNode } from "react";
 import { groupXaf } from "@/lib/utils";
+import { pdfSafe } from "@/lib/pdf/safeText";
+
 
 export interface OrderPdfData {
   orderCode: string; // real code, or "PENDING" pre-submit
@@ -78,6 +80,23 @@ function detailRows(data: OrderPdfData): [string, string][] {
 export async function generateOrderPdfBlob(data: OrderPdfData): Promise<Blob> {
   const RP = await import("@react-pdf/renderer");
   const { Document, Page, View, Text, Image, StyleSheet, pdf } = RP;
+
+  /**
+   * Every string drawn in this document passes through `pdfSafe` first.
+   *
+   * Applied at the one primitive that draws text, rather than at the fifteen
+   * fields that supply it — a field added later is covered without anybody
+   * remembering this exists, which is the only version of this that stays true.
+   *
+   * `Helvetica` is a PDF base font restricted to WinAnsiEncoding, and a
+   * character it lacks is not dropped or replaced with a placeholder — it is
+   * drawn as a *different* character. Rendered and read back, "Ngonnso' Ɛtaŋ
+   * Ɔbi" came out as "Ngonnso' taK bi" and a 🙏 in a delivery note as "=O".
+   * A wrong letter in a customer's name is worse than a missing one, because it
+   * looks correct. See `src/lib/pdf/safeText.ts`.
+   */
+  const SafeText = (props: ComponentProps<typeof Text>, ...children: ReactNode[]) =>
+    h(Text, props, ...children.map((c) => (typeof c === "string" ? pdfSafe(c) : c)));
   const fr = data.locale === "fr";
 
   const s = StyleSheet.create({
@@ -103,7 +122,7 @@ export async function generateOrderPdfBlob(data: OrderPdfData): Promise<Blob> {
   });
 
   const Row = (label: string, value: string) =>
-    h(View, { style: s.row, key: label }, h(Text, { style: s.label }, label), h(Text, { style: s.value }, value || "—"));
+    h(View, { style: s.row, key: label }, SafeText( { style: s.label }, label), SafeText( { style: s.value }, value || "—"));
 
   const logoSrc = typeof window !== "undefined" ? `${window.location.origin}/logo.png` : "/logo.png";
 
@@ -124,54 +143,54 @@ export async function generateOrderPdfBlob(data: OrderPdfData): Promise<Blob> {
           h(
             View,
             null,
-            h(Text, { style: s.brand }, "URBAN NIGHT LIFT"),
-            h(Text, { style: s.sub }, fr ? "Livraison de nuit · Yaoundé · 18h–4h" : "Night delivery · Yaoundé · 6PM–4AM")
+            SafeText( { style: s.brand }, "URBAN NIGHT LIFT"),
+            SafeText( { style: s.sub }, fr ? "Livraison de nuit · Yaoundé · 18h–4h" : "Night delivery · Yaoundé · 6PM–4AM")
           )
         ),
-        h(Text, { style: s.sub }, data.createdAt.toLocaleString(fr ? "fr-FR" : "en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))
+        SafeText( { style: s.sub }, data.createdAt.toLocaleString(fr ? "fr-FR" : "en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }))
       ),
-      h(Text, { style: s.docTitle }, fr ? "Récapitulatif & Confirmation de commande" : "Order Review & Confirmation"),
-      h(Text, { style: s.badge }, fr ? "EN ATTENTE DE CONFIRMATION ET DE PAIEMENT" : "PENDING CONFIRMATION AND PAYMENT"),
+      SafeText( { style: s.docTitle }, fr ? "Récapitulatif & Confirmation de commande" : "Order Review & Confirmation"),
+      SafeText( { style: s.badge }, fr ? "EN ATTENTE DE CONFIRMATION ET DE PAIEMENT" : "PENDING CONFIRMATION AND PAYMENT"),
       // Code
       h(
         View,
         { style: s.codeRow },
-        h(Text, { style: s.code }, data.orderCode),
-        h(Text, { style: s.sub }, fr ? "Conservez ce code" : "Keep this code")
+        SafeText( { style: s.code }, data.orderCode),
+        SafeText( { style: s.sub }, fr ? "Conservez ce code" : "Keep this code")
       ),
       // Customer
-      h(Text, { style: s.sectionTitle }, fr ? "Client" : "Customer"),
+      SafeText( { style: s.sectionTitle }, fr ? "Client" : "Customer"),
       Row(fr ? "Nom" : "Name", data.customerName),
       Row("WhatsApp", data.customerWhatsapp),
       Row(fr ? "Langue" : "Language", fr ? "Français" : "English"),
       // Service
-      h(Text, { style: s.sectionTitle }, fr ? "Service" : "Service"),
+      SafeText( { style: s.sectionTitle }, fr ? "Service" : "Service"),
       Row(fr ? "Type" : "Type", data.serviceLabel),
       Row(fr ? "Description" : "Description", data.itemDescription),
       ...detailRows(data).map(([l, v]) => Row(l, v)),
       Row(fr ? "Quantité" : "Quantity", String(data.quantity)),
       Row(fr ? "Valeur déclarée" : "Declared value", xaf(data.declaredValueXaf)),
       // Locations
-      h(Text, { style: s.sectionTitle }, fr ? "Lieux" : "Locations"),
+      SafeText( { style: s.sectionTitle }, fr ? "Lieux" : "Locations"),
       Row(fr ? "Ramassage" : "Pickup", `${data.pickupLocation}${data.pickupZoneName ? ` (${data.pickupZoneName})` : ""}`),
       Row(fr ? "Livraison" : "Delivery", `${data.deliveryLocation}${data.deliveryZoneName ? ` (${data.deliveryZoneName})` : ""}`),
       // Fee
       h(
         View,
         { style: s.feeBox },
-        h(Text, { style: s.feeLabel }, fr ? "Frais de livraison estimés" : "Estimated delivery fee"),
-        h(Text, { style: s.fee }, data.estimatedFeeXaf != null ? xaf(data.estimatedFeeXaf) : "—")
+        SafeText( { style: s.feeLabel }, fr ? "Frais de livraison estimés" : "Estimated delivery fee"),
+        SafeText( { style: s.fee }, data.estimatedFeeXaf != null ? xaf(data.estimatedFeeXaf) : "—")
       ),
       // Payment
-      h(Text, { style: s.sectionTitle }, fr ? "Paiement" : "Payment"),
+      SafeText( { style: s.sectionTitle }, fr ? "Paiement" : "Payment"),
       Row(fr ? "Méthode" : "Method", data.paymentMethodLabel),
       Row(fr ? "Statut" : "Status", fr ? "En attente de vérification" : "Pending verification"),
       // Security note
-      h(Text, { style: s.note }, fr
+      SafeText( { style: s.note }, fr
         ? "Toute ordonnance ou photo de colis est transmise de manière sécurisée au ramassage et n'est pas incluse dans ce document."
         : "Any prescription or parcel photo is provided securely at pickup and is not included in this document."),
       // Legal
-      h(Text, { style: s.legal }, data.legalNotice)
+      SafeText( { style: s.legal }, data.legalNotice)
     )
   );
 
