@@ -1,0 +1,25 @@
+{
+  "artboards": [
+    { "file": "Foundations.dc.html", "x": 0, "y": 0, "w": 880, "h": 1180, "title": "Foundations — the three defects" },
+    { "file": "Main.dc.html", "x": 1000, "y": 0, "w": 390, "h": 844, "title": "Portal home" },
+    { "file": "Food.dc.html", "x": 1510, "y": 0, "w": 390, "h": 900, "title": "Food — generated artwork" },
+    { "file": "Review.dc.html", "x": 2020, "y": 0, "w": 390, "h": 844, "title": "Review — money & caution" }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -150,
+      "w": 460,
+      "text": "Three defects found by reading the code, not by taste: caution and gold are the same hex; 365 arbitrary font sizes, most of them 10–11px; eight card surfaces with no elevation ladder. Foundations fixes the tokens; the three phone screens show the tokens doing work."
+    },
+    {
+      "id": "food-note",
+      "x": 1510,
+      "y": -150,
+      "w": 390,
+      "text": "Drawing this found a live bug: the generated artwork never rendered. Fixed in src/lib/food/artwork.ts — the note at the bottom of the artboard has the detail."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

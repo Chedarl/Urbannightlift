@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #08060e; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    a { color: #ac66ec; } a:hover { color: #c6a6ef; }
+    .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  </style>
+</helmet>
+
+<div style="padding: 40px 44px 48px; background: #08060e; color: #f6f4fb; width: 880px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 34px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, #9645de, #d4af37);"></div>
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #b4a9c6;">Urban Night Lift</span>
+    </div>
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: #f6f4fb;">Foundations, corrected</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #b4a9c6; max-width: 60ch; text-wrap: pretty;">Three defects found in the live token system. None of them is a matter of taste — each one is checkable, and two of them cost legibility or meaning on the money screens.</p>
+  </div>
+
+  <!-- ─────────── 1. Gold vs caution ─────────── -->
+  <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 34px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: #e0522f; letter-spacing: 0.1em;">01</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #f6f4fb;">A price and a warning are the same colour</h2>
+    </div>
+    <p style="margin: 0 0 2px; font-size: 14px; line-height: 1.65; color: #9a8fb0; max-width: 72ch;"><code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">--color-caution</code> and <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">--color-gold-400</code> are both <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #d4af37;">#d4af37</code> — byte-identical. On the review screen the amount owed and the warning that a shop charged over the cap render in exactly the same gold.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 16px; padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="width: 7px; height: 7px; border-radius: 99px; background: #e0522f;"></div>
+          <span style="font-size: 13px; font-weight: 600; color: #e0522f;">Now — indistinguishable</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-size: 14px; color: #cfc6db;">Delivery fee</span>
+            <span class="mono" style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: #d4af37;">1 950 XAF</span>
+          </div>
+          <div style="background: rgba(212,162,55,0.10); border-radius: 10px; padding: 9px 11px;">
+            <span style="font-size: 13px; line-height: 1.5; color: #d4af37;">The shop charged 2 400 over your cap.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 16px; padding: 18px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <div style="width: 7px; height: 7px; border-radius: 99px; background: #2fae60;"></div>
+          <span style="font-size: 13px; font-weight: 600; color: #2fae60;">Proposed — gold is money, amber is caution</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-size: 14px; color: #cfc6db;">Delivery fee</span>
+            <span class="mono" style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: #d4af37;">1 950 XAF</span>
+          </div>
+          <div style="display: flex; gap: 9px; align-items: flex-start; background: rgba(242,160,61,0.11); border-left: 2px solid #f2a03d; border-radius: 0 10px 10px 0; padding: 9px 11px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f2a03d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto; margin-top: 1px;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span style="font-size: 13px; line-height: 1.5; color: #f2a03d;">The shop charged 2 400 over your cap.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+      <div style="display: flex; align-items: center; gap: 10px; background: #110b1c; border: 1px solid #271a44; border-radius: 12px; padding: 10px 13px;">
+        <div style="width: 30px; height: 30px; border-radius: 8px; background: #d4af37;"></div>
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-size: 13px; font-weight: 600; color: #f6f4fb;">gold-400</span>
+          <span class="mono" style="font-size: 12px; color: #9a8fb0;">#d4af37 · money &amp; brand only</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; background: #110b1c; border: 1px solid #271a44; border-radius: 12px; padding: 10px 13px;">
+        <div style="width: 30px; height: 30px; border-radius: 8px; background: #f2a03d;"></div>
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-size: 13px; font-weight: 600; color: #f6f4fb;">caution</span>
+          <span class="mono" style="font-size: 12px; color: #9a8fb0;">#f2a03d · warmer, always with an icon</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; background: #110b1c; border: 1px solid #271a44; border-radius: 12px; padding: 10px 13px;">
+        <div style="width: 30px; height: 30px; border-radius: 8px; background: #e0522f;"></div>
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-size: 13px; font-weight: 600; color: #f6f4fb;">restricted</span>
+          <span class="mono" style="font-size: 12px; color: #9a8fb0;">#e0522f · unchanged</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin: 2px 0 0; font-size: 13px; line-height: 1.6; color: #9a8fb0; max-width: 72ch;">The rule that makes it hold under colour-blindness and a dim screen: <strong style="color: #cfc6db; font-weight: 600;">a caution always carries an icon and a left rule; money never does.</strong> Colour alone was never going to be enough.</p>
+  </div>
+
+  <!-- ─────────── 2. Elevation ─────────── -->
+  <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 34px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: #e0522f; letter-spacing: 0.1em;">02</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #f6f4fb;">Eight card surfaces, no ladder</h2>
+    </div>
+    <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #9a8fb0; max-width: 72ch;">Cards are drawn with eight different treatments across the app — <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">bg-ink-800</code>, <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">bg-ink-900</code>, <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">bg-ink-900/50</code>, <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">/60</code>, <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">/40</code> — so nothing reliably reads as raised. Four named steps, and the inset top highlight that makes depth legible on near-black.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
+      <div style="background: #08060e; border: 1px solid #1a1130; border-radius: 14px; padding: 16px; min-height: 104px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px;">
+        <span style="font-size: 14px; font-weight: 600; color: #f6f4fb;">surface-0</span>
+        <span class="mono" style="font-size: 12px; color: #9a8fb0;">#08060e</span>
+        <span style="font-size: 12px; color: #9a8fb0;">the page</span>
+      </div>
+      <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 14px; padding: 16px; min-height: 104px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+        <span style="font-size: 14px; font-weight: 600; color: #f6f4fb;">surface-1</span>
+        <span class="mono" style="font-size: 12px; color: #9a8fb0;">#110b1c</span>
+        <span style="font-size: 12px; color: #9a8fb0;">resting card</span>
+      </div>
+      <div style="background: #1a1130; border: 1px solid #362356; border-radius: 14px; padding: 16px; min-height: 104px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 18px rgba(0,0,0,0.45);">
+        <span style="font-size: 14px; font-weight: 600; color: #f6f4fb;">surface-2</span>
+        <span class="mono" style="font-size: 12px; color: #9a8fb0;">#1a1130</span>
+        <span style="font-size: 12px; color: #9a8fb0;">sheet, active</span>
+      </div>
+      <div style="background: #241845; border: 1px solid #462e6b; border-radius: 14px; padding: 16px; min-height: 104px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 30px rgba(0,0,0,0.55);">
+        <span style="font-size: 14px; font-weight: 600; color: #f6f4fb;">surface-3</span>
+        <span class="mono" style="font-size: 12px; color: #9a8fb0;">#241845</span>
+        <span style="font-size: 12px; color: #9a8fb0;">popover</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── 3. Type scale ─────────── -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; color: #e0522f; letter-spacing: 0.1em;">03</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #f6f4fb;">365 hand-typed font sizes, and a 10px floor</h2>
+    </div>
+    <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #9a8fb0; max-width: 72ch;"><code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">text-[11px]</code> appears 282 times and <code style="font-family: ui-monospace, monospace; font-size: 13px; color: #cfc6db;">text-[10px]</code> 72 more. That is not a scale, and 10px is below comfortable reading on a phone at 1 AM — which is this product's entire context. Seven steps, and <strong style="color: #cfc6db; font-weight: 600;">nothing below 13px</strong>.</p>
+
+    <div style="background: #110b1c; border: 1px solid #271a44; border-radius: 16px; padding: 22px 24px; display: flex; flex-direction: column; gap: 15px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">display-lg · 30</span>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #f6f4fb;">Good evening</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">display-md · 24</span>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: #f6f4fb;">What are we bringing you?</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">display-sm · 19</span>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; color: #f6f4fb;">Chez Maman Josephine</span>
+      </div>
+      <div style="height: 1px; background: #271a44;"></div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">body-lg · 16</span>
+        <span style="font-size: 16px; line-height: 1.55; color: #e3dced;">You pay what the shop charged.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">body · 15</span>
+        <span style="font-size: 15px; line-height: 1.55; color: #cfc6db;">Confirmed 12 minutes ago by the kitchen.</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">body-sm · 14</span>
+        <span style="font-size: 14px; line-height: 1.55; color: #b4a9c6;">Biyem-Assi · Open now</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #9a8fb0;">meta · 13 <span style="color: #2fae60;">floor</span></span>
+        <span style="font-size: 13px; line-height: 1.5; color: #9a8fb0;">Up to 2 km included · rounded to 50 XAF</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 20px; opacity: 0.45;">
+        <span class="mono" style="flex: 0 0 116px; font-size: 12px; color: #e0522f;">was · 10</span>
+        <span style="font-size: 10px; line-height: 1.5; color: #9a8fb0; text-decoration: line-through;">Up to 2 km included · rounded to 50 XAF</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
