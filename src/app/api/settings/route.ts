@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
+import { configuredPaymentMethods } from "@/lib/payments/methods";
 import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
 import { recordAudit, diffFields } from "@/lib/audit";
 import type { ServiceType } from "@prisma/client";
@@ -29,6 +30,17 @@ export async function GET() {
       testMode: settings.testMode,
       // Public so the order forms know whether to offer the microphone at all.
       voiceOrderingEnabled: settings.voiceOrderingEnabled,
+      /*
+        Which ways of paying actually work. Public for the same reason as the
+        service list: the forms hardcoded all three methods, production has no
+        Orange merchant code, and a customer who picked Orange Money reached a
+        payment screen that rendered nothing at all.
+
+        Only the *availability* is exposed, never the merchant codes — those go
+        to the one customer with an order to pay, on the confirmation page, and
+        have no business in a public settings response.
+      */
+      paymentMethods: configuredPaymentMethods(settings),
     },
     {
       // These are live operational switches — whether we are open, which

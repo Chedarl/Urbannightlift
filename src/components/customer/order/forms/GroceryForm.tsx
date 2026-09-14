@@ -27,6 +27,7 @@ import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/type
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn, groupXaf } from "@/lib/utils";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
 /**
  * The dropped pin, when there is one.
@@ -59,6 +60,8 @@ const CATS = [
 
 export function GroceryForm() {
   const { locale } = useTranslation();
+  // Never offer a way to pay that has no merchant code behind it.
+  const payMethods = usePaymentMethods();
   const fr = locale === "fr";
   const router = useRouter();
 
@@ -335,7 +338,7 @@ export function GroceryForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><Banknote className="h-3.5 w-3.5 text-green-300" /> {fr ? "Mode de paiement" : "Payment method"}</p>
             <div className="grid grid-cols-3 gap-2">
-              {[{ v: "CASH", t: fr ? "Espèces" : "Cash" }, { v: "MTN_MOMO", t: "MTN MoMo" }, { v: "ORANGE_MONEY", t: "Orange" }].map((p) => (
+              {[{ v: "CASH", t: fr ? "Espèces" : "Cash" }, { v: "MTN_MOMO", t: "MTN MoMo" }, { v: "ORANGE_MONEY", t: "Orange" }].filter((p) => payMethods.includes(p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")).map((p) => (
                 <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")} className={cn("rounded-xl border px-2 py-2.5 text-xs font-semibold", payment === p.v ? "border-green-400 bg-green-500/10 text-green-200" : "border-ink-700 bg-ink-800 text-mist-300")}>{p.t}</button>
               ))}
             </div>

@@ -27,6 +27,7 @@ import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/type
 import { Logo } from "@/components/shared/Logo";
 import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn, groupXaf } from "@/lib/utils";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
 /**
  * The dropped pin, when there is one.
@@ -50,6 +51,8 @@ const input = "w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 te
 
 export function ParcelForm() {
   const { locale } = useTranslation();
+  // Never offer a way to pay that has no merchant code behind it.
+  const payMethods = usePaymentMethods();
   const fr = locale === "fr";
   const router = useRouter();
 
@@ -339,7 +342,7 @@ export function ParcelForm() {
         <div className={card}>
           <p className={cn(label, "mb-2")}><Banknote className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Mode de paiement" : "Payment method"}</p>
           <div className="grid gap-2 sm:grid-cols-3">
-            {[{ v: "CASH", t: fr ? "Espèces" : "Cash", s: fr ? "À la livraison" : "Pay on delivery" }, { v: "MTN_MOMO", t: "MTN MoMo", s: "Mobile Money" }, { v: "ORANGE_MONEY", t: "Orange Money", s: "Orange Money" }].map((p) => (
+            {[{ v: "CASH", t: fr ? "Espèces" : "Cash", s: fr ? "À la livraison" : "Pay on delivery" }, { v: "MTN_MOMO", t: "MTN MoMo", s: "Mobile Money" }, { v: "ORANGE_MONEY", t: "Orange Money", s: "Orange Money" }].filter((p) => payMethods.includes(p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")).map((p) => (
               <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")} className={cn("rounded-xl border p-3 text-left", payment === p.v ? "border-blue-400 bg-blue-500/10" : "border-ink-700 bg-ink-800")}>
                 <span className={cn("block text-sm font-semibold", payment === p.v ? "text-blue-200" : "text-mist-200")}>{p.t}</span><span className="block text-xs text-mist-500">{p.s}</span>
               </button>

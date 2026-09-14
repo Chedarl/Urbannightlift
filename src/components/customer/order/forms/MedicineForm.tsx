@@ -32,6 +32,7 @@ import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn, groupXaf } from "@/lib/utils";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
 /**
  * The dropped pin, when there is one.
@@ -56,6 +57,8 @@ interface Med { name: string; dosage: string; qty: number }
 
 export function MedicineForm() {
   const { locale } = useTranslation();
+  // Never offer a way to pay that has no merchant code behind it.
+  const payMethods = usePaymentMethods();
   const fr = locale === "fr";
   const router = useRouter();
 
@@ -536,7 +539,7 @@ export function MedicineForm() {
               { v: "CASH", t: fr ? "Espèces" : "Cash", s: fr ? "À la livraison" : "Pay on delivery" },
               { v: "MTN_MOMO", t: "MTN MoMo", s: fr ? "MTN Mobile Money" : "Pay with MTN Mobile Money" },
               { v: "ORANGE_MONEY", t: "Orange Money", s: fr ? "Orange Money" : "Pay with Orange Money" },
-            ].map((p) => (
+            ].filter((p) => payMethods.includes(p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")).map((p) => (
               <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")}
                 className={cn("rounded-xl border p-3 text-left", payment === p.v ? "border-teal-400 bg-teal-500/10" : "border-ink-700 bg-ink-800")}>
                 <span className={cn("block text-sm font-semibold", payment === p.v ? "text-teal-200" : "text-mist-200")}>{p.t}</span>

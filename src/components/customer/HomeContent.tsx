@@ -314,7 +314,7 @@ export function HomeContent({
           )}
 
           {mode === "CLOSED" && (
-            <div className="mt-6 rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-xs leading-relaxed text-gold-200">
+            <div className="mt-6 rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-xs leading-relaxed text-caution">
               {getClosedNotice(locale)}
             </div>
           )}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Copy, Check, Wallet, ImageUp } from "lucide-react";
+import { Phone, Copy, Check, Wallet, ImageUp, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { buildUssd, ussdTelHref } from "@/lib/payments/momo";
+import { unavailableMethodNotice } from "@/lib/payments/methods";
 import { formatXaf, cn } from "@/lib/utils";
 import { Button } from "@/components/shared/Button";
 import type { PaymentMethod, PaymentStatus } from "@prisma/client";
@@ -20,7 +21,8 @@ export interface PaymentInfo {
 }
 
 export function PaymentCard({ info }: { info: PaymentInfo }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const fr = locale === "fr";
   const [reference, setReference] = useState("");
   const [phone, setPhone] = useState("");
   const [screenshotUrl, setScreenshotUrl] = useState("");
@@ -58,7 +60,57 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
     );
   }
 
-  if (!code) return null;
+  /*
+    A method with no merchant code cannot be completed — and this used to be
+    `if (!code) return null`, which rendered **nothing at all**.
+
+    Production has no `orangeMerchantCode`, and all five order forms offered
+    Orange Money regardless. So a customer who picked it — roughly half the
+    mobile-money market in Cameroon — placed their order, reached this screen,
+    and found a blank space where the instructions should be. No error, no
+    explanation, no way to switch, and nothing recorded anywhere. From inside
+    the product it looked like somebody who simply wandered off.
+
+    The forms no longer offer an unconfigured method, so this is now only
+    reachable by an order placed before that shipped. Those orders exist and
+    those people still need to pay, so this says what happened and what to do
+    instead. Rendering nothing is never the answer to a state we did not expect.
+  */
+  if (!code) {
+    return (
+      <div className="rounded-2xl border-l-[3px] border border-caution/40 border-l-caution bg-caution/[0.08] p-4">
+        <div className="flex items-start gap-2.5">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-caution" />
+          <div className="flex flex-col gap-2">
+            <h2 className="font-display text-base font-semibold text-caution">
+              {fr ? `${methodLabel} indisponible` : `${methodLabel} unavailable`}
+            </h2>
+            <p className="text-sm leading-relaxed text-mist-300">
+              {unavailableMethodNotice(
+                info.paymentMethod as "CASH" | "MTN_MOMO" | "ORANGE_MONEY",
+                { mtnMerchantCode: info.mtnMerchantCode, orangeMerchantCode: info.orangeMerchantCode },
+                fr
+              )}
+            </p>
+            {info.amountXaf != null && (
+              <div className="mt-1 flex items-baseline justify-between border-t border-caution/20 pt-2">
+                <span className="text-sm text-mist-400">{t("pay.amountDue")}</span>
+                <span className="font-display text-xl font-bold text-gold-400">{formatXaf(info.amountXaf)}</span>
+              </div>
+            )}
+            <a
+              href={`https://wa.me/237680038004?text=${encodeURIComponent(
+                `Urban Night Lift — order ${info.orderCode}. I chose ${methodLabel} but it is not available. How should I pay?`
+              )}`}
+              className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-xl bg-caution/15 px-3 py-2 text-sm font-semibold text-caution"
+            >
+              {fr ? "Nous écrire sur WhatsApp" : "Message us on WhatsApp"}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
