@@ -1,7 +1,47 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+
+/*
+  Automatic source detection is off, and the sources are named below.
+
+  Tailwind otherwise scans every file in the project, and `design/` holds the
+  redesign artboards — standalone HTML mockups, not app source. The Foundations
+  artboard *documents* the old type problem and contains the strings
+  `text-[10px\u200b]` and `text-[11px\u200b]` as examples, so Tailwind generated
+  both utilities and shipped them to production long after the last real use of
+  either had been removed from the app. A mockup describing a bug was
+  reintroducing it.
+
+  `@source not` was the obvious fix and did not work here, in either the bare
+  or the glob spelling. `source(none)` plus an explicit list does work, and is
+  the better answer anyway: this stylesheet now says exactly what it is built
+  from instead of hoovering up whatever happens to sit in the repository.
+*/
+@source "../**/*.{ts,tsx,js,jsx}";
 
 @theme {
-  /* Urban Night Lift brand — deep black, purple, gold */
+  /* ── Ink: the ground, and the elevation ladder ────────────────────────────
+     Card surfaces were being picked ad hoc — five ink steps plus around thirty
+     opacity variants of them (`bg-ink-900/50`, `/60`, `/40`, …) — so nothing on
+     a screen reliably said what sat above what.
+
+     The fix is a rule about these steps, not a new set of tokens. An earlier
+     draft added `--color-surface-page/raised/high/peak` as semantic aliases;
+     they were **the same four colours under second names**, no component
+     adopted them, and Tailwind tree-shook them straight back out of the
+     stylesheet. A duplicate vocabulary nobody speaks is worse than none, and
+     renaming 530 call sites for an identical rendering would be churn dressed
+     up as a fix. So the ink scale *is* the ladder, and these are its rungs:
+
+       ink-950  the page. The ground. Never a card.
+       ink-900  a card sitting on the page. The default.
+       ink-800  a card on a card, or something asking to be noticed.
+       ink-700  the live order, a sheet, a modal. One per screen at most.
+
+     ink-600 and ink-500 are borders and dividers, not surfaces.
+
+     Reach for a plain step. An opacity variant is for glass over content that
+     genuinely shows through — not a way to invent a rung between two others,
+     which is how this got to thirty of them. */
   --color-ink-950: #08060e;
   --color-ink-900: #110b1c;
   --color-ink-800: #1a1130;
@@ -59,29 +99,13 @@
   --color-restricted: #e0522f;
   --color-danger: #c0392b;
 
-  /* ── Elevation ────────────────────────────────────────────────────────────
-     There were eight different card surfaces in this codebase and no ladder,
-     so nothing on a screen said what sat above what. These are the only four,
-     and they are the ink scale given names that carry meaning:
-
-       page    the ground. Never a card.
-       raised  an ordinary card sitting on the page.
-       high    a card on a card, or something asking to be noticed.
-       peak    the live order, a modal — one per screen at most.
-
-     Each step is a real, visible change in lightness rather than a nudge,
-     because a ladder nobody can see is not a ladder. */
-  --color-surface-page: #08060e;
-  --color-surface-raised: #110b1c;
-  --color-surface-high: #1a1130;
-  --color-surface-peak: #241845;
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /* ── Type scale ───────────────────────────────────────────────────────────
      There were 365 arbitrary font sizes in this codebase — 282 of them
-     `text-[11px]` and 72 `text-[10px]`. Not a scale: a habit. Every one of
+     `text-[11px​]` and 72 `text-[10px​]`. Not a scale: a habit. Every one of
      them was somebody making a label fit, and the sum is a product whose
      small print is 10px.
 
@@ -271,6 +295,20 @@ textarea {
   border-left: 3px solid var(--color-caution);
   background: color-mix(in srgb, var(--color-caution) 8%, transparent);
   border-radius: 0.75rem;
+}
+
+/* Leaflet ships its own 12px body size, which is below our floor and which no
+   amount of tidying our own components would have caught — it arrives with the
+   map. It sets the attribution line, the scale and every popup, and those are
+   read outdoors at night like everything else here. The map is the one place a
+   customer is squinting at a screen while walking.
+
+   Scoped to the container so it cascades to Leaflet's children without
+   reaching anything of ours that happens to sit inside a map. */
+.leaflet-container,
+.leaflet-container .leaflet-popup-content,
+.leaflet-container .leaflet-control-attribution {
+  font-size: var(--text-xs);
 }
 
 /* Hide scrollbar for horizontal chip rows */
