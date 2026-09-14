@@ -97,6 +97,43 @@ export async function PATCH(req: NextRequest) {
     if (typeof body.orangeUssdTemplate === "string") data.orangeUssdTemplate = body.orangeUssdTemplate || null;
   }
 
+  /*
+    The fare. OWNER-only, because these are the numbers customers pay.
+
+    Guarded rather than trusted: a per-km rate of zero makes every trip cost the
+    minimum, and a minimum of zero makes deliveries free. Neither is a setting
+    anybody means to save, and both are one slipped keystroke away, so the
+    bounds are refusals rather than silent clamps — a figure quietly corrected
+    behind somebody's back is how a price nobody chose ends up live.
+  */
+  const FARE_BOUNDS: Record<string, [number, number]> = {
+    fareMinimumXaf: [200, 20_000],
+    fareIncludedKm: [0, 20],
+    farePerKmXaf: [0, 5_000],
+    fareErrandXaf: [0, 20_000],
+    fareLateNightPercent: [0, 100],
+    fareLateNightFromHour: [0, 23],
+    fareYellowPercent: [0, 200],
+    fareRedPercent: [0, 200],
+  };
+  const touchesFare = Object.keys(FARE_BOUNDS).some((f) => typeof body[f] === "number");
+  if (touchesFare) {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can change the fare" }, { status: 403 });
+    }
+    for (const [field, [lo, hi]] of Object.entries(FARE_BOUNDS)) {
+      const v = body[field];
+      if (typeof v !== "number") continue;
+      if (!Number.isFinite(v) || v < lo || v > hi) {
+        return NextResponse.json(
+          { error: `${field} must be between ${lo} and ${hi}.` },
+          { status: 400 }
+        );
+      }
+      data[field] = field === "fareIncludedKm" ? v : Math.round(v);
+    }
+  }
+
   // Test mode decides whether orders count as real trading, so it is
   // OWNER-only like everything else that moves the numbers.
   if (typeof body.testMode === "boolean") {

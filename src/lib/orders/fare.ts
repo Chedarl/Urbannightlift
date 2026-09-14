@@ -80,6 +80,11 @@ export interface FareRules {
    * it is routine.
    */
   busyMultiplier: number;
+  /** Flat charge when the rider shops or collects rather than only carrying. */
+  errandXaf: number;
+  /** Percentage added after `lateNightFromHour`, as a real premium. */
+  lateNightPercent: number;
+  lateNightFromHour: number;
   /**
    * Below this, the rider's share stops being worth the trip.
    *
@@ -99,13 +104,57 @@ export interface FareRules {
  * were being overcharged fall to the minimum.
  */
 export const DEFAULT_FARE: FareRules = {
-  minimumXaf: 1000,
-  includedKm: 2,
-  perKmXaf: 200,
-  tierMultiplier: { GREEN: 1, YELLOW: 1.1, RED: 1.25 },
+  /*
+    850 rather than the 800 first proposed, and the difference is not cosmetic.
+
+    At a 60% rider share, 800 pays the rider 480 — below `riderFloorXaf`, the
+    figure that says a trip has stopped being worth making. `verify-fare` caught
+    it on the first run of the new numbers, which is precisely what that floor
+    is for: a price cut that looks good to a customer and quietly underpays the
+    person on the bike is not a price cut, it is a transfer.
+
+    850 × 60% = 510. Any future change to this number has to clear the same bar.
+  */
+  minimumXaf: 850,
+  includedKm: 2.5,
+  perKmXaf: 150,
+  tierMultiplier: { GREEN: 1, YELLOW: 1.08, RED: 1.2 },
   busyMultiplier: 1,
+  errandXaf: 500,
+  lateNightPercent: 15,
+  lateNightFromHour: 23,
   riderFloorXaf: 500,
 };
+
+/**
+ * The owner's numbers, or these ones.
+ *
+ * `DEFAULT_FARE` is the fallback, not the policy. The policy lives in
+ * `OperatingSettings` where somebody can change it without a deploy — which is
+ * what "admin-editable" was supposed to mean the first time it was written in
+ * a comment above a hardcoded constant.
+ */
+export function fareRulesFrom(settings: Partial<Record<string, unknown>> | null | undefined): FareRules {
+  const num = (key: string, fallback: number): number => {
+    const v = settings?.[key];
+    return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : fallback;
+  };
+  return {
+    minimumXaf: num("fareMinimumXaf", DEFAULT_FARE.minimumXaf),
+    includedKm: num("fareIncludedKm", DEFAULT_FARE.includedKm),
+    perKmXaf: num("farePerKmXaf", DEFAULT_FARE.perKmXaf),
+    tierMultiplier: {
+      GREEN: 1,
+      YELLOW: 1 + num("fareYellowPercent", 8) / 100,
+      RED: 1 + num("fareRedPercent", 20) / 100,
+    },
+    busyMultiplier: 1,
+    errandXaf: num("fareErrandXaf", DEFAULT_FARE.errandXaf),
+    lateNightPercent: num("fareLateNightPercent", DEFAULT_FARE.lateNightPercent),
+    lateNightFromHour: num("fareLateNightFromHour", DEFAULT_FARE.lateNightFromHour),
+    riderFloorXaf: num("riderFloorXaf", DEFAULT_FARE.riderFloorXaf),
+  };
+}
 
 export interface FareInput {
   /** Straight-line km between pickup and delivery, when both are pinned. */
@@ -118,6 +167,19 @@ export interface FareInput {
   busy?: boolean;
   /** What share of the fee the rider takes, as a percentage. */
   riderSharePercent?: number;
+  /**
+   * True when the rider shops, queues or collects on the customer's behalf.
+   *
+   * This is the line that makes the rest of the bill defensible. Yango sells a
+   * *ride* — published Yaoundé tariff: 450 minimum, 88 XAF/km — and a customer
+   * comparing our old flat delivery fee against that saw three to four times
+   * the price for what looked like the same journey. It was not the same
+   * journey: somebody went, queued, bought and came back. Charging that as its
+   * own visible line prices the thing we actually sell.
+   */
+  errand?: boolean;
+  /** The hour the order is placed, 0-23, for the late-night band. */
+  hour?: number;
 }
 
 /** One step of the arithmetic, in both languages, for a screen to render. */
@@ -186,6 +248,47 @@ export function quoteFare(input: FareInput, rules: FareRules = DEFAULT_FARE): Fa
     lines.push({
       label: tier === "RED" ? "Harder to reach" : "Further out",
       labelFr: tier === "RED" ? "Accès difficile" : "Plus éloigné",
+      amountXaf: added,
+    });
+    subtotal += added;
+  }
+
+  /*
+    The errand, priced as itself.
+
+    This is the whole point of the change. A customer comparing our fee against
+    Yango's published tariff — 450 minimum, 88 XAF/km in Yaoundé — saw three to
+    four times the price for what looked like the same trip across town. It was
+    never the same trip: somebody went, queued, bought and came back. Naming
+    that as its own line is what makes the rest of the bill survive the
+    comparison, because the rest of the bill is now genuinely the ride.
+  */
+  if (input.errand === true && rules.errandXaf > 0) {
+    lines.push({ label: "We shop for you", labelFr: "Nous faisons la course", amountXaf: rules.errandXaf });
+    subtotal += rules.errandXaf;
+  }
+
+  /*
+    The late band, replacing a "busy" multiplier that was off by default and
+    therefore never anything.
+
+    A premium after 23:00 is a fact about the night rather than a lever: fewer
+    riders are out, the roads are worse, and the trip genuinely costs more to
+    make. A surcharge a customer can predict from the clock is forgiven; one
+    that appears because demand spiked is resented, which is why this is a
+    stated hour and not a surge.
+  */
+  const hour = input.hour;
+  const late =
+    typeof hour === "number" &&
+    rules.lateNightPercent > 0 &&
+    // The window crosses midnight: 23:00 and 01:00 are both "late".
+    (hour >= rules.lateNightFromHour || hour < 5);
+  if (late) {
+    const added = Math.round((subtotal * rules.lateNightPercent) / 100);
+    lines.push({
+      label: `After ${String(rules.lateNightFromHour).padStart(2, "0")}:00`,
+      labelFr: `Après ${String(rules.lateNightFromHour).padStart(2, "0")}h`,
       amountXaf: added,
     });
     subtotal += added;

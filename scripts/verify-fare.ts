@@ -154,7 +154,22 @@ for (const [label, km, tier] of [
 ] as [string, number, ZoneTier][]) {
   const q = quoteFare({ km, tier });
   console.log(`       ${label}: ${q.totalXaf} XAF`);
-  check(`${label} is a sane number`, q.totalXaf >= 1000 && q.totalXaf <= 6000);
+  /*
+    The lower bound is the configured minimum, not a literal.
+
+    It used to be `>= 1000`, which was the old minimum written down twice — so
+    when the minimum moved to 850 this failed on a price that was exactly
+    right. A band pinned to a number that lives somewhere else goes stale the
+    first time that number changes, and then reads as a defect.
+
+    The real property is: no trip costs less than the minimum, and nothing
+    in-city runs away to an absurd figure.
+  */
+  check(
+    `${label} is a sane number`,
+    q.totalXaf >= DEFAULT_FARE.minimumXaf && q.totalXaf <= 6000,
+    `${q.totalXaf} is outside ${DEFAULT_FARE.minimumXaf}–6000`
+  );
 }
 
 console.log(
