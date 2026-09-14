@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { CUSTOMER_STATUS_KEY, CUSTOMER_TIMELINE } from "@/lib/orders/statusLabels";
+import { resolveDestination } from "@/lib/orders/destination";
 
 /**
  * GET /api/track/[orderCode] — public live snapshot for the customer's
@@ -25,6 +26,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
       pickupLng: true,
       deliveryLat: true,
       deliveryLng: true,
+      /*
+        The drop-off zone's centre, used only when the exact pin is missing.
+
+        Most customers here type a landmark rather than dropping a pin — Yaoundé
+        largely does not use street addresses — and the geocoder does not always
+        find it. When it fails, `deliveryLat/Lng` stay null and the tracking map
+        loses the destination marker, the route line **and the arrival time**,
+        because the ETA is computed from rider-to-destination and is suppressed
+        outright without one. Nothing says so; the map just quietly shows less.
+
+        A zone centre is roughly a kilometre out, which is useless for the last
+        hundred metres and perfectly good for "how far away is he". So it is
+        returned, clearly marked approximate, instead of nothing.
+      */
+      deliveryZone: { select: { centroidLat: true, centroidLng: true, zoneName: true } },
       riderLat: true,
       riderLng: true,
       riderLocationAt: true,
@@ -62,6 +78,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
     at: reachedAt[key] ?? null,
   }));
 
+  const deliveryPoint = resolveDestination(order);
+
   return NextResponse.json({
     found: true,
     statusKey: currentKey,
@@ -71,10 +89,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ord
     customerConfirmMethod: order.customerConfirmMethod,
     awaitingQuote: order.quoteSentAt != null && order.quoteAcceptedAt == null,
     pickup: order.pickupLat != null && order.pickupLng != null ? { lat: order.pickupLat, lng: order.pickupLng } : null,
-    delivery:
-      order.deliveryLat != null && order.deliveryLng != null
-        ? { lat: order.deliveryLat, lng: order.deliveryLng }
-        : null,
+    delivery: deliveryPoint,
     rider:
       order.riderLat != null && order.riderLng != null
         ? { lat: order.riderLat, lng: order.riderLng, at: order.riderLocationAt }

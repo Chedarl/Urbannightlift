@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, Marker, Polyline, Circle, useMap } from "react-leaflet";
 import { BaseTiles } from "@/components/shared/BaseTiles";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Navigation, ExternalLink, Clock } from "lucide-react";
+import { MapPinOff, Navigation, ExternalLink, Clock } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { distanceKm } from "@/lib/orders/pricing";
 
@@ -19,6 +19,21 @@ const NIGHT_SPEED_KMH = 18;
 const HANDOVER_MINUTES = 4;
 
 interface Pt { lat: number; lng: number }
+/**
+ * A destination is either the customer's own pin or, when the address never
+ * geocoded, the centre of their drop-off zone.
+ *
+ * Most people here type a landmark rather than dropping a pin, and the
+ * geocoder does not always find it. When it failed, this screen used to lose
+ * the destination marker, the route line **and the arrival time** — the ETA is
+ * computed rider-to-destination and was suppressed outright — with nothing
+ * saying why. A rider would hear "the tracking does not work" and be right.
+ *
+ * A zone centre is about a kilometre out. Useless for the last hundred metres,
+ * perfectly good for "how far away is he", so it is used and labelled rather
+ * than dropped.
+ */
+interface Destination extends Pt { approximate: boolean; from: string | null }
 
 function icon(color: string, pulse = false) {
   return L.divIcon({
@@ -46,7 +61,7 @@ function Fit({ points }: { points: Pt[] }) {
 export function LiveTrackMap({ orderCode }: { orderCode: string }) {
   const { t, locale } = useTranslation();
   const [pickup, setPickup] = useState<Pt | null>(null);
-  const [delivery, setDelivery] = useState<Pt | null>(null);
+  const [delivery, setDelivery] = useState<Destination | null>(null);
   const [rider, setRider] = useState<Pt | null>(null);
   const [riderAt, setRiderAt] = useState<string | null>(null);
   // re-render every 15s so the "updated N ago" label stays fresh
@@ -145,7 +160,15 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
             <BaseTiles />
             <Fit points={pts} />
             {pickup && <Marker position={[pickup.lat, pickup.lng]} icon={icon("#d4af37")} />}
-            {delivery && <Marker position={[delivery.lat, delivery.lng]} icon={icon("#9645de")} />}
+            {/* Solid where the customer pinned it; hollow where we are guessing from the
+                zone. Drawing an approximation as though it were exact is how
+                somebody ends up at the wrong gate. */}
+            {delivery && (
+              delivery.approximate
+                ? <Circle center={[delivery.lat, delivery.lng]} radius={700}
+                    pathOptions={{ color: "#9645de", weight: 1.5, dashArray: "5 6", fillColor: "#9645de", fillOpacity: 0.08 }} />
+                : <Marker position={[delivery.lat, delivery.lng]} icon={icon("#9645de")} />
+            )}
             {rider && <Marker position={[rider.lat, rider.lng]} icon={icon("#2fae60", true)} />}
             {pickup && delivery && (
               <Polyline positions={[[pickup.lat, pickup.lng], [delivery.lat, delivery.lng]]} pathOptions={{ color: "#7b2cbf", dashArray: "6 8", weight: 2 }} />
@@ -157,6 +180,39 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
           <Navigation className="h-4 w-4 shrink-0 text-mist-500" />
           <span>{t("track.waitingRider")}</span>
         </div>
+      )}
+
+      {/*
+        Where the destination came from, when it did not come from the customer.
+
+        This screen used to degrade in silence: no pin meant no destination
+        marker, no route line and no arrival time, with nothing to say why. The
+        estimate is now made from the zone centre instead, and a reading that is
+        about a kilometre loose has to say so — an arrival time presented as
+        exact when it is not is worse than no arrival time at all.
+      */}
+      {delivery?.approximate && (
+        <p className="flex items-start gap-1.5 border-t border-ink-700 px-3 py-2 text-xs leading-relaxed text-mist-400">
+          <MapPinOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mist-500" />
+          <span>
+            {locale === "fr"
+              ? `Pas d'épingle pour la livraison — l'heure est estimée depuis le centre de ${delivery.from ?? "la zone"}, à environ un kilomètre près.`
+              : `No pin was dropped for the drop-off — this is estimated from the centre of ${delivery.from ?? "the zone"}, so it is good to about a kilometre.`}
+          </span>
+        </p>
+      )}
+
+      {/* And when there is no destination at all, say that rather than simply
+          showing a rider moving with no context. */}
+      {rider && !delivery && (
+        <p className="flex items-start gap-1.5 border-t border-ink-700 px-3 py-2 text-xs leading-relaxed text-mist-400">
+          <MapPinOff className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mist-500" />
+          <span>
+            {locale === "fr"
+              ? "Nous n'avons pas de point de livraison sur la carte, donc pas d'heure d'arrivée. Votre livreur connaît l'adresse."
+              : "We have no drop-off point on the map, so there is no arrival time. Your rider has the address."}
+          </span>
+        </p>
       )}
 
       <p
