@@ -41,16 +41,45 @@ BEGIN
   END LOOP;
 END $$;
 
-REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
-REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
-REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
+-- ## Why the revokes are guarded
+--
+-- `anon` and `authenticated` are **Supabase's** roles, not Postgres's. On any
+-- plain Postgres they do not exist, and a bare `REVOKE ... FROM anon` aborts
+-- with `role "anon" does not exist` — taking the whole migration down with it.
+--
+-- That is not hypothetical. Standing up a local Postgres to render two pages
+-- for a design check hit it immediately, and the failure is worse than it
+-- looks: Prisma records the migration as failed and then refuses to apply
+-- anything further until somebody resolves it by hand. A developer's first
+-- `migrate deploy` on a fresh database is exactly where this lands.
+--
+-- The RLS half above needs no guard — it is ordinary Postgres and default-deny
+-- is right everywhere. Only the role-specific half is Supabase-shaped, so only
+-- it is conditional. Where the roles exist (production, any Supabase restore)
+-- this runs exactly as before; where they do not, there is nothing to revoke
+-- from and skipping is the correct outcome rather than a workaround.
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated']
+  LOOP
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      RAISE NOTICE 'role % does not exist here (not a Supabase database) — nothing to revoke', r;
+      CONTINUE;
+    END IF;
 
--- The part that stops it coming back. Without this, the next table Prisma
--- creates inherits Supabase's default grant and is exposed again on day one —
--- which is how a fix like this quietly stops being true.
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE ALL ON TABLES FROM anon, authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE ALL ON SEQUENCES FROM anon, authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+    EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM %I', r);
+    EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM %I', r);
+    EXECUTE format('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM %I', r);
+
+    -- The part that stops it coming back. Without this, the next table Prisma
+    -- creates inherits Supabase's default grant and is exposed again on day
+    -- one — which is how a fix like this quietly stops being true.
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM %I', r);
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM %I', r);
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM %I', r);
+  END LOOP;
+END $$;
