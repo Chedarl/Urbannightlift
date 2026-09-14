@@ -202,9 +202,9 @@ export function ErrandForm() {
         {/* Describe */}
         <div className={card}>
           <p className={label}><FileText className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Décrivez la course en détail" : "Describe the errand in detail"}</p>
-          <p className="mb-2 text-[11px] text-mist-500">{fr ? "Soyez précis pour que nous puissions mieux vous aider." : "Be as specific as possible so we can assist you better."}</p>
+          <p className="mb-2 text-xs text-mist-500">{fr ? "Soyez précis pour que nous puissions mieux vous aider." : "Be as specific as possible so we can assist you better."}</p>
           <textarea maxLength={1000} className={cn(input, "min-h-28 resize-y")} placeholder={fr ? "Dites-nous exactement ce qu'il faut faire…" : "Tell us exactly what you need done…"} data-error={missing.includes(fr ? "Description de la course" : "Errand description") ? "true" : undefined} {...register("itemDescription")} />
-          <p className="mt-1 text-right text-[11px] text-mist-500">{(watch("itemDescription")?.length ?? 0)}/1000</p>
+          <p className="mt-1 text-right text-xs text-mist-500">{(watch("itemDescription")?.length ?? 0)}/1000</p>
         </div>
 
         {/* Pickup + destination (optional) */}
@@ -249,7 +249,7 @@ export function ErrandForm() {
           </div>
           <div className={card}>
             <p className={label}><Wallet className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Budget / montant estimé (XAF)" : "Budget or expected amount (XAF)"}</p>
-            <p className="mb-1 text-[11px] text-mist-500">{fr ? "Pour achats, paiements ou frais" : "For purchases, payments, or fees"}</p>
+            <p className="mb-1 text-xs text-mist-500">{fr ? "Pour achats, paiements ou frais" : "For purchases, payments, or fees"}</p>
             <input className={input} type="number" min={0} step={500} inputMode="numeric" placeholder={fr ? "ex. 10 000" : "e.g. 10,000"} {...register("serviceDetails.budgetXaf" as never)} />
           </div>
         </div>
@@ -266,7 +266,7 @@ export function ErrandForm() {
         {/* Confirmation toggle + who receives update */}
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => setValue("serviceDetails.needsConfirmation" as never, (!sd?.needsConfirmation) as never)} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2"><BellRing className="h-4 w-4 text-violet-300" /><span><span className="block text-sm text-mist-100">{fr ? "Confirmation dispatcher ?" : "Need dispatcher confirmation?"}</span><span className="block text-[11px] text-mist-500">{fr ? "Nous confirmerons la faisabilité." : "We'll confirm if your request can be handled."}</span></span></span>
+            <span className="flex items-center gap-2"><BellRing className="h-4 w-4 text-violet-300" /><span><span className="block text-sm text-mist-100">{fr ? "Confirmation dispatcher ?" : "Need dispatcher confirmation?"}</span><span className="block text-xs text-mist-500">{fr ? "Nous confirmerons la faisabilité." : "We'll confirm if your request can be handled."}</span></span></span>
             <ToggleDot on={Boolean(sd?.needsConfirmation)} />
           </button>
           <div className={card}>
@@ -288,7 +288,7 @@ export function ErrandForm() {
           <div className="grid gap-2 sm:grid-cols-3">
             {[{ v: "CASH", t: fr ? "Espèces" : "Cash", s: fr ? "À la livraison" : "Pay on delivery" }, { v: "MTN_MOMO", t: "MTN MoMo", s: "Mobile Money" }, { v: "ORANGE_MONEY", t: "Orange Money", s: "Orange Money" }].map((p) => (
               <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")} className={cn("rounded-xl border p-3 text-left", payment === p.v ? "border-violet-400 bg-violet-500/10" : "border-ink-700 bg-ink-800")}>
-                <span className={cn("block text-sm font-semibold", payment === p.v ? "text-violet-200" : "text-mist-200")}>{p.t}</span><span className="block text-[11px] text-mist-500">{p.s}</span>
+                <span className={cn("block text-sm font-semibold", payment === p.v ? "text-violet-200" : "text-mist-200")}>{p.t}</span><span className="block text-xs text-mist-500">{p.s}</span>
               </button>
             ))}
           </div>
@@ -298,7 +298,7 @@ export function ErrandForm() {
         <div className={card}>
           <p className={label}><MessageSquare className="h-3.5 w-3.5 text-violet-300" /> {fr ? "Notes supplémentaires" : "Additional notes"} <span className="text-mist-500">({fr ? "optionnel" : "optional"})</span></p>
           <textarea maxLength={500} className={cn(input, "mt-2 min-h-16 resize-y")} placeholder={fr ? "Autre chose à savoir ?" : "Anything else we should know?"} {...register("specialInstructions")} />
-          <p className="mt-1 text-right text-[11px] text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/500</p>
+          <p className="mt-1 text-right text-xs text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/500</p>
         </div>
 
         {missing.length > 0 && (
@@ -326,7 +326,7 @@ export function ErrandForm() {
         <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-violet-500 py-3.5 font-display text-base font-bold text-white">
           <ClipboardList className="h-5 w-5" /><span>{fr ? "Vérifier la demande" : "Review request summary"}</span><ChevronRight className="h-5 w-5" />
         </button>
-        <p className="mt-1.5 text-center text-[11px] text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-violet-400" />{fr ? "Vos informations sont en sécurité, traitées avec discrétion." : "Your details are safe with us. We handle every request with care."}</p>
+        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-violet-400" />{fr ? "Vos informations sont en sécurité, traitées avec discrétion." : "Your details are safe with us. We handle every request with care."}</p>
       </div>
     </form>
   );

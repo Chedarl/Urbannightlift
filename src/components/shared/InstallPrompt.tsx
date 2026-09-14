@@ -166,7 +166,7 @@ export function InstallPrompt({
                 </li>
               ))}
             </ol>
-            <p className="mt-3 text-[11px] leading-relaxed text-mist-500">
+            <p className="mt-3 text-xs leading-relaxed text-mist-500">
               {fr
                 ? "L'application s'ouvrira comme une vraie app, en plein écran."
                 : "The app then opens full-screen, just like a native app."}

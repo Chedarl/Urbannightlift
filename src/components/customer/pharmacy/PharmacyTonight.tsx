@@ -92,7 +92,7 @@ export function PharmacyTonight({
         <p className="text-sm font-semibold text-mist-100">
           {fr ? "Ouvert cette nuit" : "Open tonight"}
         </p>
-        <span className="text-[11px] text-mist-500">
+        <span className="text-xs text-mist-500">
           {fr ? "Touchez pour choisir" : "Tap to choose"}
         </span>
       </div>
@@ -124,18 +124,18 @@ export function PharmacyTonight({
                     {/* The pharmacy on duty is obliged to be open. At 2 AM it is
                         very often the only correct answer, so it says so first. */}
                     {p.onDutyTonight && (
-                      <span className="rounded-full bg-gold-400/15 px-2 py-0.5 text-[10px] font-semibold text-gold-300">
+                      <span className="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-semibold text-gold-300">
                         {fr ? "De garde ce soir" : "On duty tonight"}
                       </span>
                     )}
                     {p.open24h && (
-                      <span className="rounded-full bg-safe/15 px-2 py-0.5 text-[10px] font-semibold text-safe">
+                      <span className="rounded-full bg-safe/15 px-2 py-0.5 text-xs font-semibold text-safe">
                         24h
                       </span>
                     )}
                   </span>
 
-                  <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-mist-500">
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-mist-500">
                     {p.neighbourhood && (
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" /> {p.neighbourhood}
@@ -193,7 +193,7 @@ export function PharmacyTonight({
             shown here that turns out to be last month's is how a delivery ends
             in an argument at the door.
           */}
-          <p className="mt-2 text-[10px] leading-relaxed text-mist-500">
+          <p className="mt-2 text-xs leading-relaxed text-mist-500">
             {fr
               ? "Prix indicatifs de la pharmacie. Le montant exact est celui du reçu, photographié par le livreur."
               : "The pharmacy's own prices, as a guide. What you pay is what the receipt says — the rider photographs it."}

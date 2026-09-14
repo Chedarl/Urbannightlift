@@ -208,12 +208,12 @@ function Frame({ children, fr }: { children: React.ReactNode; fr: boolean }) {
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col gap-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <Logo />
-        <span className="flex items-center gap-1.5 text-[11px] font-medium text-violet-300">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-violet-300">
           <MoonStar className="h-3.5 w-3.5" /> {fr ? "Veille de nuit" : "Night watch"}
         </span>
       </div>
       {children}
-      <p className="mt-auto pt-6 text-center text-[11px] text-mist-600">
+      <p className="mt-auto pt-6 text-center text-xs text-mist-600">
         {fr ? "Urban Night Lift · Yaoundé · 18h – 4h" : "Urban Night Lift · Yaoundé · 6 PM – 4 AM"}
       </p>
     </main>

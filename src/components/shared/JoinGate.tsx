@@ -185,7 +185,7 @@ export function JoinGate({
             placeholder="••••"
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
           />
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr
               ? "4 à 6 chiffres. C'est un PIN Urban Night Lift — jamais votre PIN MoMo ou Orange."
               : "4–6 digits. This is an Urban Night Lift PIN — never your MoMo or Orange PIN."}
@@ -218,7 +218,7 @@ export function JoinGate({
         </button>
       </form>
 
-      <p className="text-center text-[11px] text-mist-500">
+      <p className="text-center text-xs text-mist-500">
         {fr ? "Vous commandez déjà chez nous ? Utilisez le même numéro. " : "Already order with us? Use the same number. "}
         <Link href="/" className="text-gold-300 hover:text-gold-200">
           {fr ? "Retour à l'accueil" : "Back to home"}

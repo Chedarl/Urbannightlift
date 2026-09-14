@@ -98,7 +98,7 @@ function UploadTile({
         {uploading ? "…" : uploadedName ? `${uploadedName}` : label}
         <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
       </label>
-      {hint && <p className="mt-1 flex items-center gap-1 text-[11px] text-mist-500"><ShieldCheck className="h-3 w-3" /> {hint}</p>}
+      {hint && <p className="mt-1 flex items-center gap-1 text-xs text-mist-500"><ShieldCheck className="h-3 w-3" /> {hint}</p>}
     </div>
   );
 }

@@ -59,7 +59,7 @@ export function WorkflowStep({
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+            "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
             active && "bg-gold-400 text-ink-950",
             done && "bg-safe text-ink-950",
             locked && "bg-ink-800 text-mist-500",
@@ -80,7 +80,7 @@ export function WorkflowStep({
           >
             Step {number} · {title}
             {active && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-gold-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold-300">
+              <span className="inline-flex items-center gap-1 rounded-md bg-gold-400/15 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-gold-300">
                 <CircleDot className="h-2.5 w-2.5" /> Do this now
               </span>
             )}
@@ -97,7 +97,7 @@ export function WorkflowStep({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-[11px] text-mist-400 hover:text-mist-200"
+            className="shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-xs text-mist-400 hover:text-mist-200"
           >
             {expanded ? (
               <span className="flex items-center gap-1">Hide <ChevronUp className="h-3 w-3" /></span>
@@ -113,7 +113,7 @@ export function WorkflowStep({
 
       {done && expanded && (
         <div className="mt-3 border-t border-ink-800 pt-3">
-          <p className="mb-2 text-[11px] text-mist-500">
+          <p className="mb-2 text-xs text-mist-500">
             This step is finished. Anything below changes a decision that has already been made.
           </p>
           {onReopen ? (
@@ -143,7 +143,7 @@ export function WorkflowProgress({ done, total }: { done: number; total: number 
           style={{ width: `${Math.round((done / total) * 100)}%` }}
         />
       </div>
-      <span className="shrink-0 text-[11px] font-semibold text-mist-400">
+      <span className="shrink-0 text-xs font-semibold text-mist-400">
         {done} of {total} done
       </span>
     </div>

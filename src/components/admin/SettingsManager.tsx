@@ -225,7 +225,7 @@ export function SettingsManager({
                   <span className="min-w-0">
                     <span className="block text-sm text-mist-100">{t(`services.${svc}.name`)}</span>
                     {waiting > 0 && (
-                      <span className="mt-0.5 flex items-center gap-1 text-[11px] text-gold-300">
+                      <span className="mt-0.5 flex items-center gap-1 text-xs text-gold-300">
                         <BellRing className="h-3 w-3" /> {waiting} waiting
                       </span>
                     )}
@@ -408,7 +408,7 @@ export function SettingsManager({
               where somebody diagnosing this is already looking. Two buttons for
               one job is how the two error messages start disagreeing. */}
 
-          <p className="mt-2 text-[11px] text-mist-500">
+          <p className="mt-2 text-xs text-mist-500">
             Applications and signups always send an email — those need a decision. Documents people
             upload are linked, never attached, so nobody&apos;s ID card sits in an inbox.
           </p>
@@ -453,7 +453,7 @@ export function SettingsManager({
             XAF delivery that is {groupXaf(Math.ceil((2000 * form.riderSharePercent) / 100))} XAF to the
             rider and {groupXaf(2000 - Math.ceil((2000 * form.riderSharePercent) / 100))} XAF to you.
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             Applies to deliveries completed from now on. Rounding favours the rider.
           </p>
         </div>

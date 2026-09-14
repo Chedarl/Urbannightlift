@@ -121,7 +121,7 @@ export function OrderHistory({
       ) : (
         groups.map(([day, list]) => (
           <section key={day}>
-            <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-widest text-mist-500">{day}</p>
+            <p className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-mist-500">{day}</p>
             <div className="flex flex-col gap-2">
               {list.map((o) => {
                 const Icon = ICON[o.serviceType];
@@ -132,7 +132,7 @@ export function OrderHistory({
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-medium text-mist-100">{o.itemDescription}</span>
+                        <span className="block truncate text-base font-medium text-mist-100">{o.itemDescription}</span>
                         <span className="block truncate text-xs text-mist-500">
                           {t(`services.${o.serviceType}.name`)} ·{" "}
                           {new Date(o.createdAt).toLocaleTimeString(fr ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })} ·{" "}

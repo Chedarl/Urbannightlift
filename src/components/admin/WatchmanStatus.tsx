@@ -90,7 +90,7 @@ export function WatchmanStatus() {
         </p>
       )}
 
-      <p className="mt-2 text-[11px] leading-relaxed text-mist-500">
+      <p className="mt-2 text-xs leading-relaxed text-mist-500">
         Every half hour through the night it looks at every live order and raises
         the ones that have stalled — unpriced, unpaid, unassigned, or out with a
         rider whose phone has stopped reporting. It never changes an order; it

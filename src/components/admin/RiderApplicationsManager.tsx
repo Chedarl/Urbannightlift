@@ -192,7 +192,7 @@ export function RiderApplicationsManager({
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-mist-500">
+                <p className="text-xs text-mist-500">
                   ID images open in a signed, short-lived link and are never shown to customers.
                 </p>
 
@@ -215,7 +215,7 @@ export function RiderApplicationsManager({
                           </option>
                         ))}
                       </select>
-                      <p className="mt-1 text-[11px] text-mist-500">
+                      <p className="mt-1 text-xs text-mist-500">
                         Create the staff account in Users first, then attach it here — that copies
                         the ID across and marks them verified.
                       </p>
@@ -244,7 +244,7 @@ export function RiderApplicationsManager({
                   </>
                 )}
 
-                {a.reviewNote && <p className="text-[11px] text-mist-500">Note: {a.reviewNote}</p>}
+                {a.reviewNote && <p className="text-xs text-mist-500">Note: {a.reviewNote}</p>}
               </div>
             )}
           </div>

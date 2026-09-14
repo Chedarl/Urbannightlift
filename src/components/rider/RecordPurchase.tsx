@@ -105,7 +105,7 @@ export function RecordPurchase({
           <Check className="h-4 w-4 text-safe" />
           {fr ? "Achat enregistré" : "Purchase recorded"} · {formatXaf(recordedXaf)}
         </p>
-        <p className="mt-1 text-[11px] text-mist-400">
+        <p className="mt-1 text-xs text-mist-400">
           {fr
             ? "Pour corriger ce montant, demandez au dispatcher — c'est aussi ce qui vous protège."
             : "To correct this amount, ask dispatch — that record is also what protects you."}
@@ -143,7 +143,7 @@ export function RecordPurchase({
         {fr ? "Ce que le commerçant a facturé" : "What the shop charged"}
       </p>
       {capXaf != null && (
-        <p className="mt-1 text-[11px] text-mist-400">
+        <p className="mt-1 text-xs text-mist-400">
           {fr ? "Plafond du client" : "Customer's cap"}: {formatXaf(capXaf)}
         </p>
       )}
@@ -179,7 +179,7 @@ export function RecordPurchase({
       </label>
 
       <div className="mt-3">
-        <p className="mb-1 text-[11px] font-medium text-mist-400">
+        <p className="mb-1 text-xs font-medium text-mist-400">
           {fr ? "2. Montant exact du reçu" : "2. The exact amount on the receipt"}
         </p>
         <div className="flex items-stretch overflow-hidden rounded-xl border border-ink-700 bg-ink-800 focus-within:border-gold-400">
@@ -197,13 +197,13 @@ export function RecordPurchase({
             XAF
           </span>
         </div>
-        <p className="mt-1 text-[10px] text-mist-500">
+        <p className="mt-1 text-xs text-mist-500">
           {fr ? "Au franc près — n'arrondissez pas." : "To the franc — don't round it."}
         </p>
       </div>
 
       {overBy > 0 && (
-        <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-caution/10 px-3 py-2 text-[11px] text-caution">
+        <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-caution/10 px-3 py-2 text-xs text-caution">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {fr
             ? `${formatXaf(overBy)} au-dessus de son plafond. Vous pouvez encore appeler le client depuis le comptoir.`

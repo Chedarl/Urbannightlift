@@ -135,7 +135,7 @@ export default async function CustomerDetailPage({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-ink-700 bg-ink-800/60 px-3 py-2">
-      <p className="text-[11px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
       <p className="mt-0.5 font-display text-sm font-bold text-mist-100">{value}</p>
     </div>
   );

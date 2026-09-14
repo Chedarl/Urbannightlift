@@ -61,11 +61,11 @@ export function RiderEarnings({
         </p>
         <div className="mt-4 flex gap-6 border-t border-gold-400/20 pt-3">
           <div>
-            <p className="text-[11px] text-mist-500">{fr ? "7 derniers jours" : "Last 7 days"}</p>
+            <p className="text-xs text-mist-500">{fr ? "7 derniers jours" : "Last 7 days"}</p>
             <p className="text-sm font-semibold text-mist-200">{formatXaf(totals.weekXaf)}</p>
           </div>
           <div>
-            <p className="text-[11px] text-mist-500">{fr ? "Depuis le début" : "All time"}</p>
+            <p className="text-xs text-mist-500">{fr ? "Depuis le début" : "All time"}</p>
             <p className="text-sm font-semibold text-mist-200">{formatXaf(totals.allTimeXaf)}</p>
           </div>
         </div>

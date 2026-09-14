@@ -158,7 +158,7 @@ export function MerchantHome({
         )}
         {/* Said plainly, because a merchant seeing a customer's name and number
             here would be the natural expectation and is not what happens. */}
-        <p className="mt-2 px-1 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-2 px-1 text-xs leading-relaxed text-mist-500">
           {fr
             ? "Nous ne partageons pas les coordonnées des clients. Notre livreur vient chercher la commande et s'occupe du reste."
             : "We don't share customer contact details. Our rider collects the order and handles the rest."}

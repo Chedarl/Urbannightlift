@@ -132,21 +132,21 @@ export function CaseInbox() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-mist-100">{c.who}</span>
                   <PriorityChip priority={c.priority} />
-                  {!c.open && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase text-mist-500">{c.status === "RESOLVED" ? "resolved" : "closed"}</span>}
+                  {!c.open && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs uppercase text-mist-500">{c.status === "RESOLVED" ? "resolved" : "closed"}</span>}
                   {c.orderCode && (
-                    <span className="flex items-center gap-1 text-[11px] text-mist-500">
+                    <span className="flex items-center gap-1 text-xs text-mist-500">
                       <Package className="h-3 w-3" /> {c.orderCode}
                     </span>
                   )}
                   {c.waitingOnUs && c.waited != null && (
-                    <span className={cn("ml-auto flex items-center gap-1 text-[11px]", c.sla === "BREACHED" ? "text-restricted" : "text-mist-400")}>
+                    <span className={cn("ml-auto flex items-center gap-1 text-xs", c.sla === "BREACHED" ? "text-restricted" : "text-mist-400")}>
                       {c.sla === "BREACHED" ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                       {c.waited}m
                     </span>
                   )}
                 </div>
                 <p className="mt-1 truncate text-xs text-mist-400">{c.preview}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-mist-600">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-mist-600">
                   <span className="capitalize">{c.category.replace(/_/g, " ").toLowerCase()}</span>
                   <span>· {c.source.replace(/_/g, " ").toLowerCase()}</span>
                   {c.assignedToName && <span>· {c.assignedToName}</span>}
@@ -168,7 +168,7 @@ export function CaseInbox() {
 function PriorityChip({ priority }: { priority: CasePriority }) {
   if (priority === "NORMAL" || priority === "LOW") return null;
   return (
-    <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold uppercase", priority === "URGENT" ? "bg-restricted/20 text-restricted" : "bg-caution/20 text-caution")}>
+    <span className={cn("rounded px-1.5 py-0.5 text-xs font-bold uppercase", priority === "URGENT" ? "bg-restricted/20 text-restricted" : "bg-caution/20 text-caution")}>
       {priority}
     </span>
   );
@@ -178,7 +178,7 @@ function Tally({ label, value, tone }: { label: string; value: number; tone: "ur
   return (
     <div className={cn("rounded-xl border px-3 py-2", tone === "urgent" ? "border-restricted/50 bg-restricted/[0.07]" : tone === "watch" ? "border-caution/40 bg-caution/[0.05]" : "border-ink-800 bg-ink-900")}>
       <p className={cn("font-display text-xl font-bold tabular-nums", tone === "urgent" ? "text-restricted" : tone === "watch" ? "text-caution" : "text-mist-200")}>{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
     </div>
   );
 }

@@ -257,7 +257,7 @@ export function HomeContent({
             {fr ? "De quoi avez-vous besoin " : "What do you need "}
             <span className="text-gold-400">{fr ? "cette nuit ?" : "tonight?"}</span>
           </h1>
-          <p className="mt-3 max-w-md text-[15px] leading-relaxed text-mist-300">
+          <p className="mt-3 max-w-md text-base leading-relaxed text-mist-300">
             {fr
               ? "Nous récupérons et livrons à travers Yaoundé, de 18h à 4h — quand vous n'avez pas le temps, ou pas envie de sortir."
               : "We pick up and deliver across Yaoundé, 6 PM to 4 AM — for the nights you have no time, or no reason to go out."}
@@ -293,7 +293,7 @@ export function HomeContent({
           {/* Paused services — a scrollable chip rail, DoorDash's category row. */}
           {soonServices.length > 0 && (
             <div className="mt-4">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-mist-500">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-mist-500">
                 {fr ? "Bientôt — dites-nous si vous en avez besoin" : "Coming soon — tell us if you need it"}
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -314,7 +314,7 @@ export function HomeContent({
           )}
 
           {mode === "CLOSED" && (
-            <div className="mt-6 rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-[13px] leading-relaxed text-gold-200">
+            <div className="mt-6 rounded-2xl border border-caution/25 bg-caution/[0.07] p-4 text-xs leading-relaxed text-gold-200">
               {getClosedNotice(locale)}
             </div>
           )}
@@ -399,7 +399,7 @@ export function HomeContent({
             const hub = a === "Yaoundé VI";
             return (
               <div key={a} className={cn("relative flex h-20 items-center justify-center rounded-xl border text-sm font-medium", hub ? "border-gold-400/60 bg-gold-400/10 text-gold-200" : "border-ink-700 bg-ink-900/50 text-mist-200")}>
-                {hub && <span className="absolute -top-2 rounded-full bg-gold-400 px-2 py-0.5 text-[10px] font-bold text-ink-950">{fr ? "Notre hub" : "Our hub"}</span>}
+                {hub && <span className="absolute -top-2 rounded-full bg-gold-400 px-2 py-0.5 text-xs font-bold text-ink-950">{fr ? "Notre hub" : "Our hub"}</span>}
                 {a}
               </div>
             );
@@ -439,7 +439,7 @@ export function HomeContent({
                 </Link>
               </div>
             </div>
-            <p className="mt-4 text-[11px] text-mist-500">
+            <p className="mt-4 text-xs text-mist-500">
               {fr
                 ? "Pas besoin de compte pour commander. Connexion par numéro WhatsApp et code — nous ne demandons jamais votre code MoMo ou Orange Money."
                 : "No account needed to order. Sign in with your WhatsApp number and a PIN — we never ask for your MoMo or Orange Money PIN."}

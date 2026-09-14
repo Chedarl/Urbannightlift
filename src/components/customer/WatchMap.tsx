@@ -78,7 +78,7 @@ export function WatchMap({
         )}
       </MapContainer>
       {!rider && (
-        <p className="border-t border-ink-800 bg-ink-900 px-3 py-2 text-[11px] text-mist-500">
+        <p className="border-t border-ink-800 bg-ink-900 px-3 py-2 text-xs text-mist-500">
           The rider has not shared a position yet. It appears here as soon as they do.
         </p>
       )}

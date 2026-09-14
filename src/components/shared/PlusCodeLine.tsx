@@ -67,7 +67,7 @@ export function PlusCodeLine({
           ? "Touchez pour copier. Collez-le dans n'importe quelle appli de cartes, ou lisez-le au téléphone."
           : "Tap to copy. Paste it into any map app, or read it out over the phone."
       }
-      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-800/60 px-2 py-1 font-mono text-[11px] text-mist-300 hover:text-mist-100"
+      className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-800/60 px-2 py-1 font-mono text-xs text-mist-300 hover:text-mist-100"
     >
       <MapPin className="h-3 w-3 text-gold-300" />
       {label ? <span className="font-sans text-mist-500">{label}</span> : null}

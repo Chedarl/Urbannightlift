@@ -167,7 +167,7 @@ export function AmbassadorDashboard({
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink-700/70 bg-ink-800/40 px-3 py-2"
               >
                 <span className="font-mono text-xs text-mist-300">{o.orderCode}</span>
-                <span className="text-[11px] text-mist-500">
+                <span className="text-xs text-mist-500">
                   {new Date(o.createdAt).toLocaleDateString("en-GB", {
                     day: "2-digit",
                     month: "short",
@@ -212,7 +212,7 @@ export function AmbassadorDashboard({
         </section>
       )}
 
-      <p className="text-center text-[11px] text-mist-500">
+      <p className="text-center text-xs text-mist-500">
         Questions about a payment? Message us on WhatsApp — {MAIN_WHATSAPP_NUMBER}.
       </p>
     </div>
@@ -232,7 +232,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-2xl border border-ink-700 bg-ink-900 p-3">
-      <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-mist-500">
+      <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-mist-500">
         <Icon className="h-3.5 w-3.5" /> {label}
       </p>
       <p

@@ -103,7 +103,7 @@ export function ProductSuggestions({
         <Sparkles className="h-3.5 w-3.5" style={{ color: accent }} />
         {fr ? "Populaire ce soir" : "Popular tonight"}
       </p>
-      <p className="mt-1 text-[11px] text-mist-500">
+      <p className="mt-1 text-xs text-mist-500">
         {fr
           ? "Prix indicatifs à Yaoundé — le montant exact est confirmé avec le vendeur avant paiement."
           : "Indicative Yaoundé prices — the exact amount is confirmed with the vendor before you pay."}

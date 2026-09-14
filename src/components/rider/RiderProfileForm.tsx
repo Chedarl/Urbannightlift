@@ -118,7 +118,7 @@ export function RiderProfileForm({ profile }: { profile: RiderProfile }) {
         <p className="flex items-center gap-1.5 text-xs font-medium text-mist-400">
           <Camera className="h-3.5 w-3.5 text-violet-300" /> Your photo
         </p>
-        <p className="mt-1 text-[11px] text-mist-500">
+        <p className="mt-1 text-xs text-mist-500">
           Customers see this the moment you&apos;re dispatched, so they know who is coming. Face
           clear, good light.
         </p>
@@ -146,7 +146,7 @@ export function RiderProfileForm({ profile }: { profile: RiderProfile }) {
           onChange={(e) => setVehicleRef(e.target.value)}
           placeholder="e.g. red Yamaha, CE 4521 AB"
         />
-        <p className="mt-1 text-[11px] text-mist-500">
+        <p className="mt-1 text-xs text-mist-500">
           Written on the customer&apos;s tracking screen so they can spot you from a window.
         </p>
       </section>
@@ -156,7 +156,7 @@ export function RiderProfileForm({ profile }: { profile: RiderProfile }) {
         <p className="flex items-center gap-1.5 text-xs font-medium text-mist-400">
           <IdCard className="h-3.5 w-3.5 text-violet-300" /> Your ID card
         </p>
-        <p className="mt-1 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-1 text-xs leading-relaxed text-mist-500">
           Only dispatch ever sees this. It is stored privately, never shown to a customer, and never
           published anywhere. Changing it means we check it again.
         </p>
@@ -195,7 +195,7 @@ export function RiderProfileForm({ profile }: { profile: RiderProfile }) {
         {busy ? "Saving…" : saved ? "Saved" : "Save my details"}
       </button>
 
-      <p className="text-center text-[11px] text-mist-500">
+      <p className="text-center text-xs text-mist-500">
         We will never ask you for your MoMo PIN or Orange secret code.
       </p>
     </div>

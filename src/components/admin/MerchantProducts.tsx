@@ -235,7 +235,7 @@ export function MerchantProducts({
                   type="button"
                   onClick={() => setOtc(p.id, !p.otcApproved)}
                   disabled={pending}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                     p.otcApproved
                       ? "bg-safe/15 text-safe"
                       : "border border-ink-600 text-mist-500"
@@ -319,11 +319,11 @@ export function MerchantProducts({
         />
       </div>
 
-      {note && <p className="mt-2 text-[11px] text-mist-400">{note}</p>}
+      {note && <p className="mt-2 text-xs text-mist-400">{note}</p>}
 
       {draft && draft.length > 0 && (
         <div className="mt-3 rounded-lg border border-gold-400/30 bg-gold-400/5 p-2.5">
-          <p className="text-[11px] text-gold-200">
+          <p className="text-xs text-gold-200">
             Drafted from their own page. Tick what is right — nothing is saved until you do.
           </p>
           <ul className="mt-2 flex flex-col gap-1">

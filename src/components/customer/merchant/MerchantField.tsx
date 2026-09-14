@@ -125,7 +125,7 @@ export function MerchantField({
           <span className={value ? "truncate text-mist-100" : "text-mist-500"}>{value || placeholder}</span>
         </button>
         {chosen && (
-          <p className="mt-1 text-[11px]" style={{ color: accent }}>
+          <p className="mt-1 text-xs" style={{ color: accent }}>
             {fr
               ? "Adresse et téléphone confirmés — le livreur sait où aller."
               : "Address and phone confirmed — the rider knows where to go."}
@@ -203,29 +203,29 @@ export function MerchantField({
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {m.onDutyTonight && (
-                      <span className="rounded-full bg-teal-400/15 px-2 py-0.5 text-[10px] font-semibold text-teal-300">
+                      <span className="rounded-full bg-teal-400/15 px-2 py-0.5 text-xs font-semibold text-teal-300">
                         {fr ? "De garde ce soir" : "On duty tonight"}
                       </span>
                     )}
                     {m.open24h ? (
-                      <span className="rounded-full bg-safe/15 px-2 py-0.5 text-[10px] font-semibold text-safe">24/7</span>
+                      <span className="rounded-full bg-safe/15 px-2 py-0.5 text-xs font-semibold text-safe">24/7</span>
                     ) : (
                       m.openNow && (
-                        <span className="rounded-full bg-safe/15 px-2 py-0.5 text-[10px] font-semibold text-safe">
+                        <span className="rounded-full bg-safe/15 px-2 py-0.5 text-xs font-semibold text-safe">
                           <Clock className="mr-0.5 inline h-2.5 w-2.5" />
                           {fr ? "Ouvert" : "Open now"}
                         </span>
                       )
                     )}
                     {m.productCount > 0 && (
-                      <span className="rounded-full bg-gold-400/15 px-2 py-0.5 text-[10px] font-semibold text-gold-300">
+                      <span className="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-semibold text-gold-300">
                         {m.productCount} {fr ? "articles" : "items"}
                       </span>
                     )}
                   </div>
                 </div>
                 {m.phone && (
-                  <p className="mt-1 text-[11px] text-mist-500">
+                  <p className="mt-1 text-xs text-mist-500">
                     <Phone className="mr-1 inline h-3 w-3" />
                     {m.phone}
                   </p>
@@ -239,7 +239,7 @@ export function MerchantField({
       {/* The escape hatch. Our list will never cover every spot in Yaoundé, and
           an order refused because a vendor isn't catalogued is a lost order. */}
       <div className="border-t border-ink-700 px-4 py-3">
-        <p className="mb-2 text-[11px] text-mist-500">
+        <p className="mb-2 text-xs text-mist-500">
           {fr ? "Pas dans la liste ? Écrivez le nom :" : "Not listed? Type the name:"}
         </p>
         <div className="flex gap-2">

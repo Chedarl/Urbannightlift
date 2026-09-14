@@ -187,7 +187,7 @@ export function CustomerCrm({ canBlock }: { canBlock: boolean }) {
                   <TierChip tier={c.tier} />
                   {c.risk !== "NONE" && <RiskChip risk={c.risk} />}
                   {!c.hasAccount && (
-                    <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase text-mist-500">Guest</span>
+                    <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs uppercase text-mist-500">Guest</span>
                   )}
                   <span className="ml-auto text-xs tabular-nums text-mist-500">+{c.whatsappNumber}</span>
                 </div>
@@ -257,7 +257,7 @@ function ProfilePanel({
               <TierChip tier={stats.tier} />
               {stats.risk !== "NONE" && <RiskChip risk={stats.risk} />}
               {!c.hasAccount && (
-                <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase text-mist-500">Guest</span>
+                <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs uppercase text-mist-500">Guest</span>
               )}
             </div>
             <p className="mt-1 text-sm text-mist-300">{stats.summary}</p>
@@ -292,7 +292,7 @@ function ProfilePanel({
           >
             <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
           </a>
-          <span className="text-[11px] text-mist-500">
+          <span className="text-xs text-mist-500">
             {c.language === "FR" ? "Speaks French" : "Speaks English"} · since{" "}
             {new Date(c.memberSince).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
           </span>
@@ -312,7 +312,7 @@ function ProfilePanel({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-xl border border-ink-800 bg-ink-900 p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
             <Coins className="h-3.5 w-3.5" /> Credit &amp; referrals
           </p>
           <p className="mt-1.5 text-sm text-mist-200">
@@ -324,7 +324,7 @@ function ProfilePanel({
           </p>
         </div>
         <div className="rounded-xl border border-ink-800 bg-ink-900 p-3">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
             <MapPin className="h-3.5 w-3.5" /> Saved places
           </p>
           {c.addresses.length === 0 ? (
@@ -349,7 +349,7 @@ function ProfilePanel({
 
       {/* The three ways a call ends. */}
       <div className="rounded-2xl border border-ink-800 bg-ink-900 p-4">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
           <StickyNote className="h-3.5 w-3.5" /> Add a note
         </p>
         <textarea
@@ -375,7 +375,7 @@ function ProfilePanel({
       </div>
 
       <div className="rounded-2xl border border-gold-400/35 bg-gold-400/[0.04] p-4">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-gold-300">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gold-300">
           <Gift className="h-3.5 w-3.5" /> Put something right
         </p>
         <p className="mt-1 text-xs text-mist-400">
@@ -414,7 +414,7 @@ function ProfilePanel({
 
       {canBlock && (
         <div className="rounded-2xl border border-ink-800 bg-ink-950/60 p-4">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
             <ShieldAlert className="h-3.5 w-3.5" /> Do-not-serve list
           </p>
           {c.blockedAt ? (
@@ -491,7 +491,7 @@ function ProfilePanel({
                   ) : (
                     e.title
                   )}
-                  <span className="text-[10px] tabular-nums text-mist-600">
+                  <span className="text-xs tabular-nums text-mist-600">
                     {new Date(e.at).toLocaleString("en-GB", {
                       day: "2-digit",
                       month: "short",
@@ -500,7 +500,7 @@ function ProfilePanel({
                     })}
                   </span>
                 </p>
-                {e.detail && <p className="mt-0.5 text-[11px] leading-relaxed text-mist-500">{e.detail}</p>}
+                {e.detail && <p className="mt-0.5 text-xs leading-relaxed text-mist-500">{e.detail}</p>}
               </div>
             </li>
           ))}
@@ -524,7 +524,7 @@ function TagEditor({
 
   return (
     <div className="rounded-2xl border border-ink-800 bg-ink-900 p-4">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
         <Tag className="h-3.5 w-3.5" /> Tags
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -535,7 +535,7 @@ function TagEditor({
             disabled={saving}
             onClick={() => toggle(t)}
             className={cn(
-              "rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40",
+              "rounded-lg border px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40",
               tags.includes(t)
                 ? "border-violet-400/60 bg-violet-500/15 text-violet-200"
                 : "border-ink-700 text-mist-500 hover:text-mist-300"
@@ -573,7 +573,7 @@ function TierChip({ tier }: { tier: CustomerTier }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         tier === "VIP" && "bg-gold-400/20 text-gold-300",
         tier === "REGULAR" && "bg-violet-500/20 text-violet-300",
         tier === "RETURNING" && "bg-ink-800 text-mist-400",
@@ -590,7 +590,7 @@ function RiskChip({ risk }: { risk: CustomerRisk }) {
   return (
     <span
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         risk === "BLOCKED" || risk === "AT_RISK" ? "bg-restricted/20 text-restricted" : "bg-caution/20 text-caution"
       )}
     >
@@ -605,7 +605,7 @@ function Stat({ label, value, tone = "plain" }: { label: string; value: string; 
       <p className={cn("font-display text-base font-bold tabular-nums", tone === "bad" ? "text-restricted" : "text-mist-100")}>
         {value}
       </p>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
     </div>
   );
 }

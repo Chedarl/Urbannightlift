@@ -139,7 +139,7 @@ export function AmbassadorJoinForm({
           autoCapitalize="characters"
           maxLength={20}
         />
-        <p className="mt-1 text-[11px] text-mist-500">
+        <p className="mt-1 text-xs text-mist-500">
           {fr
             ? "Lettres et chiffres, 4 à 20 caractères. Choisissez quelque chose de facile à dire à voix haute."
             : "Letters and numbers, 4–20 characters. Pick something easy to say out loud."}
@@ -178,7 +178,7 @@ export function AmbassadorJoinForm({
           onChange={(e) => set("payoutNumber", e.target.value)}
           placeholder={fr ? "Numéro de paiement" : "Payout number"}
         />
-        <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-mist-500">
           <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-safe" />
           {fr
             ? "Juste le numéro. Ne donnez jamais votre code secret MoMo ou Orange — nous ne le demanderons jamais."

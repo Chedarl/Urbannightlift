@@ -83,7 +83,7 @@ export function AmbassadorLoginForm() {
         {busy ? "Signing in…" : "Sign in"}
       </button>
 
-      <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-mist-500">
+      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-mist-500">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
         This is your Urban Night Lift PIN. We will never ask you for your MTN MoMo PIN, your Orange
         Money secret code, or any bank password — not here, not on WhatsApp, not on the phone.

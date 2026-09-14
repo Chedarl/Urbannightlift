@@ -57,13 +57,13 @@ export function SellTonightPanel({ merchantId }: { merchantId: string }) {
         <p className="flex items-center gap-2 text-sm font-semibold text-mist-100">
           <BarChart3 className="h-4 w-4 text-violet-300" /> Sell tonight
         </p>
-        <span className={cn("flex items-center gap-1 text-[11px] font-semibold", trendTone)}>
+        <span className={cn("flex items-center gap-1 text-xs font-semibold", trendTone)}>
           <TrendIcon className="h-3.5 w-3.5" />
           {report.trend === "UNKNOWN" ? "not enough history" : report.trend.toLowerCase()}
         </span>
       </div>
 
-      <p className="mt-1 text-[11px] text-mist-500">
+      <p className="mt-1 text-xs text-mist-500">
         {report.orders} completed order{report.orders === 1 ? "" : "s"} through us
       </p>
 
@@ -76,7 +76,7 @@ export function SellTonightPanel({ merchantId }: { merchantId: string }) {
               <span className="h-1.5 w-20 overflow-hidden rounded-full bg-ink-800">
                 <span className="block h-full rounded-full bg-violet-400" style={{ width: `${Math.round(p.share * 100)}%` }} />
               </span>
-              <span className="w-14 shrink-0 text-right text-[11px] text-mist-400">
+              <span className="w-14 shrink-0 text-right text-xs text-mist-400">
                 {p.units} unit{p.units === 1 ? "" : "s"}
               </span>
             </li>
@@ -85,7 +85,7 @@ export function SellTonightPanel({ merchantId }: { merchantId: string }) {
       )}
 
       {report.quietNights.length > 0 && report.quietNights.length < 7 && (
-        <p className="mt-3 text-[11px] text-caution">
+        <p className="mt-3 text-xs text-caution">
           Nothing sold on {report.quietNights.join(", ")} — open room.
         </p>
       )}
@@ -110,7 +110,7 @@ export function SellTonightPanel({ merchantId }: { merchantId: string }) {
           <Send className="h-3.5 w-3.5" /> Send these numbers on WhatsApp
         </a>
       ) : (
-        <p className="mt-3 text-[11px] text-mist-500">
+        <p className="mt-3 text-xs text-mist-500">
           {report.enoughData
             ? "No WhatsApp number on file for this merchant."
             : "Not enough sales yet to tell them anything useful."}

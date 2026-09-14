@@ -106,7 +106,7 @@ export function MerchantProductsEditor({ initial }: { initial: Product[] }) {
         </div>
         {/* Because a wrong price is worse than a missing one: the customer sets
             their spending cap from what they read here. */}
-        <p className="mt-2 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-2 text-xs leading-relaxed text-mist-500">
           {fr
             ? "Laissez le prix vide si vous n'êtes pas sûr — nous confirmerons avec vous. Un prix faux est pire qu'un prix absent."
             : "Leave the price blank if you're not sure — we'll confirm with you. A wrong price is worse than no price."}
@@ -141,7 +141,7 @@ export function MerchantProductsEditor({ initial }: { initial: Product[] }) {
                   fr={fr}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className={`truncate text-[15px] font-medium ${p.available ? "text-mist-100" : "text-mist-500 line-through"}`}>
+                  <p className={`truncate text-base font-medium ${p.available ? "text-mist-100" : "text-mist-500 line-through"}`}>
                     {p.name}
                   </p>
                   <p className="text-xs text-mist-500">
@@ -156,8 +156,8 @@ export function MerchantProductsEditor({ initial }: { initial: Product[] }) {
                   onClick={() => call("PATCH", { id: p.id, available: !p.available })}
                   className={
                     p.available
-                      ? "shrink-0 rounded-full border border-safe/50 bg-safe/10 px-2.5 py-1 text-[11px] font-medium text-safe"
-                      : "shrink-0 rounded-full border border-ink-700 px-2.5 py-1 text-[11px] text-mist-500"
+                      ? "shrink-0 rounded-full border border-safe/50 bg-safe/10 px-2.5 py-1 text-xs font-medium text-safe"
+                      : "shrink-0 rounded-full border border-ink-700 px-2.5 py-1 text-xs text-mist-500"
                   }
                 >
                   {p.available

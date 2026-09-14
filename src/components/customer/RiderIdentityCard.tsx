@@ -67,7 +67,7 @@ export function RiderIdentityCard({ orderCode, fr }: { orderCode: string; fr: bo
       )}
 
       <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-wide text-violet-300">
+        <p className="text-xs uppercase tracking-wide text-violet-300">
           {fr ? "Votre livreur ce soir" : "Your rider tonight"}
         </p>
         <p className="font-display text-base font-bold text-mist-100">{rider.fullName}</p>
@@ -78,7 +78,7 @@ export function RiderIdentityCard({ orderCode, fr }: { orderCode: string; fr: bo
         )}
         <p
           className={cn(
-            "mt-1 flex items-center gap-1.5 text-[11px]",
+            "mt-1 flex items-center gap-1.5 text-xs",
             rider.idVerified ? "text-safe" : "text-mist-500"
           )}
         >
@@ -93,7 +93,7 @@ export function RiderIdentityCard({ orderCode, fr }: { orderCode: string; fr: bo
         </p>
       </div>
 
-      <p className="ml-auto hidden max-w-[9rem] text-right text-[11px] leading-relaxed text-mist-500 sm:block">
+      <p className="ml-auto hidden max-w-[9rem] text-right text-xs leading-relaxed text-mist-500 sm:block">
         {fr
           ? `Ne donnez votre code qu'à ${firstName}, une fois le colis en main.`
           : `Only give your code to ${firstName}, once the goods are in your hands.`}

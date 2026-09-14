@@ -107,7 +107,7 @@ export function ShareDelivery({ orderCode, fr }: { orderCode: string; fr: boolea
         </button>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
-          <p className="truncate rounded-lg border border-ink-700 bg-ink-950 px-3 py-2 text-[11px] text-mist-400">
+          <p className="truncate rounded-lg border border-ink-700 bg-ink-950 px-3 py-2 text-xs text-mist-400">
             {url}
           </p>
           <div className="flex gap-2">

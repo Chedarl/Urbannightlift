@@ -299,9 +299,9 @@ export function MerchantsManager({
           <input className={inputCls} inputMode="decimal" placeholder="Latitude (e.g. 3.8480)" value={form.latitude ?? ""} onChange={(e) => setForm({ ...form, latitude: e.target.value === "" ? null : Number(e.target.value) })} />
           <input className={inputCls} inputMode="decimal" placeholder="Longitude (e.g. 11.5021)" value={form.longitude ?? ""} onChange={(e) => setForm({ ...form, longitude: e.target.value === "" ? null : Number(e.target.value) })} />
           {missingForCreate.length > 0 && (
-            <p className="text-[11px] text-caution sm:col-span-2">{describeMissing(missingForCreate)}</p>
+            <p className="text-xs text-caution sm:col-span-2">{describeMissing(missingForCreate)}</p>
           )}
-          {createError && <p className="text-[11px] text-restricted sm:col-span-2">{createError}</p>}
+          {createError && <p className="text-xs text-restricted sm:col-span-2">{createError}</p>}
           <Button size="sm" className="sm:col-span-2" onClick={create} disabled={pending || missingForCreate.length > 0}>
             {t("common.save")}
           </Button>
@@ -342,7 +342,7 @@ export function MerchantsManager({
                   )}
                   <span className="font-display font-semibold">{m.merchantName}</span>
                   <Badge tone="violet">{t(`admin.merchants.categories.${m.category}`)}</Badge>
-                  {m.subcategory && <span className="text-[11px] text-mist-500">{m.subcategory}</span>}
+                  {m.subcategory && <span className="text-xs text-mist-500">{m.subcategory}</span>}
                   {m.verified && (
                     <Badge tone="gold">
                       <Check className="h-3 w-3" /> {t("admin.merchants.verified")}
@@ -466,18 +466,18 @@ export function MerchantsManager({
                   href={m.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-violet-300 hover:text-violet-200"
+                  className="mt-1 inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200"
                 >
                   <ExternalLink className="h-3 w-3" /> {m.website}
                 </a>
               )}
               {m.phoneVerifiedAt && (
-                <p className="mt-1 flex items-center gap-1 text-[11px] text-safe">
+                <p className="mt-1 flex items-center gap-1 text-xs text-safe">
                   <Clock className="h-3 w-3" /> Reached by phone on{" "}
                   {new Date(m.phoneVerifiedAt).toLocaleDateString()}
                 </p>
               )}
-              {m.notes && <p className="mt-1 text-[11px] text-mist-500">{m.notes}</p>}
+              {m.notes && <p className="mt-1 text-xs text-mist-500">{m.notes}</p>}
 
               {/* Asking what is actually on the fire — only worth it once a
                   customer can see this business at all. */}

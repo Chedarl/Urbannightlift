@@ -279,7 +279,7 @@ export function ConfirmReceipt({
           : fr ? "Je confirme la réception" : "Confirm I received it"}
       </Button>
 
-      <p className="mt-2 text-[11px] text-mist-500">
+      <p className="mt-2 text-xs text-mist-500">
         {fr
           ? "Votre signature ou photo reste privée et n'est jamais publiée."
           : "Your signature or photo stays private and is never published."}

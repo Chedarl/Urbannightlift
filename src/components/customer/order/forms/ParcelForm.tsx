@@ -285,11 +285,11 @@ export function ParcelForm() {
         {/* Toggles */}
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => setValue("isFragile", !watch("isFragile"))} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2"><Wine className="h-4 w-4 text-blue-300" /><span><span className="block text-sm text-mist-100">{fr ? "Fragile" : "Fragile"}</span><span className="block text-[11px] text-mist-500">{fr ? "Manipuler avec soin" : "Handle with extra care"}</span></span></span>
+            <span className="flex items-center gap-2"><Wine className="h-4 w-4 text-blue-300" /><span><span className="block text-sm text-mist-100">{fr ? "Fragile" : "Fragile"}</span><span className="block text-xs text-mist-500">{fr ? "Manipuler avec soin" : "Handle with extra care"}</span></span></span>
             <ToggleDot on={Boolean(watch("isFragile"))} />
           </button>
           <button type="button" onClick={() => setValue("serviceDetails.sealed" as never, (!sd?.sealed) as never)} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2"><Lock className="h-4 w-4 text-blue-300" /><span><span className="block text-sm text-mist-100">{fr ? "Colis scellé" : "Sealed package"}</span><span className="block text-[11px] text-mist-500">{fr ? "Le colis est scellé" : "Package is sealed"}</span></span></span>
+            <span className="flex items-center gap-2"><Lock className="h-4 w-4 text-blue-300" /><span><span className="block text-sm text-mist-100">{fr ? "Colis scellé" : "Sealed package"}</span><span className="block text-xs text-mist-500">{fr ? "Le colis est scellé" : "Package is sealed"}</span></span></span>
             <ToggleDot on={Boolean(sd?.sealed)} />
           </button>
         </div>
@@ -302,7 +302,7 @@ export function ParcelForm() {
               <span className={uploadedName ? "text-safe" : "text-mist-400"}>{uploading ? "…" : uploadedName ?? (fr ? "Ajouter une photo (JPG, PNG ≤5MB)" : "Upload a photo of the parcel · JPG, PNG up to 5MB")}</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
             </label>
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-mist-500"><ShieldCheck className="h-3 w-3" /> {fr ? "Privé — jamais dans le PDF partagé." : "Private — never in the shared PDF."}</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-mist-500"><ShieldCheck className="h-3 w-3" /> {fr ? "Privé — jamais dans le PDF partagé." : "Private — never in the shared PDF."}</p>
           </div>
           <div className={card}>
             <DeliveryTimeField
@@ -319,7 +319,7 @@ export function ParcelForm() {
         <div className={card}>
           <p className={label}><ClipboardList className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Note de livraison / repère" : "Delivery note / landmark"}</p>
           <textarea maxLength={200} className={cn(input, "mt-2 min-h-16 resize-y")} placeholder={fr ? "ex. Code du portail, nom du bâtiment, repère…" : "e.g. Gate code, building name, nearest landmark…"} {...register("specialInstructions")} />
-          <p className="mt-1 text-right text-[11px] text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/200</p>
+          <p className="mt-1 text-right text-xs text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/200</p>
         </div>
 
         {/* Proof of delivery */}
@@ -341,7 +341,7 @@ export function ParcelForm() {
           <div className="grid gap-2 sm:grid-cols-3">
             {[{ v: "CASH", t: fr ? "Espèces" : "Cash", s: fr ? "À la livraison" : "Pay on delivery" }, { v: "MTN_MOMO", t: "MTN MoMo", s: "Mobile Money" }, { v: "ORANGE_MONEY", t: "Orange Money", s: "Orange Money" }].map((p) => (
               <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")} className={cn("rounded-xl border p-3 text-left", payment === p.v ? "border-blue-400 bg-blue-500/10" : "border-ink-700 bg-ink-800")}>
-                <span className={cn("block text-sm font-semibold", payment === p.v ? "text-blue-200" : "text-mist-200")}>{p.t}</span><span className="block text-[11px] text-mist-500">{p.s}</span>
+                <span className={cn("block text-sm font-semibold", payment === p.v ? "text-blue-200" : "text-mist-200")}>{p.t}</span><span className="block text-xs text-mist-500">{p.s}</span>
               </button>
             ))}
           </div>
@@ -377,7 +377,7 @@ export function ParcelForm() {
         <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 font-display text-base font-bold text-white">
           <Package className="h-5 w-5" /><span>{fr ? "Vérifier la commande" : "Review order summary"}</span><ChevronRight className="h-5 w-5" />
         </button>
-        <p className="mt-1.5 text-center text-[11px] text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-blue-400" />{fr ? "Votre commande est protégée. Traitée avec soin." : "Your order is protected. We handle it with care."}</p>
+        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-blue-400" />{fr ? "Votre commande est protégée. Traitée avec soin." : "Your order is protected. We handle it with care."}</p>
       </div>
     </form>
   );

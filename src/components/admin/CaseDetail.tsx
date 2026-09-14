@@ -256,7 +256,7 @@ export function CaseDetail({
             <h2 className="font-display text-lg font-bold text-mist-100">{c.who}</h2>
             <PriorityChip priority={c.priority} />
             {c.sla === "BREACHED" && (
-              <span className="rounded bg-restricted/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-restricted">
+              <span className="rounded bg-restricted/20 px-1.5 py-0.5 text-xs font-bold uppercase text-restricted">
                 Overdue{c.waited != null ? ` · ${c.waited}m` : ""}
               </span>
             )}
@@ -276,7 +276,7 @@ export function CaseDetail({
         <div className="flex flex-col gap-3">
           <div className="flex max-h-[24rem] flex-col gap-2 overflow-y-auto rounded-2xl border border-ink-800 bg-ink-950/40 p-3">
             <div className="rounded-xl bg-ink-900 p-3 text-sm text-mist-200">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-mist-500">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-mist-500">
                 {new Date(c.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
               </p>
               {c.message}
@@ -293,7 +293,7 @@ export function CaseDetail({
                       : "self-start bg-ink-800 text-mist-200"
                 )}
               >
-                <p className="mb-0.5 flex items-center gap-1 text-[10px] uppercase tracking-wide text-mist-500">
+                <p className="mb-0.5 flex items-center gap-1 text-xs uppercase tracking-wide text-mist-500">
                   {m.internal && <Lock className="h-2.5 w-2.5" />}
                   {m.internal ? "internal" : m.authorName} ·{" "}
                   {new Date(m.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
@@ -320,7 +320,7 @@ export function CaseDetail({
                         body: JSON.stringify({ id: mac.id }),
                       }).catch(() => {});
                     }}
-                    className="shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-[11px] text-mist-400 hover:text-mist-200"
+                    className="shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-xs text-mist-400 hover:text-mist-200"
                   >
                     {mac.title}
                   </button>
@@ -340,7 +340,7 @@ export function CaseDetail({
                     ? "You have already started a reply — this will not overwrite it."
                     : "Write a first version for you to edit"
                 }
-                className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-200 disabled:opacity-40"
+                className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 px-2.5 py-1 text-xs font-semibold text-violet-200 disabled:opacity-40"
               >
                 {drafting ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -358,7 +358,7 @@ export function CaseDetail({
               className="w-full rounded-xl border border-ink-700 bg-ink-950 p-2.5 text-sm text-mist-100 placeholder:text-mist-600 focus:border-violet-500/60 focus:outline-none"
             />
             <div className="mt-2 flex items-center justify-between gap-2">
-              <label className="flex items-center gap-1.5 text-[11px] text-mist-400">
+              <label className="flex items-center gap-1.5 text-xs text-mist-400">
                 <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="h-3.5 w-3.5 accent-caution" />
                 Internal note
               </label>
@@ -401,7 +401,7 @@ export function CaseDetail({
                 {data.customer.risk !== "NONE" && <RiskChip risk={data.customer.risk} />}
               </div>
               <p className="mt-1.5 text-xs text-mist-400">{data.customer.summary}</p>
-              <Link href={`/admin/live`} className="mt-2 inline-block text-[11px] text-violet-300 hover:text-violet-200">
+              <Link href={`/admin/live`} className="mt-2 inline-block text-xs text-violet-300 hover:text-violet-200">
                 Open full profile →
               </Link>
             </div>
@@ -416,7 +416,7 @@ export function CaseDetail({
               <Package className="h-4 w-4 text-mist-400" />
               <span className="min-w-0 flex-1">
                 <span className="block font-mono text-xs font-semibold text-gold-300">{data.order.orderCode}</span>
-                <span className="block text-[11px] text-mist-500">
+                <span className="block text-xs text-mist-500">
                   {data.order.orderStatus.replace(/_/g, " ").toLowerCase()} — re-price, re-dispatch, refund
                 </span>
               </span>
@@ -427,7 +427,7 @@ export function CaseDetail({
           {/* Put it right */}
           {data.customer && (
             <div className="rounded-2xl border border-gold-400/30 bg-gold-400/[0.04] p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-gold-300">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gold-300">
                 <Gift className="h-3.5 w-3.5" /> Make it right
               </p>
               <div className="mt-2 flex gap-2">
@@ -447,13 +447,13 @@ export function CaseDetail({
                   Credit
                 </button>
               </div>
-              <p className="mt-1 text-[10px] text-mist-500">{data.customer.creditXaf} XAF unspent now</p>
+              <p className="mt-1 text-xs text-mist-500">{data.customer.creditXaf} XAF unspent now</p>
             </div>
           )}
 
           {/* Move it along */}
           <div className="rounded-2xl border border-ink-800 bg-ink-900 p-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-mist-500">Priority</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-mist-500">Priority</p>
             <div className="grid grid-cols-4 gap-1">
               {(["LOW", "NORMAL", "HIGH", "URGENT"] as CasePriority[]).map((p) => (
                 <button
@@ -461,7 +461,7 @@ export function CaseDetail({
                   type="button"
                   onClick={() => patch({ priority: p })}
                   className={cn(
-                    "rounded-lg py-1 text-[10px] font-bold uppercase",
+                    "rounded-lg py-1 text-xs font-bold uppercase",
                     c.priority === p ? "bg-violet-500 text-white" : "border border-ink-700 text-mist-400"
                   )}
                 >
@@ -469,7 +469,7 @@ export function CaseDetail({
                 </button>
               ))}
             </div>
-            <p className="mb-2 mt-3 text-[11px] font-semibold uppercase tracking-wide text-mist-500">Assign</p>
+            <p className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wide text-mist-500">Assign</p>
             <select
               value={c.assignedToUserId ?? ""}
               onChange={(e) => patch({ assignedToUserId: e.target.value })}
@@ -509,7 +509,7 @@ function PriorityChip({ priority }: { priority: CasePriority }) {
   return (
     <span
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         priority === "URGENT" && "bg-restricted/20 text-restricted",
         priority === "HIGH" && "bg-caution/20 text-caution",
         priority === "NORMAL" && "bg-ink-800 text-mist-400",
@@ -525,7 +525,7 @@ function TierChip({ tier }: { tier: CustomerTier }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         tier === "VIP" ? "bg-gold-400/20 text-gold-300" : tier === "REGULAR" ? "bg-violet-500/20 text-violet-300" : "bg-ink-800 text-mist-400"
       )}
     >
@@ -539,7 +539,7 @@ function RiskChip({ risk }: { risk: CustomerRisk }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         risk === "BLOCKED" || risk === "AT_RISK" ? "bg-restricted/20 text-restricted" : "bg-caution/20 text-caution"
       )}
     >

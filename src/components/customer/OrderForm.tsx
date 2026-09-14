@@ -578,7 +578,7 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] text-mist-500">{t("exp.priceEstimate")}</p>
+            <p className="text-xs text-mist-500">{t("exp.priceEstimate")}</p>
             <p className="truncate font-display text-lg font-bold" style={{ color: dominantTier ? TIER_META[dominantTier].hex : "#d4af37" }}>
               {estimatedFee != null ? formatXaf(estimatedFee) : "—"}
             </p>

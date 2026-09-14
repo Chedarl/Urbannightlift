@@ -64,7 +64,7 @@ export function MoneyBreakdown({
     <div className={cn("rounded-2xl border border-ink-700 bg-ink-900/60 p-4", className)}>
       {money.shopping && items.length > 0 && (
         <>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-mist-500">
+          <p className="text-xs font-bold uppercase tracking-widest text-mist-500">
             {fr ? "Ce que vous nous demandez d'acheter" : "What you asked us to buy"}
           </p>
           <ul className="mt-2 flex flex-col gap-1">
@@ -116,7 +116,7 @@ export function MoneyBreakdown({
           rider knows where they are going is the thing customers most resent
           being surprised by. */}
       {fareEstimated && (
-        <p className="mt-2 text-[11px] leading-relaxed text-mist-400">
+        <p className="mt-2 text-xs leading-relaxed text-mist-400">
           {fr
             ? "Estimation : nous n'avons pas encore de point précis pour les deux adresses. Placez un repère et le prix se calcule sur la distance réelle."
             : "An estimate: we don't have a precise point for both addresses yet. Drop a pin and the price is worked out on the real distance."}
@@ -150,7 +150,7 @@ export function MoneyBreakdown({
       )}
 
       {goodsAtDoor && money.shopping && (
-        <p className="mt-2 text-[11px] leading-relaxed text-mist-400">
+        <p className="mt-2 text-xs leading-relaxed text-mist-400">
           {fr
             ? "Vous payez les frais de livraison maintenant, et le montant exact des articles en espèces à l'arrivée — nous ne prenons jamais d'avance sur ce que nous n'avons pas encore dépensé."
             : "You pay the delivery fee now, and the exact cost of the items in cash on arrival — we never take money for something we haven't spent yet."}
@@ -158,7 +158,7 @@ export function MoneyBreakdown({
       )}
 
       {money.shopping && (
-        <p className="mt-3 flex items-start gap-2 border-t border-ink-800 pt-3 text-[11px] leading-relaxed text-mist-400">
+        <p className="mt-3 flex items-start gap-2 border-t border-ink-800 pt-3 text-xs leading-relaxed text-mist-400">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
           {fr
             ? "Aucune marge sur vos articles : vous payez exactement ce que le commerçant nous a facturé, au franc près, et le livreur photographie le reçu. Nous ne gagnons que sur la livraison."

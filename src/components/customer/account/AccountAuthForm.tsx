@@ -229,7 +229,7 @@ export function AccountAuthForm({ mode }: { mode: "signup" | "login" }) {
         </button>
 
         {/* The PIN must never be confused with a mobile-money PIN. */}
-        <p className="mt-1 flex items-start gap-2 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-1 flex items-start gap-2 text-xs leading-relaxed text-mist-500">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
           {fr
             ? "Ce code sert uniquement à Urban Night Lift. Nous ne demandons JAMAIS votre code MoMo ou Orange Money."

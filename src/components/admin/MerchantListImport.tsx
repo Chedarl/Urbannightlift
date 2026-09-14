@@ -129,7 +129,7 @@ export function MerchantListImport() {
       </div>
 
       {!verified && (
-        <p className="mt-2 text-[11px] text-mist-500">
+        <p className="mt-2 text-xs text-mist-500">
           They will sit in the queue as leads until someone verifies them.
         </p>
       )}

@@ -148,9 +148,9 @@ export function MerchantRelations() {
                   <span className="font-medium text-mist-100">{m.name}</span>
                   <StandingChip standing={m.standing} verified={m.verified} />
                 </span>
-                <span className="block truncate text-[11px] text-mist-500">{m.summary}</span>
+                <span className="block truncate text-xs text-mist-500">{m.summary}</span>
               </span>
-              <span className="shrink-0 text-right text-[11px] text-mist-500">
+              <span className="shrink-0 text-right text-xs text-mist-500">
                 <span className="block font-display text-sm font-bold text-mist-200">{m.orderCount}</span>
                 orders
               </span>
@@ -244,9 +244,9 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <StandingChip standing={m.standing} verified={m.verified} />
-          {m.nightOpen && <span className="rounded bg-safe/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-safe">Night open</span>}
-          {!m.acceptingOrders && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] uppercase text-mist-500">Paused</span>}
-          {m.source === "signup" && <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] uppercase text-violet-300">Signed up</span>}
+          {m.nightOpen && <span className="rounded bg-safe/15 px-1.5 py-0.5 text-xs font-semibold uppercase text-safe">Night open</span>}
+          {!m.acceptingOrders && <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs uppercase text-mist-500">Paused</span>}
+          {m.source === "signup" && <span className="rounded bg-violet-500/15 px-1.5 py-0.5 text-xs uppercase text-violet-300">Signed up</span>}
         </div>
         <p className="mt-2 text-sm text-mist-300">{m.summary}</p>
 
@@ -288,7 +288,7 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
 
         {/* Contact log */}
         <div className="mt-4">
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-mist-500">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-mist-500">
             <StickyNote className="h-3.5 w-3.5" /> Contact log
           </p>
           <div className="flex gap-2">
@@ -305,7 +305,7 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
           <ul className="mt-2 flex flex-col gap-1.5">
             {notes.map((n) => (
               <li key={n.id} className="rounded-lg border border-ink-800 bg-ink-950/50 px-3 py-2 text-xs text-mist-300">
-                <span className="mb-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-mist-500">
+                <span className="mb-0.5 flex items-center gap-1.5 text-xs uppercase tracking-wide text-mist-500">
                   <Clock className="h-2.5 w-2.5" />
                   {new Date(n.createdAt).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · {n.authorName}
                 </span>
@@ -322,12 +322,12 @@ function MerchantPanel({ merchant: m, onClose, onChanged }: { merchant: Merchant
 
 function StandingChip({ standing, verified }: { standing: MerchantStanding; verified: boolean }) {
   if (!verified) {
-    return <span className="rounded bg-caution/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-caution">To verify</span>;
+    return <span className="rounded bg-caution/20 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-caution">To verify</span>;
   }
   return (
     <span
       className={cn(
-        "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        "rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide",
         standing === "GROWING" && "bg-safe/15 text-safe",
         standing === "STEADY" && "bg-ink-800 text-mist-400",
         (standing === "QUIET" || standing === "DORMANT") && "bg-restricted/15 text-restricted",
@@ -343,7 +343,7 @@ function Tally({ label, value, tone }: { label: string; value: number; tone: "wa
   return (
     <div className={cn("rounded-xl border px-3 py-2", tone === "watch" ? "border-caution/40 bg-caution/[0.05]" : "border-ink-800 bg-ink-900")}>
       <p className={cn("font-display text-xl font-bold tabular-nums", tone === "watch" ? "text-caution" : "text-mist-200")}>{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
     </div>
   );
 }
@@ -352,7 +352,7 @@ function Stat({ label, value, tone = "plain" }: { label: string; value: string; 
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-950/50 px-2 py-2">
       <p className={cn("font-display text-sm font-bold tabular-nums", tone === "bad" ? "text-restricted" : "text-mist-100")}>{value}</p>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
     </div>
   );
 }

@@ -125,7 +125,7 @@ export function MerchantAuthForm() {
         </label>
 
         {/* Non-negotiable, on every PIN field in the product. */}
-        <p className="flex items-start gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3 py-2.5 text-[11px] leading-relaxed text-mist-400">
+        <p className="flex items-start gap-2 rounded-xl border border-ink-700 bg-ink-900 px-3 py-2.5 text-xs leading-relaxed text-mist-400">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-safe" />
           {fr
             ? "Ce code est uniquement pour Urban Night Lift. Nous ne demanderons jamais votre code MTN MoMo ou Orange Money."

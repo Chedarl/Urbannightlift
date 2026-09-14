@@ -31,13 +31,83 @@
   --color-mist-400: #b4a9c6;
   --color-mist-500: #9a8fb0;
 
+  /* ── Status colours ───────────────────────────────────────────────────────
+     `caution` was #d4af37 — **byte-identical to --color-gold-400**, the brand
+     gold used for every price in the product. So a warning and an amount of
+     money rendered in exactly the same colour, and on the order review screen
+     they sit six lines apart: the total a customer is about to pay, and the
+     note saying the price might still change. Nothing distinguished them.
+
+     Picking the replacement was tighter than it looks, because caution sits
+     *between* two colours it must not be confused with: gold at hue 46° and
+     restricted at 13°. Moving away from one walks toward the other. #ff8c1a
+     (hue 30°) is the choice that maximises the **smaller** of the two gaps —
+     ΔE 36.8 from gold, 32.0 from restricted, against 21.1 and 38.4 for the
+     first amber tried, which was comfortably clear of red and not nearly clear
+     enough of gold. It holds 8.3:1 on a card, so it is AAA as text as well.
+
+     Gold is now reserved for money and brand, and means only that.
+
+     The colour is the smaller half of the fix. Colour alone was never
+     sufficient: roughly one man in twelve cannot separate these two hues at
+     all, and neither can anybody reading a phone at 2 a.m. under a streetlight.
+     So a caution state in this product always carries **an icon and a left
+     rule** as well — see `.caution-note` below, which is the shape to reach
+     for rather than a bare text-caution. */
   --color-safe: #2fae60;
-  --color-caution: #d4af37;
+  --color-caution: #ff8c1a;
   --color-restricted: #e0522f;
   --color-danger: #c0392b;
 
+  /* ── Elevation ────────────────────────────────────────────────────────────
+     There were eight different card surfaces in this codebase and no ladder,
+     so nothing on a screen said what sat above what. These are the only four,
+     and they are the ink scale given names that carry meaning:
+
+       page    the ground. Never a card.
+       raised  an ordinary card sitting on the page.
+       high    a card on a card, or something asking to be noticed.
+       peak    the live order, a modal — one per screen at most.
+
+     Each step is a real, visible change in lightness rather than a nudge,
+     because a ladder nobody can see is not a ladder. */
+  --color-surface-page: #08060e;
+  --color-surface-raised: #110b1c;
+  --color-surface-high: #1a1130;
+  --color-surface-peak: #241845;
+
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Type scale ───────────────────────────────────────────────────────────
+     There were 365 arbitrary font sizes in this codebase — 282 of them
+     `text-[11px]` and 72 `text-[10px]`. Not a scale: a habit. Every one of
+     them was somebody making a label fit, and the sum is a product whose
+     small print is 10px.
+
+     This app is read **one-handed, outdoors, at night**, often by somebody
+     standing at a gate waiting for a rider. 10px is not small-and-elegant in
+     that setting, it is unreadable, and the things set in it are order codes,
+     delivery windows and prices.
+
+     So the floor is 13px and `text-xs` *is* the floor — raised from Tailwind's
+     12px default rather than adding a new step beside it, because a scale with
+     an escape hatch one notch lower is not a floor. Nothing in the product is
+     smaller than this. The arbitrary sizes are mapped onto it. */
+  --text-xs: 0.8125rem; /* 13px — the floor */
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.875rem; /* 14px */
+  --text-sm--line-height: 1.5;
+  --text-base: 0.9375rem; /* 15px */
+  --text-base--line-height: 1.55;
+  --text-lg: 1rem; /* 16px */
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.1875rem; /* 19px */
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.5rem; /* 24px */
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 1.875rem; /* 30px */
+  --text-3xl--line-height: 1.15;
 
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer: shimmer 2.5s linear infinite;
@@ -184,6 +254,23 @@ textarea {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* A caution, carried by three signals rather than one.
+   ────────────────────────────────────────────────────────────────────────────
+   Reach for this instead of a bare `text-caution`. Colour was doing all the
+   work, and it was the *same* colour as every price in the product; even after
+   fixing the hue, colour alone fails for roughly one man in twelve, and for
+   anybody reading a phone outdoors at 2 a.m.
+
+   So: the amber, a left rule, and a tinted ground. The icon is the caller's —
+   put a real one in the markup; there is no content-generated glyph here
+   because an icon a screen reader cannot name is decoration pretending to be
+   information. */
+.caution-note {
+  border-left: 3px solid var(--color-caution);
+  background: color-mix(in srgb, var(--color-caution) 8%, transparent);
+  border-radius: 0.75rem;
 }
 
 /* Hide scrollbar for horizontal chip rows */
