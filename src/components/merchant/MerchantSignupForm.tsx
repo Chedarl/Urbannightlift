@@ -229,7 +229,7 @@ export function MerchantSignupForm() {
           <p className={label}>
             <Phone className="h-3.5 w-3.5 text-gold-300" /> {fr ? "Numéro WhatsApp" : "WhatsApp number"}
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr ? "C'est ici que nous envoyons les commandes." : "This is where we send you orders."}
           </p>
           <div className="mt-2 flex">
@@ -257,7 +257,7 @@ export function MerchantSignupForm() {
             value={location}
             onChange={setLocation}
           />
-          <p className="mt-2 text-[11px] text-mist-500">
+          <p className="mt-2 text-xs text-mist-500">
             {fr
               ? "Le livreur va exactement à ce point — épinglez la porte, pas la rue."
               : "The rider goes exactly to this point — pin the door, not the street."}
@@ -307,7 +307,7 @@ export function MerchantSignupForm() {
             <Link2 className="h-3.5 w-3.5 text-gold-300" />
             {fr ? "Votre page Facebook, Instagram ou TikTok" : "Your Facebook, Instagram or TikTok page"}
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr ? "Facultatif — cela nous aide à vous reconnaître." : "Optional — it helps us recognize you."}
           </p>
           <input
@@ -322,7 +322,7 @@ export function MerchantSignupForm() {
           <p className={label}>
             <ImageUp className="h-3.5 w-3.5 text-gold-300" /> {fr ? "Votre logo" : "Your logo"}
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr
               ? "Les clients vous reconnaissent plus vite avec votre logo. Facultatif."
               : "Customers recognize you faster with your logo. Optional."}
@@ -346,7 +346,7 @@ export function MerchantSignupForm() {
             <Plus className="h-3.5 w-3.5 text-gold-300" />
             {fr ? "Quelques articles et leurs prix" : "A few items and their prices"}
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr
               ? "Facultatif, mais les clients commandent plus quand ils voient un prix."
               : "Optional, but customers order more when they can see a price."}
@@ -412,7 +412,7 @@ export function MerchantSignupForm() {
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
           />
-          <span className="text-[11px] leading-relaxed text-mist-400">
+          <span className="text-xs leading-relaxed text-mist-400">
             <ShieldCheck className="mr-1 inline h-3 w-3 text-gold-300" />
             {fr
               ? "Je représente ce commerce et j'autorise Urban Night Lift à afficher son nom, son logo et ses prix aux clients. Nous ne demandons jamais de code PIN MoMo ou Orange Money."
@@ -433,7 +433,7 @@ export function MerchantSignupForm() {
         >
           {busy ? (fr ? "Envoi…" : "Sending…") : fr ? "Rejoindre Urban Night Lift" : "Join Urban Night Lift"}
         </button>
-        <p className="text-center text-[11px] text-mist-500">
+        <p className="text-center text-xs text-mist-500">
           {fr
             ? "Nous vous contactons sur WhatsApp pour confirmer avant toute mise en ligne."
             : "We'll message you on WhatsApp to confirm before anything goes live."}

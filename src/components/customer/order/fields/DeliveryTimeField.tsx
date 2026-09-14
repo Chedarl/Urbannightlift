@@ -85,7 +85,7 @@ export function DeliveryTimeField({
           </option>
         ))}
       </select>
-      <p className="mt-1.5 text-[11px] text-mist-500">
+      <p className="mt-1.5 text-xs text-mist-500">
         {fr
           ? `Nous livrons de ${formatHour(startHour, true)} à ${formatHour(endHour, true)}.`
           : `We deliver from ${formatHour(startHour, false)} to ${formatHour(endHour, false)}.`}

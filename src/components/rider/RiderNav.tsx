@@ -38,7 +38,7 @@ export function RiderNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
                 active ? "text-gold-400" : "text-mist-500 hover:text-mist-300"
               )}
             >

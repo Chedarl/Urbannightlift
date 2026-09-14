@@ -177,7 +177,7 @@ export function LocationPicker({
         <button
           type="button"
           onClick={() => setSatellite((v) => !v)}
-          className="absolute right-2 top-2 z-[500] rounded-lg border border-ink-600 bg-ink-950/80 px-2 py-1 text-[11px] font-medium text-mist-200 backdrop-blur"
+          className="absolute right-2 top-2 z-[500] rounded-lg border border-ink-600 bg-ink-950/80 px-2 py-1 text-xs font-medium text-mist-200 backdrop-blur"
         >
           {satellite ? (locale === "fr" ? "Plan" : "Map") : "Satellite"}
         </button>
@@ -222,11 +222,11 @@ export function LocationPicker({
           <div key={which} className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-900/50 px-3 py-2.5">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: which === "pickup" ? "#d4af37" : accent }} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-mist-100">
+              <p className="truncate text-xs font-medium text-mist-100">
                 {p ? p.label : which === "pickup" ? t("orderForm.pickupLocation") : t("orderForm.deliveryLocation")}
               </p>
               {p?.tier && (
-                <p className="text-[11px]" style={{ color: TIER_META[p.tier].hex }}>
+                <p className="text-xs" style={{ color: TIER_META[p.tier].hex }}>
                   {p.zoneName} · {locale === "fr" ? TIER_META[p.tier].labelFr : TIER_META[p.tier].label}
                 </p>
               )}

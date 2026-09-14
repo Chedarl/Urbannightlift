@@ -134,7 +134,7 @@ export function MerchantInsights({ report }: { report: SellTonight }) {
 
       {/* Said out loud, because a merchant could reasonably read these as their
           whole trade and make a decision on that basis. */}
-      <p className="mt-5 px-1 text-[11px] leading-relaxed text-mist-500">
+      <p className="mt-5 px-1 text-xs leading-relaxed text-mist-500">
         {fr
           ? "Ces chiffres ne couvrent que les commandes passées par Urban Night Lift — pas vos clients au comptoir."
           : "These numbers only cover orders placed through Urban Night Lift — not your walk-in trade."}

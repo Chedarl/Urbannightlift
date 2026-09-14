@@ -75,7 +75,7 @@ export function DangerDelete({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-restricted/40 px-2.5 py-1 text-[11px] font-semibold text-restricted/80 hover:bg-restricted/10"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-restricted/40 px-2.5 py-1 text-xs font-semibold text-restricted/80 hover:bg-restricted/10"
       >
         <Trash2 className="h-3.5 w-3.5" /> Delete permanently
       </button>
@@ -84,7 +84,7 @@ export function DangerDelete({
 
   return (
     <div className="mt-2 rounded-lg border border-restricted/40 bg-restricted/5 p-2.5">
-      <p className="text-[11px] leading-relaxed text-restricted">
+      <p className="text-xs leading-relaxed text-restricted">
         This deletes <strong>{name}</strong> for good.
         {attached.length > 0 && (
           <>
@@ -105,7 +105,7 @@ export function DangerDelete({
           type="button"
           onClick={remove}
           disabled={!matches || busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-restricted/50 bg-restricted/15 px-2.5 py-1 text-[11px] font-semibold text-restricted disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-restricted/50 bg-restricted/15 px-2.5 py-1 text-xs font-semibold text-restricted disabled:opacity-40"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
           Delete for good
@@ -117,12 +117,12 @@ export function DangerDelete({
             setTyped("");
             setError(null);
           }}
-          className="text-[11px] text-mist-400 hover:text-mist-200"
+          className="text-xs text-mist-400 hover:text-mist-200"
         >
           Cancel
         </button>
       </div>
-      {error && <p className="mt-1.5 text-[11px] text-restricted">{error}</p>}
+      {error && <p className="mt-1.5 text-xs text-restricted">{error}</p>}
     </div>
   );
 }

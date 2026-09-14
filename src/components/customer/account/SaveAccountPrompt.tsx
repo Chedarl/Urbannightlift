@@ -127,7 +127,7 @@ export function SaveAccountPrompt({
             {state === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
             {fr ? "Enregistrer" : "Save my account"}
           </button>
-          <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-mist-500">
+          <p className="flex items-start gap-1.5 text-xs leading-relaxed text-mist-500">
             <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-safe" />
             {fr
               ? "Code de connexion Urban Night Lift uniquement — jamais votre code MoMo ou Orange Money."

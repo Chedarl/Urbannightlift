@@ -55,7 +55,7 @@ export function OrderGate({ next = "/order", fr }: { next?: string; fr: boolean 
           </Link>
         </div>
 
-        <p className="text-center text-[11px] leading-relaxed text-mist-600">
+        <p className="text-center text-xs leading-relaxed text-mist-600">
           {fr
             ? "Votre code est un code Urban Night Lift — jamais votre code MoMo, Orange Money ou banque."
             : "Your PIN is an Urban Night Lift PIN — never your MoMo, Orange Money or bank code."}

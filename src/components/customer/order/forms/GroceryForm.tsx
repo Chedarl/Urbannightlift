@@ -279,7 +279,7 @@ export function GroceryForm() {
         {/* Substitutions */}
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => setValue("serviceDetails.substituteOk" as never, (!sd?.substituteOk) as never)} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2"><Repeat className="h-4 w-4 text-green-300" /><span><span className="block text-sm text-mist-100">{fr ? "Substitutions autorisées" : "Allow substitutions"}</span><span className="block text-[11px] text-mist-500">{fr ? "Si un article est indisponible" : "If an item is unavailable"}</span></span></span>
+            <span className="flex items-center gap-2"><Repeat className="h-4 w-4 text-green-300" /><span><span className="block text-sm text-mist-100">{fr ? "Substitutions autorisées" : "Allow substitutions"}</span><span className="block text-xs text-mist-500">{fr ? "Si un article est indisponible" : "If an item is unavailable"}</span></span></span>
             <ToggleDot on={Boolean(sd?.substituteOk)} />
           </button>
           <div className={card}>
@@ -327,7 +327,7 @@ export function GroceryForm() {
             <div className="grid grid-cols-3 gap-2">
               {[{ v: "SMALL", t: fr ? "Petit" : "Small", s: "1–3" }, { v: "MEDIUM", t: fr ? "Moyen" : "Medium", s: "4–8" }, { v: "LARGE", t: fr ? "Grand" : "Large", s: "9+" }].map((o) => (
                 <button key={o.v} type="button" onClick={() => setValue("serviceDetails.bagSize" as never, o.v as never)} className={cn("rounded-xl border px-2 py-2 text-center", bagSize === o.v ? "border-green-400 bg-green-500/10 text-green-200" : "border-ink-700 bg-ink-800 text-mist-300")}>
-                  <span className="block text-sm font-semibold">{o.t}</span><span className="block text-[10px] text-mist-500">{o.s} {fr ? "sacs" : "bags"}</span>
+                  <span className="block text-sm font-semibold">{o.t}</span><span className="block text-xs text-mist-500">{o.s} {fr ? "sacs" : "bags"}</span>
                 </button>
               ))}
             </div>
@@ -346,7 +346,7 @@ export function GroceryForm() {
         <div className={card}>
           <p className={label}><ClipboardList className="h-3.5 w-3.5 text-green-300" /> {fr ? "Instructions supplémentaires" : "Extra instructions"}</p>
           <textarea maxLength={250} className={cn(input, "mt-2 min-h-20 resize-y")} placeholder={fr ? "ex. Vérifiez les dates, appelez si indisponible…" : "e.g. Check expiry dates, call me if something is unavailable…"} {...register("specialInstructions")} />
-          <p className="mt-1 text-right text-[11px] text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/250</p>
+          <p className="mt-1 text-right text-xs text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/250</p>
         </div>
 
         {missing.length > 0 && (
@@ -375,7 +375,7 @@ export function GroceryForm() {
         <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-green-400 py-3.5 font-display text-base font-bold text-ink-950">
           <ShoppingBasket className="h-5 w-5" /><span>{fr ? "Vérifier la commande" : "Review order summary"}</span><ChevronRight className="h-5 w-5" />
         </button>
-        <p className="mt-1.5 text-center text-[11px] text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-green-400" />{fr ? "Votre commande est protégée. Traitée avec soin." : "Your order is protected. We handle it with care."}</p>
+        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-green-400" />{fr ? "Votre commande est protégée. Traitée avec soin." : "Your order is protected. We handle it with care."}</p>
       </div>
     </form>
   );

@@ -150,7 +150,7 @@ export function QuickIntake({ enabledServices }: { enabledServices: ServiceType[
         </button>
       </div>
 
-      {error && <p className="mt-2 text-[11px] leading-relaxed text-caution">{error}</p>}
+      {error && <p className="mt-2 text-xs leading-relaxed text-caution">{error}</p>}
     </div>
   );
 }

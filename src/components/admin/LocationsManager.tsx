@@ -456,7 +456,7 @@ export function LocationsManager() {
                   accent="#d4af37"
                   onMove={(lat, lng) => setDraft({ ...draft, lat, lng })}
                 />
-                <p className="mt-1.5 text-[11px] text-mist-500">
+                <p className="mt-1.5 text-xs text-mist-500">
                   The zone and delivery fee are worked out from this pin, the same
                   way a customer&apos;s address is.
                 </p>

@@ -162,7 +162,7 @@ export function PaymentCard({ info }: { info: PaymentInfo }) {
         </div>
       )}
 
-      <p className="mt-2 text-[11px] text-mist-500">{t("pay.pendingHint")}</p>
+      <p className="mt-2 text-xs text-mist-500">{t("pay.pendingHint")}</p>
     </div>
   );
 }

@@ -71,11 +71,11 @@ export function RiderSuggestions({
     };
   }, [orderId, fr]);
 
-  if (error) return <p className="mb-2 text-[11px] text-mist-500">{error}</p>;
+  if (error) return <p className="mb-2 text-xs text-mist-500">{error}</p>;
 
   if (!data) {
     return (
-      <p className="mb-2 flex items-center gap-2 text-[11px] text-mist-500">
+      <p className="mb-2 flex items-center gap-2 text-xs text-mist-500">
         <Loader2 className="h-3 w-3 animate-spin" />
         {fr ? "Recherche du meilleur livreur…" : "Finding the best rider…"}
       </p>
@@ -84,7 +84,7 @@ export function RiderSuggestions({
 
   if (data.suggestions.length === 0) {
     return (
-      <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-[11px] text-gold-200">
+      <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
         {fr
           ? "Aucun livreur disponible pour cette course."
           : "No rider can take this one right now."}
@@ -101,7 +101,7 @@ export function RiderSuggestions({
 
   return (
     <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-950/20 p-2.5">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-200">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-200">
         <Zap className="h-3 w-3" />
         {fr ? "Suggéré" : "Suggested"}
       </p>
@@ -109,7 +109,7 @@ export function RiderSuggestions({
       <div className="mt-1.5 flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-mist-100">{best.fullName}</p>
-          <p className="truncate text-[11px] text-mist-400">
+          <p className="truncate text-xs text-mist-400">
             {(fr ? best.reasonsFr : best.reasons).join(" · ")}
           </p>
         </div>
@@ -131,7 +131,7 @@ export function RiderSuggestions({
               type="button"
               disabled={disabled}
               onClick={() => onPick(s.riderId)}
-              className="flex items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left text-[11px] text-mist-400 hover:bg-violet-500/10 disabled:opacity-40"
+              className="flex items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left text-xs text-mist-400 hover:bg-violet-500/10 disabled:opacity-40"
             >
               <span className="truncate">
                 {s.fullName}
@@ -151,7 +151,7 @@ export function RiderSuggestions({
       {/* Said rather than implied. Without a pickup pin the ranking is on duty
           and load alone, and a dispatcher should know that before trusting it. */}
       {!data.pinned && (
-        <p className="mt-2 text-[10px] leading-relaxed text-mist-500">
+        <p className="mt-2 text-xs leading-relaxed text-mist-500">
           {fr
             ? "Pas de point de ramassage — classé sur la disponibilité seule, pas la distance."
             : "No pickup pin — ranked on availability alone, not distance."}

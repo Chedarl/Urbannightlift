@@ -93,8 +93,8 @@ function Card({
         {icon}
         {value}
       </p>
-      <p className="mt-0.5 text-[11px] leading-tight text-mist-500">{label}</p>
-      {sub && <p className="text-[10px] text-mist-600">{sub}</p>}
+      <p className="mt-0.5 text-xs leading-tight text-mist-500">{label}</p>
+      {sub && <p className="text-xs text-mist-600">{sub}</p>}
     </div>
   );
 }

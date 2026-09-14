@@ -47,7 +47,7 @@ export function WelcomeBack({ accent, fr, showReorder = true }: { accent: string
         <button
           type="button"
           onClick={again}
-          className="flex items-center gap-1.5 rounded-xl border border-ink-600 px-2.5 py-1.5 text-[11px] font-semibold text-mist-200 hover:text-mist-100"
+          className="flex items-center gap-1.5 rounded-xl border border-ink-600 px-2.5 py-1.5 text-xs font-semibold text-mist-200 hover:text-mist-100"
         >
           <Repeat className="h-3 w-3" /> {fr ? "Refaire la dernière" : "Order the same again"}
         </button>

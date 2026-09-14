@@ -40,18 +40,18 @@ function RowFlags({ row }: { row: OrderRow }) {
   return (
     <>
       {row.isTest && (
-        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[10px] font-semibold uppercase text-mist-400">
+        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-xs font-semibold uppercase text-mist-400">
           Test
         </span>
       )}
       {row.archived && (
-        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[10px] font-semibold uppercase text-mist-400">
+        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-xs font-semibold uppercase text-mist-400">
           Archived
         </span>
       )}
       {unanswered && (
         <span
-          className="inline-flex items-center gap-1 rounded-full bg-caution/15 px-2 py-0.5 text-[10px] font-semibold text-gold-200"
+          className="inline-flex items-center gap-1 rounded-full bg-caution/15 px-2 py-0.5 text-xs font-semibold text-gold-200"
           title="The rider has not accepted this assignment yet"
         >
           <Clock className="h-3 w-3" /> Unaccepted

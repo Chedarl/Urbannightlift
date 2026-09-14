@@ -134,7 +134,7 @@ export function LiveConsole() {
         </button>
       </div>
 
-      <p className="flex items-center gap-1.5 text-[11px] text-mist-500">
+      <p className="flex items-center gap-1.5 text-xs text-mist-500">
         <span className={cn("h-1.5 w-1.5 rounded-full", error ? "bg-caution" : "animate-pulse bg-safe")} />
         {error ?? "Updating every 12 seconds"}
         {checkedAt && ` · last checked ${checkedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
@@ -189,7 +189,7 @@ export function LiveConsole() {
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-mist-200">{r.name}</p>
-                <p className="truncate text-[11px] text-mist-500">
+                <p className="truncate text-xs text-mist-500">
                   {r.activeOrders > 0 ? `${r.activeOrders} order${r.activeOrders === 1 ? "" : "s"} out` : "Free"}
                   {r.vehicleRef ? ` · ${r.vehicleRef}` : ""}
                 </p>
@@ -222,9 +222,9 @@ function OrderRow({ order: o, focused, onFocus }: { order: LiveOrder; focused: b
           {o.orderCode}
         </Link>
         {o.isTest && (
-          <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] font-bold uppercase text-mist-500">Test</span>
+          <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs font-bold uppercase text-mist-500">Test</span>
         )}
-        <span className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-mist-400">
+        <span className="rounded bg-ink-800 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-mist-400">
           {o.stage}
         </span>
         {o.onTheRoad && <TrackingChip state={o.tracking} ageMinutes={o.fixAgeMinutes} />}
@@ -244,7 +244,7 @@ function OrderRow({ order: o, focused, onFocus }: { order: LiveOrder; focused: b
         </span>
       </p>
 
-      <p className="mt-1.5 truncate text-[11px] text-mist-500">
+      <p className="mt-1.5 truncate text-xs text-mist-500">
         <MapPin className="mr-1 inline h-3 w-3" />
         {o.pickupLocation} → {o.deliveryLocation}
       </p>
@@ -252,22 +252,22 @@ function OrderRow({ order: o, focused, onFocus }: { order: LiveOrder; focused: b
       {/* Both numbers, on the row. The whole point of this screen is that
           noticing something and acting on it are the same gesture. */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[11px] text-mist-500">{o.customerName}</span>
+        <span className="mr-1 text-xs text-mist-500">{o.customerName}</span>
         <Reach phone={o.customerPhone} message={`Urban Night Lift — about your order ${o.orderCode}.`} />
 
         {o.rider ? (
           <>
-            <span className="ml-2 mr-1 flex items-center gap-1 text-[11px] text-mist-500">
+            <span className="ml-2 mr-1 flex items-center gap-1 text-xs text-mist-500">
               <Bike className="h-3 w-3" /> {o.rider.name}
             </span>
             {o.rider.phone ? (
               <Reach phone={o.rider.phone} message={`Urban Night Lift — order ${o.orderCode}, checking in.`} />
             ) : (
-              <span className="text-[11px] text-mist-600">no number on file</span>
+              <span className="text-xs text-mist-600">no number on file</span>
             )}
           </>
         ) : (
-          <span className="ml-2 flex items-center gap-1 text-[11px] text-mist-500">
+          <span className="ml-2 flex items-center gap-1 text-xs text-mist-500">
             <CircleSlash className="h-3 w-3" /> no rider yet
           </span>
         )}
@@ -276,7 +276,7 @@ function OrderRow({ order: o, focused, onFocus }: { order: LiveOrder; focused: b
           <button
             type="button"
             onClick={onFocus}
-            className="ml-auto flex items-center gap-1 rounded-lg border border-violet-500/40 px-2 py-1 text-[11px] font-semibold text-violet-300 hover:bg-violet-500/10"
+            className="ml-auto flex items-center gap-1 rounded-lg border border-violet-500/40 px-2 py-1 text-xs font-semibold text-violet-300 hover:bg-violet-500/10"
           >
             <Eye className="h-3 w-3" /> {focused ? "Hide on map" : "Show on map"}
           </button>
@@ -293,7 +293,7 @@ function Reach({ phone, message }: { phone: string; message: string }) {
     <span className="flex items-center gap-1">
       <a
         href={`tel:+${digits}`}
-        className="flex items-center gap-1 rounded-lg border border-ink-700 px-2 py-1 text-[11px] font-semibold text-mist-300 hover:border-safe/50 hover:text-safe"
+        className="flex items-center gap-1 rounded-lg border border-ink-700 px-2 py-1 text-xs font-semibold text-mist-300 hover:border-safe/50 hover:text-safe"
       >
         <Phone className="h-3 w-3" /> Call
       </a>
@@ -301,7 +301,7 @@ function Reach({ phone, message }: { phone: string; message: string }) {
         href={buildWaLink(phone, message)}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 rounded-lg border border-ink-700 px-2 py-1 text-[11px] font-semibold text-mist-300 hover:border-safe/50 hover:text-safe"
+        className="flex items-center gap-1 rounded-lg border border-ink-700 px-2 py-1 text-xs font-semibold text-mist-300 hover:border-safe/50 hover:text-safe"
       >
         <MessageCircle className="h-3 w-3" /> Message
       </a>
@@ -313,7 +313,7 @@ function TrackingChip({ state, ageMinutes }: { state: TrackingState; ageMinutes:
   return (
     <span
       className={cn(
-        "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
         state === "LIVE" && "bg-safe/15 text-safe",
         state === "STALE" && "bg-caution/15 text-caution",
         (state === "LOST" || state === "NEVER") && "bg-restricted/15 text-restricted"
@@ -344,7 +344,7 @@ function Tally({ label, value, tone }: { label: string; value: number; tone: "ur
       >
         {value}
       </p>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
     </div>
   );
 }

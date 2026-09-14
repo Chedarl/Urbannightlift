@@ -113,7 +113,7 @@ export function OrderCaseThread({ orderCode, fr }: { orderCode: string; fr: bool
                         : "self-end bg-ink-800 text-mist-200"
                     )}
                   >
-                    <p className="text-[11px] text-mist-500">
+                    <p className="text-xs text-mist-500">
                       {m.authorType === "STAFF" ? `${m.authorName} · Urban Night Lift` : fr ? "Vous" : "You"}
                     </p>
                     <p className="mt-0.5 whitespace-pre-wrap">{m.body}</p>
@@ -150,7 +150,7 @@ export function OrderCaseThread({ orderCode, fr }: { orderCode: string; fr: bool
             <Send className="h-4 w-4" /> {fr ? "Envoyer" : "Send"}
           </Button>
 
-          <p className="text-[11px] text-mist-500">
+          <p className="text-xs text-mist-500">
             {fr
               ? "Nous répondons pendant nos heures de nuit (18h–4h). Vous verrez la réponse ici."
               : "We reply during our night hours (6 PM–4 AM). Our answer appears right here."}

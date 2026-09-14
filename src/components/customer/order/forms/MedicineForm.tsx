@@ -405,7 +405,7 @@ export function MedicineForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
             <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
-            <p className="mt-2 text-[11px] text-mist-500">
+            <p className="mt-2 text-xs text-mist-500">
               {fr
                 ? "Vous ne savez pas laquelle est ouverte ? Laissez vide — nous trouvons la pharmacie de garde la plus proche."
                 : "Not sure which is open? Leave this and we'll find the nearest pharmacy on duty."}
@@ -420,7 +420,7 @@ export function MedicineForm() {
             <p className="text-sm font-semibold text-mist-100">{fr ? "Liste des médicaments" : "Medicine list"}</p>
             <span className="text-xs text-mist-500">{fr ? "Ajoutez tous les médicaments" : "Add all medicines to be picked up"}</span>
           </div>
-          <div className="hidden grid-cols-[1fr_1fr_auto_auto] gap-2 px-1 pb-1 text-[11px] text-mist-500 sm:grid">
+          <div className="hidden grid-cols-[1fr_1fr_auto_auto] gap-2 px-1 pb-1 text-xs text-mist-500 sm:grid">
             <span>{fr ? "Nom" : "Medicine name"}</span><span>{fr ? "Dosage" : "Dosage / Strength"}</span><span className="text-center">{fr ? "Qté" : "Quantity"}</span><span />
           </div>
           <div className="flex flex-col gap-2">
@@ -447,13 +447,13 @@ export function MedicineForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={card}>
             <p className={label}><Upload className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Joindre l'ordonnance" : "Upload prescription"}</p>
-            <p className="mb-2 text-[11px] text-mist-500">JPG, PNG {fr ? "ou" : "or"} PDF (Max 10MB)</p>
+            <p className="mb-2 text-xs text-mist-500">JPG, PNG {fr ? "ou" : "or"} PDF (Max 10MB)</p>
             <label className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-ink-700 bg-ink-800 px-3 py-2.5 text-xs">
               <span className={uploadedName ? "text-safe" : "text-mist-500"}>{uploading ? "…" : uploadedName ?? (fr ? "Aucun fichier" : "No file selected")}</span>
               <span className="rounded-lg bg-teal-500/15 px-3 py-1 font-semibold text-teal-300">{fr ? "Parcourir" : "Browse"}</span>
               <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFile} />
             </label>
-            <p className="mt-1 flex items-center gap-1 text-[10px] text-mist-500"><ShieldCheck className="h-3 w-3" /> {fr ? "Privé — jamais dans le PDF partagé." : "Private — never in the shared PDF."}</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-mist-500"><ShieldCheck className="h-3 w-3" /> {fr ? "Privé — jamais dans le PDF partagé." : "Private — never in the shared PDF."}</p>
           </div>
           <div className={card}>
             <p className={label}><UserCheck className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Titulaire / récepteur autorisé" : "Prescription holder / authorized receiver"}</p>
@@ -540,7 +540,7 @@ export function MedicineForm() {
               <button key={p.v} type="button" onClick={() => setValue("paymentMethod", p.v as "CASH" | "MTN_MOMO" | "ORANGE_MONEY")}
                 className={cn("rounded-xl border p-3 text-left", payment === p.v ? "border-teal-400 bg-teal-500/10" : "border-ink-700 bg-ink-800")}>
                 <span className={cn("block text-sm font-semibold", payment === p.v ? "text-teal-200" : "text-mist-200")}>{p.t}</span>
-                <span className="block text-[11px] text-mist-500">{p.s}</span>
+                <span className="block text-xs text-mist-500">{p.s}</span>
               </button>
             ))}
           </div>
@@ -550,7 +550,7 @@ export function MedicineForm() {
         <div className={card}>
           <p className={label}><ClipboardList className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Instructions importantes / notes" : "Important instructions / caution notes"}</p>
           <textarea maxLength={250} className={cn(input, "mt-2 min-h-20 resize-y")} placeholder={fr ? "ex. Allergique à la pénicilline, contacter avant le ramassage…" : "e.g. Allergic to penicillin, urgent medication, contact before pickup…"} {...register("specialInstructions")} />
-          <p className="mt-1 text-right text-[11px] text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/250</p>
+          <p className="mt-1 text-right text-xs text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/250</p>
         </div>
 
         {missing.length > 0 && (
@@ -581,7 +581,7 @@ export function MedicineForm() {
           <span>{fr ? "Vérifier la commande" : "Review order summary"}</span>
           <ChevronRight className="h-5 w-5" />
         </button>
-        <p className="mt-1.5 text-center text-[11px] text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-teal-400" />{fr ? "Votre commande est protégée. Traitée avec soin et confidentialité." : "Your order is protected. We handle it with care and confidentiality."}</p>
+        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-teal-400" />{fr ? "Votre commande est protégée. Traitée avec soin et confidentialité." : "Your order is protected. We handle it with care and confidentiality."}</p>
       </div>
     </form>
   );

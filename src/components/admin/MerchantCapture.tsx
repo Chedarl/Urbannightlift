@@ -234,7 +234,7 @@ export function MerchantCapture() {
           {progress ? `Reading ${progress.done}/${progress.total}…` : "Add screenshots"}
         </Button>
         {/* The input has always taken several; nothing said so. */}
-        <span className="self-center text-[11px] text-mist-500">pick as many as you like</span>
+        <span className="self-center text-xs text-mist-500">pick as many as you like</span>
         <Button size="sm" variant="outline" onClick={readThread} disabled={busy || thread.trim().length < 20}>
           <ClipboardPaste className="h-3.5 w-3.5" /> Read the conversation
         </Button>
@@ -274,10 +274,10 @@ export function MerchantCapture() {
       */}
       {lastSaw && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-[11px] text-mist-500 hover:text-mist-300">
+          <summary className="cursor-pointer text-xs text-mist-500 hover:text-mist-300">
             What Kimi could read
           </summary>
-          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-[10px] leading-relaxed text-mist-400">
+          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-xs leading-relaxed text-mist-400">
             {lastSaw}
           </pre>
         </details>
@@ -402,7 +402,7 @@ export function MerchantCapture() {
                   onClick={() =>
                     edit(index, { [key]: draft[key] === true ? null : true } as Partial<Draft>)
                   }
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                     draft[key] === true ? "bg-safe/15 text-safe" : "border border-ink-600 text-mist-500"
                   }`}
                 >
@@ -413,7 +413,7 @@ export function MerchantCapture() {
             </div>
 
             {draft.products.length > 0 && (
-              <p className="text-[11px] text-mist-500">
+              <p className="text-xs text-mist-500">
                 {draft.products.length} price{draft.products.length === 1 ? "" : "s"} were visible
                 too — add them from the products panel once this is saved.
               </p>
@@ -425,16 +425,16 @@ export function MerchantCapture() {
               a business's own Instagram page actually gives you.
             */}
             {missing.length > 0 && (
-              <p className="text-[11px] text-caution">{describeMissing(missing)}</p>
+              <p className="text-xs text-caution">{describeMissing(missing)}</p>
             )}
 
             {/* Check a field against the page rather than against memory. */}
             {draft.sawText && (
               <details>
-                <summary className="cursor-pointer text-[11px] text-mist-500 hover:text-mist-300">
+                <summary className="cursor-pointer text-xs text-mist-500 hover:text-mist-300">
                   What Kimi read off this picture
                 </summary>
-                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-[10px] leading-relaxed text-mist-400">
+                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-ink-950 p-2 text-xs leading-relaxed text-mist-400">
                   {draft.sawText}
                 </pre>
               </details>
@@ -457,12 +457,12 @@ export function MerchantCapture() {
       })}
 
       {drafts.length > 0 && (
-        <p className="mt-2 text-[10px] leading-relaxed text-mist-600">
+        <p className="mt-2 text-xs leading-relaxed text-mist-600">
           Each saves unverified, so nothing reaches a customer until you confirm it — same as
           every other way in.
         </p>
       )}
-      {pending && <p className="mt-1 text-[11px] text-mist-600">Refreshing…</p>}
+      {pending && <p className="mt-1 text-xs text-mist-600">Refreshing…</p>}
     </div>
   );
 }

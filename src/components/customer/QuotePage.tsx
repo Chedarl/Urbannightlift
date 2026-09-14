@@ -99,7 +99,7 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
         <Logo height={34} />
       </div>
       {children}
-      <p className="mt-6 text-center text-[11px] text-mist-500">
+      <p className="mt-6 text-center text-xs text-mist-500">
         {fr
           ? "Urban Night Lift — livraison de nuit à Yaoundé, 18h à 4h."
           : "Urban Night Lift — night delivery across Yaoundé, 6 PM to 4 AM."}
@@ -196,12 +196,12 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
 
           <p className="mt-5 text-xs text-mist-400">{fr ? "Frais de livraison" : "Delivery fee"}</p>
           <p className="font-display text-4xl font-bold text-gold-300">{formatXaf(quote.feeXaf)}</p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr
               ? "Prix fixe. Le coût de vos articles se règle séparément."
               : "Fixed price. The cost of your items is settled separately."}
           </p>
-          <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900/60 px-3 py-2 text-[11px] text-mist-400">
+          <p className="mt-3 rounded-xl border border-ink-700 bg-ink-900/60 px-3 py-2 text-xs text-mist-400">
             {quote.payOnDelivery
               ? fr
                 ? "Après acceptation, nous assignons un livreur. Vous payez en espèces à la livraison."
@@ -324,7 +324,7 @@ export function QuotePage({ quote, fr }: { quote: QuoteView; fr: boolean }) {
         </div>
       </div>
 
-      <p className="mt-4 flex items-start gap-2 rounded-xl border border-ink-700 bg-ink-900/50 p-3 text-[11px] text-mist-500">
+      <p className="mt-4 flex items-start gap-2 rounded-xl border border-ink-700 bg-ink-900/50 p-3 text-xs text-mist-500">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
         {fr
           ? "Nous ne demandons jamais votre code PIN MoMo ou Orange Money. Rien n'est prélevé tant que vous n'avez pas accepté."

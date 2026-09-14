@@ -240,7 +240,7 @@ export function ChatPanel({
               ))}
             </div>
             {copy.caveat && (
-              <p className="mt-4 text-[11px] leading-relaxed text-mist-600">{copy.caveat}</p>
+              <p className="mt-4 text-xs leading-relaxed text-mist-600">{copy.caveat}</p>
             )}
           </div>
         )}
@@ -258,7 +258,7 @@ export function ChatPanel({
               )}
             </div>
 
-            {turn.stopped && <p className="mt-1 text-[11px] text-mist-600">{copy.stopped}</p>}
+            {turn.stopped && <p className="mt-1 text-xs text-mist-600">{copy.stopped}</p>}
 
             {/*
               Whatever this grounding calls a button. Rendered by the caller,
@@ -280,7 +280,7 @@ export function ChatPanel({
                     type="button"
                     onClick={() => ask(q)}
                     disabled={busy}
-                    className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1 text-[11px] text-mist-400 hover:border-violet-500 hover:text-mist-200 disabled:opacity-50"
+                    className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1 text-xs text-mist-400 hover:border-violet-500 hover:text-mist-200 disabled:opacity-50"
                   >
                     {q}
                   </button>
@@ -348,7 +348,7 @@ export function ChatPanel({
               abortRef.current?.abort();
               setTurns([]);
             }}
-            className="flex items-center gap-1.5 self-start text-[11px] text-mist-500 hover:text-mist-300"
+            className="flex items-center gap-1.5 self-start text-xs text-mist-500 hover:text-mist-300"
           >
             <RotateCcw className="h-3 w-3" />
             {copy.newChat}

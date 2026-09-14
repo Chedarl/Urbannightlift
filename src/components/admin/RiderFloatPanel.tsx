@@ -88,7 +88,7 @@ export function RiderFloatPanel({ riderId, riderName }: { riderId: string; rider
       <button
         type="button"
         onClick={toggle}
-        className="flex items-center gap-1.5 text-[11px] font-medium text-mist-400 hover:text-mist-200"
+        className="flex items-center gap-1.5 text-xs font-medium text-mist-400 hover:text-mist-200"
       >
         <Wallet className="h-3.5 w-3.5" />
         Float
@@ -98,7 +98,7 @@ export function RiderFloatPanel({ riderId, riderName }: { riderId: string; rider
       {open && (
         <div className="mt-2 rounded-xl border border-ink-700 bg-ink-950 p-3">
           {!state ? (
-            <p className="text-[11px] text-mist-500">Reading the ledger…</p>
+            <p className="text-xs text-mist-500">Reading the ledger…</p>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -111,13 +111,13 @@ export function RiderFloatPanel({ riderId, riderName }: { riderId: string; rider
               </div>
 
               {state.limitXaf <= 0 && (
-                <p className="mt-2 text-[11px] leading-relaxed text-caution">
+                <p className="mt-2 text-xs leading-relaxed text-caution">
                   No float. {riderName.split(" ")[0]} cannot take food, pharmacy or grocery jobs
                   until you grant one — the app will refuse to let them pay from their own pocket.
                 </p>
               )}
               {state.suspended && (
-                <p className="mt-2 text-[11px] text-caution">
+                <p className="mt-2 text-xs text-caution">
                   Suspended — no new top-ups. They can still hand cash back.
                 </p>
               )}
@@ -173,12 +173,12 @@ export function RiderFloatPanel({ riderId, riderName }: { riderId: string; rider
                 </Button>
               </div>
 
-              {error && <p className="mt-2 text-[11px] text-restricted">{error}</p>}
+              {error && <p className="mt-2 text-xs text-restricted">{error}</p>}
 
               {state.entries.length > 0 && (
                 <ul className="mt-3 flex flex-col gap-1 border-t border-ink-800 pt-2">
                   {state.entries.slice(0, 6).map((e) => (
-                    <li key={e.id} className="flex items-baseline justify-between gap-2 text-[11px]">
+                    <li key={e.id} className="flex items-baseline justify-between gap-2 text-xs">
                       <span className="text-mist-500">
                         {TYPE_LABEL[e.type] ?? e.type}
                         {e.note ? ` · ${e.note}` : ""}
@@ -204,7 +204,7 @@ export function RiderFloatPanel({ riderId, riderName }: { riderId: string; rider
 function Figure({ label, value, tone }: { label: string; value: number; tone?: "gold" }) {
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-wide text-mist-500">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-mist-500">{label}</p>
       <p className={`text-sm font-semibold tabular-nums ${tone === "gold" ? "text-gold-400" : "text-mist-200"}`}>
         {formatXaf(value)}
       </p>

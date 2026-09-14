@@ -99,7 +99,7 @@ export function ApproveOverCap({
         </button>
       </div>
 
-      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-mist-500">
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-mist-500">
         <Receipt className="mt-0.5 h-3 w-3 shrink-0" />
         {fr
           ? "Le livreur a photographié le reçu du commerçant — demandez-le à tout moment."

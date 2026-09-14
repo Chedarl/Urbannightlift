@@ -40,7 +40,7 @@ export function OrderStageBar({ stage, blocker }: { stage: Stage; blocker: strin
               <div className="flex w-full items-center">
                 <span
                   className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold",
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
                     done && "border-safe bg-safe/20 text-safe",
                     here && "border-gold-400 bg-gold-400 text-ink-950",
                     !done && !here && "border-ink-600 text-mist-500"
@@ -54,7 +54,7 @@ export function OrderStageBar({ stage, blocker }: { stage: Stage; blocker: strin
               </div>
               <span
                 className={cn(
-                  "text-center text-[10px] leading-tight",
+                  "text-center text-xs leading-tight",
                   here ? "font-semibold text-gold-300" : done ? "text-mist-400" : "text-mist-500"
                 )}
               >

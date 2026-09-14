@@ -266,7 +266,7 @@ export function LocationField({
                 <p className="truncate text-sm font-semibold text-mist-100">{value.primaryName}</p>
                 <p className="truncate text-xs text-mist-500">{value.neighbourhood} · {ARRONDISSEMENT_LABEL[value.arrondissement] ?? value.arrondissement}</p>
                 {value.landmark && <p className="mt-0.5 truncate text-xs text-mist-400">📍 {value.landmark}</p>}
-                <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${SERVICE_STATUS_META[value.serviceStatus]?.hex ?? accent}22`, color: SERVICE_STATUS_META[value.serviceStatus]?.hex ?? accent }}>
+                <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${SERVICE_STATUS_META[value.serviceStatus]?.hex ?? accent}22`, color: SERVICE_STATUS_META[value.serviceStatus]?.hex ?? accent }}>
                   {fr ? SERVICE_STATUS_META[value.serviceStatus]?.fr : SERVICE_STATUS_META[value.serviceStatus]?.en}
                 </span>
               </div>
@@ -379,7 +379,7 @@ export function LocationField({
                 key={tb.id}
                 type="button"
                 onClick={() => { setTab(tb.id); if (tb.id === "browse") loadBrowse(); if (tb.id === "gps") detectMyLocation(); if (tb.id === "map") movePin(3.848, 11.502); }}
-                className={cn("flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium", tab === tb.id ? "text-mist-100" : "text-mist-500")}
+                className={cn("flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium", tab === tb.id ? "text-mist-100" : "text-mist-500")}
                 style={tab === tb.id ? { borderBottom: `2px solid ${accent}` } : undefined}
               >
                 <tb.icon className="h-4 w-4" /> {tb.label}
@@ -465,7 +465,7 @@ function ResultRow({ r, fr, onPick, flat }: { r: LocationResult; fr: boolean; on
           {r.neighbourhood} · {ARRONDISSEMENT_LABEL[r.arrondissement] ?? r.arrondissement}
         </p>
       </div>
-      {meta && <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${meta.hex}22`, color: meta.hex }}>{fr ? meta.fr : meta.en}</span>}
+      {meta && <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${meta.hex}22`, color: meta.hex }}>{fr ? meta.fr : meta.en}</span>}
     </button>
   );
 }

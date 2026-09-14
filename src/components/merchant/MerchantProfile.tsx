@@ -123,7 +123,7 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
           prefix="shop-cover"
           fr={fr}
         />
-        <p className="text-[11px] leading-relaxed text-mist-500">
+        <p className="text-xs leading-relaxed text-mist-500">
           {fr
             ? "N'utilisez que vos propres photos. Enregistrez en bas pour les publier."
             : "Use only your own photographs. Press save at the bottom to publish them."}
@@ -150,7 +150,7 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
             onChange={(e) => setForm({ ...form, landmark: e.target.value })}
           />
         </label>
-        <p className="text-[11px] leading-relaxed text-mist-500">
+        <p className="text-xs leading-relaxed text-mist-500">
           {fr
             ? "C'est ce que lit le livreur à 1 h du matin. Un bon repère vaut mieux qu'une adresse exacte."
             : "This is what a rider reads at 1 AM. A good landmark beats an exact address."}
@@ -213,7 +213,7 @@ export function MerchantProfile({ merchant }: { merchant: ShopFields }) {
             onChange={(e) => setForm({ ...form, socialUrl: e.target.value })}
           />
         </label>
-        <p className="text-[11px] leading-relaxed text-mist-500">
+        <p className="text-xs leading-relaxed text-mist-500">
           {fr
             ? `Le numéro WhatsApp de votre compte (${merchant.whatsappNumber}) et le nom de votre boutique ne se changent pas ici — appelez le dispatch, nous confirmons et nous le modifions.`
             : `Your account's WhatsApp number (${merchant.whatsappNumber}) and your shop's name can't be changed here — call dispatch, we confirm and change it.`}
@@ -256,7 +256,7 @@ function Toggle({
     >
       <span className="min-w-0">
         <span className="block text-sm font-medium text-mist-100">{title}</span>
-        {hint && <span className="mt-0.5 block text-[11px] leading-relaxed text-mist-500">{hint}</span>}
+        {hint && <span className="mt-0.5 block text-xs leading-relaxed text-mist-500">{hint}</span>}
       </span>
       <span
         className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${

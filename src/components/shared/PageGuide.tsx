@@ -69,7 +69,7 @@ export function PageGuide() {
           >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-violet-300">
+                <p className="text-xs font-bold uppercase tracking-widest text-violet-300">
                   {fr ? "Sur cette page" : "On this page"}
                 </p>
                 <h2 className="mt-1 font-display text-2xl font-bold leading-tight text-mist-100">
@@ -90,13 +90,13 @@ export function PageGuide() {
               {fr ? guide.purpose.fr : guide.purpose.en}
             </p>
 
-            <p className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-widest text-mist-500">
+            <p className="mt-5 mb-2 text-xs font-bold uppercase tracking-widest text-mist-500">
               {fr ? "Ce que vous faites ici" : "What you do here"}
             </p>
             <ul className="flex flex-col gap-3">
               {guide.steps.map((s, i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink-800 text-[11px] font-bold text-mist-300">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink-800 text-xs font-bold text-mist-300">
                     {i + 1}
                   </span>
                   <span className="text-sm leading-relaxed text-mist-200">{fr ? s.fr : s.en}</span>
@@ -108,7 +108,7 @@ export function PageGuide() {
               <div className="mt-5 flex gap-2.5 rounded-xl border border-caution/40 bg-caution/10 p-3.5">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-caution" />
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-caution">
+                  <p className="text-xs font-bold uppercase tracking-widest text-caution">
                     {fr ? "Attention" : "Watch out"}
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-mist-200">

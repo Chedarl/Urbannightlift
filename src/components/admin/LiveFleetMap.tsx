@@ -89,7 +89,7 @@ export function LiveFleetMap({ riders }: { riders: FleetPin[] }) {
         ))}
       </MapContainer>
       {riders.length === 0 && (
-        <p className="border-t border-ink-800 bg-ink-900 px-3 py-2 text-[11px] text-mist-500">
+        <p className="border-t border-ink-800 bg-ink-900 px-3 py-2 text-xs text-mist-500">
           Nobody is reporting a position right now. A rider only appears here while their phone is awake and
           sharing — a web page cannot track a phone with the screen off.
         </p>

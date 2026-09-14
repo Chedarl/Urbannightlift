@@ -251,7 +251,7 @@ export function AmbassadorsManager({
                     <Button size="sm" variant="ghost" onClick={() => setPayingId(null)}>
                       Cancel
                     </Button>
-                    <span className="text-[11px] text-mist-500">
+                    <span className="text-xs text-mist-500">
                       Send the money on MoMo first, then record it here.
                     </span>
                   </div>
@@ -263,12 +263,12 @@ export function AmbassadorsManager({
               </div>
             )}
 
-            {a.notes && <p className="mt-2 text-[11px] text-mist-500">{a.notes}</p>}
+            {a.notes && <p className="mt-2 text-xs text-mist-500">{a.notes}</p>}
           </div>
         ))}
       </div>
 
-      <p className="text-[11px] text-mist-500">
+      <p className="text-xs text-mist-500">
         Commission is only earned on deliveries that completed and were paid for — never on a quote, a
         cancelled order, or a test order. Default terms: {formatXaf(DEFAULT_TERMS.discountXaf)} off,{" "}
         {DEFAULT_TERMS.commissionPercent}% of our share, first {DEFAULT_TERMS.orderCap} orders.

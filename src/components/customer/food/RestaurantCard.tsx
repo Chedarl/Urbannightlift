@@ -118,7 +118,7 @@ export function RestaurantCard({
 
           <span className="absolute left-3 top-3 flex items-center gap-1.5">
             <span
-              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur ${
+              className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold backdrop-blur ${
                 merchant.openNow ? "bg-safe/25 text-safe" : "bg-ink-950/70 text-mist-400"
               }`}
             >
@@ -126,14 +126,14 @@ export function RestaurantCard({
               {merchant.openNow ? (fr ? "Ouvert" : "Open now") : fr ? "Fermé" : "Closed"}
             </span>
             {merchant.open24h && (
-              <span className="rounded-full bg-ink-950/70 px-2 py-0.5 text-[10px] font-semibold text-violet-200 backdrop-blur">
+              <span className="rounded-full bg-ink-950/70 px-2 py-0.5 text-xs font-semibold text-violet-200 backdrop-blur">
                 24h
               </span>
             )}
           </span>
 
           {inCart > 0 && (
-            <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-0.5 text-[11px] font-bold text-ink-950 shadow-lg">
+            <span className="absolute right-3 top-3 rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-ink-950 shadow-lg">
               {inCart}
             </span>
           )}
@@ -169,7 +169,7 @@ export function RestaurantCard({
                 className={`h-4 w-4 shrink-0 text-mist-500 transition-transform ${open ? "rotate-180" : ""}`}
               />
             </span>
-            <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+            <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               {merchant.neighbourhood && (
                 <span className="flex items-center gap-1 text-mist-400">
                   <MapPin className="h-3 w-3" /> {merchant.neighbourhood}
@@ -258,7 +258,7 @@ export function RestaurantCard({
                           </span>
                         )}
                         {item.soldOut && (
-                          <span className="absolute inset-x-0 bottom-0 bg-ink-950/90 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-caution">
+                          <span className="absolute inset-x-0 bottom-0 bg-ink-950/90 py-0.5 text-center text-xs font-semibold uppercase tracking-wide text-caution">
                             {fr ? "Fini ce soir" : "Sold out tonight"}
                           </span>
                         )}
@@ -273,7 +273,7 @@ export function RestaurantCard({
                           {name}
                         </span>
                         {description && (
-                          <span className="line-clamp-2 text-[10px] leading-snug text-mist-500">
+                          <span className="line-clamp-2 text-xs leading-snug text-mist-500">
                             {description}
                           </span>
                         )}
@@ -339,7 +339,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
+      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
         active
           ? "border-amber-400 bg-amber-400/15 text-amber-200"
           : "border-ink-700 text-mist-400 hover:text-mist-200"

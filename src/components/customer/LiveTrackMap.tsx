@@ -112,7 +112,7 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
           {/* A legible "live" state — the pulsing dot the reference apps use so
               you can see at a glance that the position is current, not frozen. */}
           {rider && !isStale && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-[11px] font-semibold text-safe">
+            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-xs font-semibold text-safe">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-safe/70" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-safe" />
@@ -121,7 +121,7 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
             </span>
           )}
           {etaMinutes != null && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-[11px] font-semibold text-safe">
+            <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-0.5 text-xs font-semibold text-safe">
               <Clock className="h-3 w-3" />
               {t("track.etaMinutes").replace("{n}", String(etaMinutes))}
             </span>
@@ -132,7 +132,7 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
             href={mapsHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[11px] text-violet-300 hover:text-violet-200"
+            className="flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200"
           >
             <ExternalLink className="h-3 w-3" /> {t("track.openInMaps")}
           </a>
@@ -160,7 +160,7 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
       )}
 
       <p
-        className={`px-3 py-1.5 text-center text-[11px] ${
+        className={`px-3 py-1.5 text-center text-xs ${
           rider ? (isStale ? "bg-ink-950 text-mist-500" : "bg-ink-950 text-safe") : "bg-ink-950 text-mist-500"
         }`}
       >

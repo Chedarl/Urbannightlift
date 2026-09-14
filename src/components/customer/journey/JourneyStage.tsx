@@ -77,12 +77,12 @@ export function JourneyStage({
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-mist-500">
+        <p className="text-xs font-bold uppercase tracking-widest text-mist-500">
           {fr ? `Étape ${stage.number} sur 5` : `Step ${stage.number} of 5`}
         </p>
         <span
           className={cn(
-            "shrink-0 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+            "shrink-0 rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
             turn === "YOURS" ? "bg-gold-400/15 text-gold-300" : "bg-violet-500/15 text-violet-300"
           )}
         >

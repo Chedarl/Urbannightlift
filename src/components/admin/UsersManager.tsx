@@ -138,7 +138,7 @@ export function UsersManager({
 
               {u.role === "RIDER" && (
                 <div className="mt-2">
-                  <p className="text-[11px] text-mist-500">
+                  <p className="text-xs text-mist-500">
                     Zones covered {u.zoneIds.length === 0 && "— none set, so this rider is offered every area"}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
@@ -152,8 +152,8 @@ export function UsersManager({
                           onClick={() => toggleZone(u, z.id)}
                           className={
                             on
-                              ? "rounded-full border border-gold-400/60 bg-gold-400/10 px-2.5 py-0.5 text-[11px] font-medium text-gold-200"
-                              : "rounded-full border border-ink-700 px-2.5 py-0.5 text-[11px] text-mist-500 hover:text-mist-300"
+                              ? "rounded-full border border-gold-400/60 bg-gold-400/10 px-2.5 py-0.5 text-xs font-medium text-gold-200"
+                              : "rounded-full border border-ink-700 px-2.5 py-0.5 text-xs text-mist-500 hover:text-mist-300"
                           }
                         >
                           {z.zoneName}

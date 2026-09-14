@@ -83,7 +83,7 @@ export function ServiceSelection({
                 <Icon className="h-6 w-6" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-display text-[15px] font-semibold">{t(`services.${type}.name`)}</span>
+                <span className="block font-display text-base font-semibold">{t(`services.${type}.name`)}</span>
                 <span className="mt-0.5 block text-xs leading-relaxed text-mist-500">
                   {t(`services.${type}.description`)}
                 </span>
@@ -102,8 +102,8 @@ export function ServiceSelection({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="block font-display text-[15px] font-semibold text-mist-300">{t(`services.${type}.name`)}</span>
-                  <span className="rounded-full bg-ink-800 px-2 py-0.5 text-[10px] font-semibold text-mist-400">
+                  <span className="block font-display text-base font-semibold text-mist-300">{t(`services.${type}.name`)}</span>
+                  <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs font-semibold text-mist-400">
                     {fr ? "Bientôt" : "Coming soon"}
                   </span>
                 </span>

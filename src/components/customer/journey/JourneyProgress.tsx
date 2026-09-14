@@ -37,7 +37,7 @@ export function JourneyProgress({
           />
         ))}
       </div>
-      <p className="mt-2 text-[11px] font-medium text-mist-500">
+      <p className="mt-2 text-xs font-medium text-mist-500">
         {stopped
           ? fr
             ? "Cette commande a été arrêtée."

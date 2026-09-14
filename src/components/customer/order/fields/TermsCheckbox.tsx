@@ -37,7 +37,7 @@ export function TermsCheckbox({
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <span className="text-[11px] leading-relaxed text-mist-400">
+      <span className="text-xs leading-relaxed text-mist-400">
         <ShieldCheck className="mr-1 inline h-3 w-3" style={{ color: accent }} />
         {getDisclaimer(fr ? "fr" : "en")}
       </span>

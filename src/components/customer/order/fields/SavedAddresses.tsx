@@ -100,7 +100,7 @@ export function SavedAddresses({
     <div className="mb-2 flex flex-col gap-2">
       {addresses.length > 0 && (
         <>
-          <p className="text-[11px] text-mist-500">{fr ? "Vos adresses enregistrées" : "Your saved places"}</p>
+          <p className="text-xs text-mist-500">{fr ? "Vos adresses enregistrées" : "Your saved places"}</p>
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
             {addresses.map((a) => {
               const picked = current != null && locationTextOf(current) === a.locationText;
@@ -169,7 +169,7 @@ export function SavedAddresses({
           <button
             type="button"
             onClick={() => setNaming(true)}
-            className="flex w-fit items-center gap-1.5 rounded-xl border border-dashed border-ink-600 px-2.5 py-1.5 text-[11px] text-mist-400 hover:text-mist-200"
+            className="flex w-fit items-center gap-1.5 rounded-xl border border-dashed border-ink-600 px-2.5 py-1.5 text-xs text-mist-400 hover:text-mist-200"
           >
             <Plus className="h-3 w-3" /> {fr ? "Enregistrer cette adresse" : "Save this place for next time"}
           </button>

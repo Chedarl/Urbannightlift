@@ -287,7 +287,7 @@ export function OrderConfirmation({
           cards still asking to be dealt with. */}
       {done.length > 0 && !finished && (
         <div className="flex flex-col gap-2.5 rounded-2xl border border-ink-800 bg-ink-950/40 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-mist-600">
+          <p className="text-xs font-bold uppercase tracking-widest text-mist-600">
             {fr ? "Déjà fait" : "Done so far"}
           </p>
           {done.map((s) => (
@@ -425,7 +425,7 @@ export function OrderConfirmation({
               able to reach past the step they are on. */}
           {ahead.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-mist-600">
+              <p className="text-xs font-bold uppercase tracking-widest text-mist-600">
                 {fr ? "Ensuite" : "Still to come"}
               </p>
               {ahead.map((s) => (

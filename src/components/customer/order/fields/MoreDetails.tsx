@@ -37,7 +37,7 @@ export function MoreDetails({
           <SlidersHorizontal className="h-4 w-4" style={{ color: accent }} />
           {label ?? (fr ? "Ajouter des détails" : "Add details")}
         </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-mist-500">
+        <span className="flex items-center gap-1.5 text-xs text-mist-500">
           {fr ? "optionnel" : "optional"}
           <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
         </span>

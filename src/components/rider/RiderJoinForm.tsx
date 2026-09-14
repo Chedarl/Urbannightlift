@@ -174,7 +174,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
           <p className="mt-1.5 rounded-xl border border-ink-700 bg-ink-800/60 px-3 py-2.5 text-sm text-mist-200">
             {profile ? `+${profile.whatsappNumber}` : "—"}
           </p>
-          <p className="mt-1 text-[11px] text-mist-500">
+          <p className="mt-1 text-xs text-mist-500">
             {fr ? "Le numéro de votre compte — c'est là que nous appelons." : "The number on your account — this is where we call."}
           </p>
         </div>
@@ -195,7 +195,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
           <IdCard className="h-3.5 w-3.5 text-violet-300" />
           {fr ? "Pièce d'identité" : "Your ID"}
         </p>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-1.5 text-xs leading-relaxed text-mist-500">
           {fr
             ? "Nous vérifions chaque conducteur parce qu'il frappe à la porte des clients à 1h du matin. Votre pièce reste privée : elle n'est jamais montrée à un client ni publiée."
             : "We check every rider because you'll be knocking on someone's door at 1 AM. Your ID stays private — it is never shown to a customer and never published anywhere."}
@@ -230,7 +230,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
           <Camera className="h-3.5 w-3.5 text-violet-300" />
           {fr ? "Votre photo" : "A photo of you"}
         </p>
-        <p className="mt-1 text-[11px] leading-relaxed text-mist-500">
+        <p className="mt-1 text-xs leading-relaxed text-mist-500">
           {fr
             ? "Celle-ci, les clients la voient : ils savent qui arrive avant que vous frappiez. Visage dégagé, bonne lumière."
             : "This one customers do see — so they know who's arriving before you knock. Face clear, good light."}
@@ -257,7 +257,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
               type="button"
               onClick={() => set("vehicleType", o.v)}
               className={cn(
-                "rounded-xl border px-2 py-2 text-[11px] font-semibold",
+                "rounded-xl border px-2 py-2 text-xs font-semibold",
                 f.vehicleType === o.v
                   ? "border-violet-400 bg-violet-500/10 text-violet-200"
                   : "border-ink-700 bg-ink-800 text-mist-300"
@@ -292,7 +292,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
               type="button"
               onClick={() => toggleZone(z.id)}
               className={cn(
-                "rounded-xl border px-2.5 py-1.5 text-[11px]",
+                "rounded-xl border px-2.5 py-1.5 text-xs",
                 zonePreference.includes(z.id)
                   ? "border-violet-400 bg-violet-500/10 text-violet-200"
                   : "border-ink-700 bg-ink-800 text-mist-400"
@@ -302,7 +302,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
             </button>
           ))}
         </div>
-        <p className="mt-1 text-[11px] text-mist-500">
+        <p className="mt-1 text-xs text-mist-500">
           {fr
             ? "Trouver un lieu, c'est le métier ici. Nous gardons les conducteurs dans les zones qu'ils connaissent."
             : "Finding a place is the job here. We keep riders in the areas they already know."}
@@ -373,7 +373,7 @@ export function RiderJoinForm({ zones, fr }: { zones: { id: string; zoneName: st
         {busy ? (fr ? "Envoi…" : "Sending…") : fr ? "Envoyer ma candidature" : "Send my application"}
       </button>
 
-      <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-mist-500">
+      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-mist-500">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
         {fr
           ? "Nous ne demandons jamais d'argent pour postuler, et jamais votre code secret MoMo ou Orange."

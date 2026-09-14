@@ -171,7 +171,7 @@ export function AvailabilityPing({
           type="button"
           onClick={ping}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 px-2.5 py-1 text-[11px] font-semibold text-violet-300 disabled:opacity-40"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-600/15 px-2.5 py-1 text-xs font-semibold text-violet-300 disabled:opacity-40"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radio className="h-3.5 w-3.5" />}
           {/* A business with nothing listed gets asked a different question, and
@@ -182,12 +182,12 @@ export function AvailabilityPing({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1 text-[11px] text-mist-400 hover:text-mist-200"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1 text-xs text-mist-400 hover:text-mist-200"
           >
             <ClipboardPaste className="h-3.5 w-3.5" /> Paste their reply
           </button>
         )}
-        <span className="text-[11px] text-mist-500">
+        <span className="text-xs text-mist-500">
           {itemCount === 0
             ? "No menu yet — one reply builds it."
             : freshness
@@ -214,14 +214,14 @@ export function AvailabilityPing({
               type="button"
               onClick={readReply}
               disabled={busy || reply.trim().length < 2}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1 text-[11px] text-mist-300 disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 px-2.5 py-1 text-xs text-mist-300 disabled:opacity-40"
             >
               Read it
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-[11px] text-mist-500 hover:text-mist-300"
+              className="text-xs text-mist-500 hover:text-mist-300"
             >
               Close
             </button>
@@ -233,7 +233,7 @@ export function AvailabilityPing({
       {changes && (changes.length > 0 || newItems.length > 0) && (
         <div className="mt-2 flex flex-col gap-1.5">
           {changes.map((c) => (
-            <p key={c.itemId} className="text-[11px]">
+            <p key={c.itemId} className="text-xs">
               <span className={c.soldOut ? "text-caution" : "text-safe"}>
                 {c.soldOut ? "Sold out" : "Available"}
               </span>{" "}
@@ -249,13 +249,13 @@ export function AvailabilityPing({
           */}
           {newItems.length > 0 && (
             <div className="rounded-lg border border-gold-400/30 bg-gold-400/5 p-2">
-              <p className="text-[11px] text-gold-200">
+              <p className="text-xs text-gold-200">
                 Not on their list yet. Ticked rows are added to their menu.
               </p>
               <ul className="mt-1.5 flex flex-col gap-1">
                 {newItems.map((n, i) => (
                   <li key={`${n.name}-${i}`}>
-                    <label className="flex cursor-pointer items-center gap-2 text-[11px] text-mist-200">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-mist-200">
                       <input
                         type="checkbox"
                         checked={picked.has(i)}
@@ -274,14 +274,14 @@ export function AvailabilityPing({
                   </li>
                 ))}
               </ul>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-mist-500">
+              <p className="mt-1.5 text-xs leading-relaxed text-mist-500">
                 A price is only shown when they actually said one — never guessed. Add the rest from
                 the products panel.
               </p>
             </div>
           )}
           {unmatched.length > 0 && newItems.length === 0 && (
-            <p className="text-[11px] leading-relaxed text-mist-500">
+            <p className="text-xs leading-relaxed text-mist-500">
               Not on their list: {unmatched.join(", ")} — add it from the products panel if they
               really sell it. Nothing is created automatically.
             </p>
@@ -290,7 +290,7 @@ export function AvailabilityPing({
             type="button"
             onClick={apply}
             disabled={busy}
-            className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-lg border border-safe/40 bg-safe/10 px-2.5 py-1 text-[11px] font-semibold text-safe disabled:opacity-50"
+            className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-lg border border-safe/40 bg-safe/10 px-2.5 py-1 text-xs font-semibold text-safe disabled:opacity-50"
           >
             <Check className="h-3.5 w-3.5" />{" "}
             {picked.size > 0 ? `Apply, and add ${picked.size}` : "Apply to the menu"}
@@ -298,7 +298,7 @@ export function AvailabilityPing({
         </div>
       )}
 
-      {note && <p className="mt-2 text-[11px] leading-relaxed text-mist-400">{note}</p>}
+      {note && <p className="mt-2 text-xs leading-relaxed text-mist-400">{note}</p>}
     </div>
   );
 }

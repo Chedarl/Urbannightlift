@@ -256,14 +256,14 @@ export function PortalHome({ data }: { data: PortalData }) {
                   </span>
                   <span className="min-w-0">
                     {usual && (
-                      <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-widest text-mist-400">
+                      <span className="mb-0.5 block text-xs font-bold uppercase tracking-widest text-mist-400">
                         {fr ? "Votre habitude" : "Your usual"}
                       </span>
                     )}
-                    <span className="block truncate font-display text-[15px] font-semibold text-mist-100">
+                    <span className="block truncate font-display text-base font-semibold text-mist-100">
                       {t(`services.${type}.name`)}
                     </span>
-                    <span className="block truncate text-[11px] text-mist-400">{t(`services.${type}.description`)}</span>
+                    <span className="block truncate text-xs text-mist-400">{t(`services.${type}.description`)}</span>
                   </span>
                   <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-mist-500 transition-transform group-hover:translate-x-0.5" />
                 </Link>
@@ -278,7 +278,7 @@ export function PortalHome({ data }: { data: PortalData }) {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-display text-sm font-semibold text-mist-200">{fr ? "Vos adresses" : "Your places"}</h2>
-            <Link href="/account/addresses" className="text-[11px] text-violet-300 hover:text-violet-200">
+            <Link href="/account/addresses" className="text-xs text-violet-300 hover:text-violet-200">
               {fr ? "Gérer" : "Manage"}
             </Link>
           </div>
@@ -296,7 +296,7 @@ export function PortalHome({ data }: { data: PortalData }) {
                 <PlaceIcon label={a.label} />
                 <span className="max-w-[9rem] truncate">
                   <span className="font-medium text-mist-200">{a.label}</span>
-                  <span className="block truncate text-[10px] text-mist-500">{a.locationText}</span>
+                  <span className="block truncate text-xs text-mist-500">{a.locationText}</span>
                 </span>
               </Link>
             ))}
@@ -318,7 +318,7 @@ export function PortalHome({ data }: { data: PortalData }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-mist-100">{reorderable.itemDescription}</span>
-              <span className="block truncate text-[11px] text-mist-400">
+              <span className="block truncate text-xs text-mist-400">
                 {t(`services.${reorderable.serviceType}.name`)} · {reorderable.deliveryLocation}
               </span>
             </span>
@@ -342,14 +342,14 @@ export function PortalHome({ data }: { data: PortalData }) {
                   <p className="text-sm font-semibold text-mist-100">
                     {formatXaf(data.customer.creditXaf)} {fr ? "de crédit" : "in credit"}
                   </p>
-                  <p className="text-[11px] text-mist-400">
+                  <p className="text-xs text-mist-400">
                     {fr ? "Appliqué automatiquement à votre prochaine commande." : "Applied automatically to your next order."}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="text-sm font-semibold text-mist-100">{fr ? "Parrainez un ami" : "Bring a friend"}</p>
-                  <p className="text-[11px] text-mist-400">
+                  <p className="text-xs text-mist-400">
                     {fr ? "Gagnez du crédit quand ils commandent." : "Earn credit when they order."}
                   </p>
                 </>
@@ -383,7 +383,7 @@ export function PortalHome({ data }: { data: PortalData }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-mist-200">{o.itemDescription}</span>
-                    <span className="block text-[11px] text-mist-500">
+                    <span className="block text-xs text-mist-500">
                       {new Date(o.createdAt).toLocaleDateString(fr ? "fr-FR" : "en-GB", { day: "2-digit", month: "short" })} ·{" "}
                       {t(`customerStatus.${CUSTOMER_STATUS_KEY[o.orderStatus]}`)}
                       {o.feeXaf != null && ` · ${formatXaf(o.feeXaf)}`}
@@ -399,7 +399,7 @@ export function PortalHome({ data }: { data: PortalData }) {
 
       {/* ── The promise, restated where it reassures: safety and help, in-portal ── */}
       <section className="grid grid-cols-2 gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 text-[11px] text-mist-400">
+        <div className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 text-xs text-mist-400">
           <ShieldCheck className="h-4 w-4 shrink-0 text-safe" />
           {fr ? "Livraison suivie, en toute sécurité." : "Every delivery tracked, safely."}
         </div>
@@ -408,7 +408,7 @@ export function PortalHome({ data }: { data: PortalData }) {
             destination, not a second door to the same page. */}
         <Link
           href="/help#contact"
-          className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 text-[11px] text-mist-400 hover:text-mist-200"
+          className="flex items-center gap-2 rounded-xl border border-ink-800 bg-ink-900/60 px-3 py-2.5 text-xs text-mist-400 hover:text-mist-200"
         >
           <LifeBuoy className="h-4 w-4 shrink-0 text-violet-300" />
           {fr ? "Contacter le support" : "Contact support"}
@@ -440,7 +440,7 @@ function ActiveOrderCard({ order, fr }: { order: PortalOrder; fr: boolean }) {
           <Icon className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-violet-300">
+          <p className="text-xs font-bold uppercase tracking-widest text-violet-300">
             {fr ? "Votre commande cette nuit" : "Your order tonight"}
           </p>
           <p className="truncate font-display text-base font-semibold text-mist-100">{order.itemDescription}</p>

@@ -169,7 +169,7 @@ export function DutyPosterImport() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-mist-100">{s.pharmacyName}</span>
-                  <span className="block text-[11px] text-mist-500">
+                  <span className="block text-xs text-mist-500">
                     {s.neighbourhood ?? "quartier not read"}
                     {s.phone ? ` · ${s.phone}` : ""}
                     {/*
@@ -188,16 +188,16 @@ export function DutyPosterImport() {
                   type="date"
                   value={s.startsOn}
                   onChange={(e) => edit(i, { startsOn: e.target.value })}
-                  className="rounded border border-ink-700 bg-ink-800 px-1.5 py-1 text-[11px] text-mist-200"
+                  className="rounded border border-ink-700 bg-ink-800 px-1.5 py-1 text-xs text-mist-200"
                 />
                 <input
                   type="date"
                   value={s.endsOn}
                   onChange={(e) => edit(i, { endsOn: e.target.value })}
-                  className="rounded border border-ink-700 bg-ink-800 px-1.5 py-1 text-[11px] text-mist-200"
+                  className="rounded border border-ink-700 bg-ink-800 px-1.5 py-1 text-xs text-mist-200"
                 />
                 {done ? (
-                  <span className="flex items-center gap-1 text-[11px] text-safe">
+                  <span className="flex items-center gap-1 text-xs text-safe">
                     <Check className="h-3 w-3" /> on duty
                   </span>
                 ) : s.merchantId ? (
@@ -205,7 +205,7 @@ export function DutyPosterImport() {
                     Set duty
                   </Button>
                 ) : (
-                  <span className="flex items-center gap-1 text-[11px] text-mist-600">
+                  <span className="flex items-center gap-1 text-xs text-mist-600">
                     <X className="h-3 w-3" /> add the pharmacy first
                   </span>
                 )}

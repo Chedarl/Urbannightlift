@@ -61,7 +61,7 @@ export function RiderDashboard({
             <p className="mt-1 font-display text-2xl font-bold text-gold-400">
               {formatXaf(earnedTonightXaf)}
             </p>
-            <p className="mt-0.5 text-[11px] text-mist-500">
+            <p className="mt-0.5 text-xs text-mist-500">
               {stats.completedTonight} {fr ? "terminées ce soir" : "done tonight"}
             </p>
           </div>
@@ -92,7 +92,7 @@ export function RiderDashboard({
               </span>
             </p>
             {float.suspended && (
-              <p className="mt-1 text-[11px] text-caution">
+              <p className="mt-1 text-xs text-caution">
                 {fr
                   ? "Suspendue — pas de nouveau réapprovisionnement."
                   : "Suspended — no new top-ups."}
@@ -115,7 +115,7 @@ export function RiderDashboard({
           <div>
             <p className="text-xs text-mist-500">{fr ? "Gagné au total" : "Earned all time"}</p>
             <p className="mt-0.5 font-display text-xl font-bold text-mist-100">{formatXaf(standing.earnedXaf)}</p>
-            <p className="mt-0.5 text-[11px] text-mist-500">
+            <p className="mt-0.5 text-xs text-mist-500">
               {standing.deliveries} {fr ? "livraisons terminées" : "completed deliveries"}
             </p>
           </div>
@@ -126,14 +126,14 @@ export function RiderDashboard({
                 <p className="mt-0.5 flex items-center justify-end gap-1 font-display text-xl font-bold text-gold-400">
                   <Star className="h-4 w-4 fill-gold-400" /> {standing.rating.toFixed(1)}
                 </p>
-                <p className="mt-0.5 text-[11px] text-mist-500">
+                <p className="mt-0.5 text-xs text-mist-500">
                   {standing.ratingCount} {fr ? "avis" : "ratings"}
                 </p>
               </>
             ) : (
               // Never publish an average off two ratings — it misleads the
               // person it is about.
-              <p className="mt-0.5 max-w-[9rem] text-[11px] text-mist-500">
+              <p className="mt-0.5 max-w-[9rem] text-xs text-mist-500">
                 {fr ? "Pas encore assez d'avis" : "Not enough ratings yet"}
               </p>
             )}

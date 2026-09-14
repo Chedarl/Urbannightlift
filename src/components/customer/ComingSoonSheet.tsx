@@ -72,7 +72,7 @@ export function ComingSoonSheet({
             </span>
             <div>
               <p className="text-sm font-semibold text-mist-100">{serviceName}</p>
-              <p className="text-[11px] font-medium" style={{ color: accent }}>
+              <p className="text-xs font-medium" style={{ color: accent }}>
                 {t("comingSoon.badge")}
               </p>
             </div>

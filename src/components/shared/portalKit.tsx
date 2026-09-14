@@ -50,7 +50,7 @@ export function PageHeader({
 
 /** A small all-caps label above a group of cards — DoorDash's section heads. */
 export function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-widest text-mist-500">{children}</p>;
+  return <p className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-mist-500">{children}</p>;
 }
 
 /**
@@ -102,7 +102,7 @@ export function ListRow({
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className={cn("block truncate text-[15px] font-medium", tone === "danger" ? "text-restricted" : "text-mist-100")}>
+        <span className={cn("block truncate text-base font-medium", tone === "danger" ? "text-restricted" : "text-mist-100")}>
           {title}
         </span>
         {subtitle && <span className="block truncate text-xs text-mist-500">{subtitle}</span>}

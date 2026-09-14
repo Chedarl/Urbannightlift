@@ -172,7 +172,7 @@ export function AiStatus() {
         key you are holding and useless to anybody else.
       */}
       {state.configured && (
-        <p className="mt-1 font-mono text-[11px] text-mist-400">
+        <p className="mt-1 font-mono text-xs text-mist-400">
           {state.keyVariable} ending <span className="text-mist-200">{state.keyFingerprint}</span> →{" "}
           {state.baseUrl.replace(/^https?:\/\//, "")}
         </p>
@@ -184,7 +184,7 @@ export function AiStatus() {
         was never set. Names only — never values.
       */}
       {state.unreadVariables.length > 0 && (
-        <p className="mt-1 rounded-lg bg-caution/10 px-2 py-1.5 text-[11px] leading-relaxed text-caution">
+        <p className="mt-1 rounded-lg bg-caution/10 px-2 py-1.5 text-xs leading-relaxed text-caution">
           {state.unreadVariables.join(", ")} {state.unreadVariables.length === 1 ? "is" : "are"} set
           but not read. The key must be under exactly <span className="font-mono">KIMI_API_KEY</span>{" "}
           or <span className="font-mono">MOONSHOT_API_KEY</span>.
@@ -238,7 +238,7 @@ export function AiStatus() {
                 <span className="font-mono text-mist-500">{f.purpose}</span>{" "}
                 <span className="text-mist-600">· {ago(f.at)}</span>
                 {f.stale && (
-                  <span className="ml-1 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-mist-500">
+                  <span className="ml-1 rounded bg-ink-800 px-1.5 py-0.5 text-xs text-mist-500">
                     older build
                   </span>
                 )}
@@ -296,7 +296,7 @@ export function AiStatus() {
           {visionResult?.stages && visionResult.stages.length > 0 && (
             <ul className="mt-1.5 flex flex-col gap-0.5">
               {visionResult.stages.map((stage, i) => (
-                <li key={i} className="flex items-baseline gap-1.5 text-[11px]">
+                <li key={i} className="flex items-baseline gap-1.5 text-xs">
                   <span className={stage.ok ? "text-safe" : "text-caution"}>{stage.ok ? "✓" : "✕"}</span>
                   <span className="text-mist-400">{stage.name}</span>
                   <span className="text-mist-600">— {stage.detail}</span>

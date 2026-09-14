@@ -57,7 +57,7 @@ export function ServiceComingSoon({ serviceType }: { serviceType: ServiceType })
         >
           <Clock className="h-7 w-7" />
         </span>
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider" style={{ color: exp.accent }}>
+        <p className="mt-3 text-xs font-semibold uppercase tracking-wider" style={{ color: exp.accent }}>
           {t("comingSoon.badge")}
         </p>
         <h1 className="mt-1 font-display text-xl font-bold text-mist-100">{t(exp.titleKey)}</h1>

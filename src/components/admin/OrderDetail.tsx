@@ -382,7 +382,7 @@ export function OrderDetail({
         </div>
         {order.otpCode && (
           <div className="rounded-xl border border-violet-500/40 bg-violet-950/40 px-3 py-2 text-center">
-            <p className="text-[10px] uppercase text-violet-300">OTP</p>
+            <p className="text-xs uppercase text-violet-300">OTP</p>
             <p className="font-display text-lg font-bold tracking-widest">{order.otpCode}</p>
           </div>
         )}
@@ -596,7 +596,7 @@ export function OrderDetail({
                     {order.voiceTranscript}
                   </p>
                 )}
-                <p className="mt-1 text-[11px] text-mist-500">Staff only — never shared with anyone else.</p>
+                <p className="mt-1 text-xs text-mist-500">Staff only — never shared with anyone else.</p>
               </div>
             )}
 
@@ -610,7 +610,7 @@ export function OrderDetail({
                   <ShieldAlert className="h-3.5 w-3.5" /> Read this before sending a rider
                 </p>
                 <p className="text-xs leading-relaxed text-mist-200">{order.safetyFlag}</p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-mist-500">
+                <p className="mt-1.5 text-xs leading-relaxed text-mist-500">
                   Raised automatically from what the customer typed. It is a prompt to look, not a
                   judgement — most turn out to be fine, and the decision is yours.
                 </p>
@@ -728,7 +728,7 @@ export function OrderDetail({
                   sits here, next to the number it refers to. */}
               {order.quoteSentAt && !order.quoteAcceptedAt && !order.quoteDeclinedAt && (
                 <div className="rounded-xl border border-gold-400/30 bg-gold-400/5 p-3">
-                  <p className="text-[11px] text-gold-200">
+                  <p className="text-xs text-gold-200">
                     Send this link to the customer — it shows the price and the Accept button.
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -803,7 +803,7 @@ export function OrderDetail({
                 <MessageCircle className="h-3.5 w-3.5" /> Send dispatch update
               </a>
             </div>
-            <p className="mt-2 text-[11px] text-mist-500">
+            <p className="mt-2 text-xs text-mist-500">
               Sending opens WhatsApp with the message written for you and marks the order as told.
             </p>
           </section>
@@ -910,7 +910,7 @@ export function OrderDetail({
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-mist-500">
+              <p className="text-xs text-mist-500">
                 ✓ covers this delivery zone · the count is how many deliveries they have completed there.
               </p>
               <Button
@@ -926,14 +926,14 @@ export function OrderDetail({
                 {t("admin.order.assignRider")}
               </Button>
               {payOnDelivery && !dispatchStop && (
-                <p className="text-[11px] text-mist-500">
+                <p className="text-xs text-mist-500">
                   Cash on delivery — there is nothing to verify before dispatch. The rider collects
                   {order.quotedFeeXaf != null ? ` ${formatXaf(order.quotedFeeXaf)}` : ""} at the door and it
                   settles through their cash balance.
                 </p>
               )}
               {order.otpCode == null && !dispatchStop && (
-                <p className="text-[11px] text-mist-500">
+                <p className="text-xs text-mist-500">
                   Assigning generates the customer&apos;s delivery code and sends it to them with their receipt.
                 </p>
               )}
@@ -1037,7 +1037,7 @@ export function OrderDetail({
                   </>
                 )}
               </div>
-              <p className="mt-2 text-[11px] text-mist-500">
+              <p className="mt-2 text-xs text-mist-500">
                 The split is fixed at the rate in force when the order was delivered, so changing the rate later never
                 rewrites completed accounts.
               </p>
@@ -1100,7 +1100,7 @@ export function OrderDetail({
                 )}
               </div>
               {isOwner && (
-                <p className="text-[11px] text-mist-500">
+                <p className="text-xs text-mist-500">
                   Deleting is permanent and owner-only. An order with a verified payment cannot be deleted at all —
                   archive it instead.
                 </p>

@@ -94,7 +94,7 @@ export function SecurityStatus() {
 
       {advice && (
         <p
-          className={`mt-3 rounded-lg border p-2.5 text-[11px] leading-relaxed ${
+          className={`mt-3 rounded-lg border p-2.5 text-xs leading-relaxed ${
             exposed
               ? "border-restricted/40 bg-restricted/10 text-restricted"
               : "border-caution/40 bg-caution/10 text-caution"

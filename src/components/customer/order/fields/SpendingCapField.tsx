@@ -71,7 +71,7 @@ export function SpendingCapField({
         </p>
       )}
 
-      <p className="mt-2 flex items-start gap-2 text-[11px] leading-relaxed text-mist-400">
+      <p className="mt-2 flex items-start gap-2 text-xs leading-relaxed text-mist-400">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-safe" />
         {fr
           ? "Nous ne dépasserons jamais ce montant sans vous demander d'abord. Vous payez exactement ce que le commerçant facture — sans marge — plus les frais de livraison. Le livreur photographie le reçu."

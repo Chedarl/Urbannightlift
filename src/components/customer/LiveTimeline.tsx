@@ -148,7 +148,7 @@ export function LiveTimeline({
         })}
       </ol>
 
-      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-mist-500">
+      <p className="mt-3 flex items-center gap-1.5 text-xs text-mist-500">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-safe" />
         {fr ? "Mise à jour automatique" : "Updating automatically"}
         {checkedAt && ` · ${timeOf(checkedAt.toISOString(), fr)}`}

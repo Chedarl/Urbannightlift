@@ -243,7 +243,7 @@ export function RiderLocationShare({
       {sharing && (
         <>
           {!error && (
-            <p className="text-center text-[11px] text-mist-500">
+            <p className="text-center text-xs text-mist-500">
               {sentCount > 0
                 ? t("rider.order.share.sentAgo")
                     .replace("{time}", agoLabel)
@@ -252,19 +252,19 @@ export function RiderLocationShare({
             </p>
           )}
           {screenHeld && (
-            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-mist-500">
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-mist-500">
               <Sun className="h-3 w-3 text-gold-300" />
               {t("rider.order.share.screenOn")}
             </p>
           )}
           {!screenHeld && wakeLockSupported() && (
-            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-gold-300">
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-gold-300">
               <AlertTriangle className="h-3 w-3" />
               {t("rider.order.share.keepScreenOn")}
             </p>
           )}
           {queued > 0 && (
-            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-gold-300">
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-gold-300">
               <CloudOff className="h-3 w-3" />
               {t("rider.order.share.queued").replace("{n}", String(queued))}
             </p>
@@ -273,13 +273,13 @@ export function RiderLocationShare({
       )}
 
       {!sharing && !error && (
-        <p className="text-center text-[11px] text-mist-500">{t("rider.order.share.hint")}</p>
+        <p className="text-center text-xs text-mist-500">{t("rider.order.share.hint")}</p>
       )}
 
       {error && (
         <p
           className={cn(
-            "rounded-lg px-3 py-2 text-center text-[11px]",
+            "rounded-lg px-3 py-2 text-center text-xs",
             fatal ? "bg-restricted/10 text-restricted" : "bg-caution/10 text-caution"
           )}
         >

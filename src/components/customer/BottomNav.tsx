@@ -43,7 +43,7 @@ export function BottomNav({ signedIn = false }: { signedIn?: boolean }) {
             key={href}
             href={href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition-colors",
+              "flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-xs font-medium transition-colors",
               active ? "text-gold-400" : "text-mist-500 hover:text-mist-300"
             )}
           >

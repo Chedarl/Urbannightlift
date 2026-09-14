@@ -36,7 +36,7 @@ export function OrderAlerts({ orderCode, fr }: { orderCode: string; fr: boolean 
         orderCode={orderCode}
         label={fr ? "M'alerter pour cette commande" : "Alert me about this order"}
       />
-      <p className="mt-2 text-[11px] text-mist-500">
+      <p className="mt-2 text-xs text-mist-500">
         {fr
           ? "Sur iPhone, ajoutez d'abord le site à l'écran d'accueil. Nous vous écrirons aussi sur WhatsApp."
           : "On iPhone, add the site to your Home Screen first. We'll message you on WhatsApp as well."}

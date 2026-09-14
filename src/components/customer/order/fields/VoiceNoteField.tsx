@@ -212,7 +212,7 @@ export function VoiceNoteField({
         <Mic className="h-3.5 w-3.5" style={{ color: accent }} />
         {fr ? "Ou envoyez une note vocale" : "Or just tell us in a voice note"}
       </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-mist-500">
+      <p className="mt-1 text-xs leading-relaxed text-mist-500">
         {fr
           ? "Dites ce qu'il vous faut et où vous êtes. Notre dispatcher écoute et vous rappelle le prix."
           : "Say what you need and where you are. Dispatch listens and comes back with the price. Faster than typing."}
@@ -267,15 +267,15 @@ export function VoiceNoteField({
       </div>
 
       {savedSeconds != null && !uploading && (
-        <p className={cn("mt-2 flex items-center gap-1.5 text-[11px] text-safe")}>
+        <p className={cn("mt-2 flex items-center gap-1.5 text-xs text-safe")}>
           <Check className="h-3.5 w-3.5" />
           {fr ? `Note de ${mmss(savedSeconds)} attachée.` : `${mmss(savedSeconds)} note attached to your order.`}
         </p>
       )}
 
-      {error && <p className="mt-2 text-[11px] text-restricted">{error}</p>}
+      {error && <p className="mt-2 text-xs text-restricted">{error}</p>}
 
-      <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-mist-500">
+      <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-mist-500">
         <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-safe" />
         {fr
           ? "Votre note reste privée : seule notre équipe l'écoute, elle n'est jamais publiée ni jointe à un PDF partagé."

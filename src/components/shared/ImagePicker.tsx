@@ -123,13 +123,13 @@ export function ImagePicker({
         </button>
 
         <div className="min-w-0 flex-1">
-          {hint && <p className="text-[11px] leading-snug text-mist-500">{hint}</p>}
+          {hint && <p className="text-xs leading-snug text-mist-500">{hint}</p>}
           {value && !busy && (
             <button
               type="button"
               onClick={() => onChange(null)}
               disabled={disabled}
-              className="mt-1 flex items-center gap-1 text-[11px] text-mist-500 hover:text-restricted"
+              className="mt-1 flex items-center gap-1 text-xs text-mist-500 hover:text-restricted"
             >
               <Trash2 className="h-3 w-3" />
               {fr ? "Retirer" : "Remove"}
@@ -138,7 +138,7 @@ export function ImagePicker({
         </div>
       </div>
 
-      {error && <p className="text-[11px] leading-snug text-restricted">{error}</p>}
+      {error && <p className="text-xs leading-snug text-restricted">{error}</p>}
 
       <input
         ref={inputRef}
