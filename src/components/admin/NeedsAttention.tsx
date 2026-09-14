@@ -59,10 +59,10 @@ const KIND_TONE: Record<string, string> = {
   RECEIPT_MISMATCH: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   CUSTOMER_NOT_TOLD: "border-gold-400/50 bg-gold-400/10 text-gold-200",
   PAYMENT_UNVERIFIED: "border-gold-400/50 bg-gold-400/10 text-gold-200",
-  RIDER_SILENT: "border-caution/40 bg-caution/10 text-gold-200",
-  NO_RIDER: "border-caution/40 bg-caution/10 text-gold-200",
+  RIDER_SILENT: "border-caution/40 bg-caution/10 text-caution",
+  NO_RIDER: "border-caution/40 bg-caution/10 text-caution",
   QUOTE_UNANSWERED: "border-ink-600 bg-ink-900 text-mist-300",
-  TRACKING_LOST: "border-caution/40 bg-caution/10 text-gold-200",
+  TRACKING_LOST: "border-caution/40 bg-caution/10 text-caution",
   UNREVIEWED: "border-violet-500/40 bg-violet-500/10 text-violet-200",
 };
 

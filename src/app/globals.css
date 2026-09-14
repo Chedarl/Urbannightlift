@@ -91,9 +91,21 @@
      The colour is the smaller half of the fix. Colour alone was never
      sufficient: roughly one man in twelve cannot separate these two hues at
      all, and neither can anybody reading a phone at 2 a.m. under a streetlight.
-     So a caution state in this product always carries **an icon and a left
-     rule** as well — see `.caution-note` below, which is the shape to reach
-     for rather than a bare text-caution. */
+     A caution should carry a shape as well — an icon, a border — not just a
+     hue.
+
+     An earlier draft of this shipped a `.caution-note` class to be that shape.
+     Nothing ever used it: the entire codebase is Tailwind utilities, and a
+     bespoke class cuts against that grain, so it sat in the stylesheet being
+     described rather than used. That is the same failure as the surface tokens
+     it sat beside, one round later. It is gone.
+
+     What is enforced instead is the rule that actually broke:
+     **a caution surface never contains gold text.** Eight components rendered
+     an amber warning box with `text-gold-200` inside it — the collision in its
+     most literal form, including the closed-tonight notice on the home page,
+     the most-seen caution in the product. `verify-design-tokens` fails on it
+     now. */
   --color-safe: #2fae60;
   --color-caution: #ff8c1a;
   --color-restricted: #e0522f;
@@ -278,37 +290,6 @@ textarea {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-
-/* A caution, carried by three signals rather than one.
-   ────────────────────────────────────────────────────────────────────────────
-   Reach for this instead of a bare `text-caution`. Colour was doing all the
-   work, and it was the *same* colour as every price in the product; even after
-   fixing the hue, colour alone fails for roughly one man in twelve, and for
-   anybody reading a phone outdoors at 2 a.m.
-
-   So: the amber, a left rule, and a tinted ground. The icon is the caller's —
-   put a real one in the markup; there is no content-generated glyph here
-   because an icon a screen reader cannot name is decoration pretending to be
-   information. */
-.caution-note {
-  border-left: 3px solid var(--color-caution);
-  background: color-mix(in srgb, var(--color-caution) 8%, transparent);
-  border-radius: 0.75rem;
-}
-
-/* Leaflet ships its own 12px body size, which is below our floor and which no
-   amount of tidying our own components would have caught — it arrives with the
-   map. It sets the attribution line, the scale and every popup, and those are
-   read outdoors at night like everything else here. The map is the one place a
-   customer is squinting at a screen while walking.
-
-   Scoped to the container so it cascades to Leaflet's children without
-   reaching anything of ours that happens to sit inside a map. */
-.leaflet-container,
-.leaflet-container .leaflet-popup-content,
-.leaflet-container .leaflet-control-attribution {
-  font-size: var(--text-xs);
 }
 
 /* Hide scrollbar for horizontal chip rows */

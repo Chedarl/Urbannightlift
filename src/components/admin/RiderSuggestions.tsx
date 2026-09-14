@@ -84,7 +84,7 @@ export function RiderSuggestions({
 
   if (data.suggestions.length === 0) {
     return (
-      <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+      <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-caution">
         {fr
           ? "Aucun livreur disponible pour cette course."
           : "No rider can take this one right now."}

@@ -51,7 +51,7 @@ function RowFlags({ row }: { row: OrderRow }) {
       )}
       {unanswered && (
         <span
-          className="inline-flex items-center gap-1 rounded-full bg-caution/15 px-2 py-0.5 text-xs font-semibold text-gold-200"
+          className="inline-flex items-center gap-1 rounded-full bg-caution/15 px-2 py-0.5 text-xs font-semibold text-caution"
           title="The rider has not accepted this assignment yet"
         >
           <Clock className="h-3 w-3" /> Unaccepted

@@ -771,7 +771,7 @@ export function OrderDetail({
                 {order.customerNotifiedStage ? ` (${order.customerNotifiedStage.toLowerCase()})` : ""}
               </p>
             ) : (
-              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-caution">
                 Nobody has told this customer anything yet.
               </p>
             )}
@@ -865,7 +865,7 @@ export function OrderDetail({
             <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-gold-300">
             </h2>
             {dispatchStop && (
-              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-gold-200">
+              <p className="mb-2 rounded-xl border border-caution/30 bg-caution/10 p-2 text-xs text-caution">
                 {dispatchStop.message} A rider is only committed once the price is agreed and the money is
                 in — otherwise we pay for a trip that can be refused at the door.
               </p>

@@ -152,16 +152,58 @@ console.log("Caution does not wear the colour of money");
   );
 }
 
-console.log("\nColour is never the only thing carrying a caution");
+console.log("\nAnd no caution surface contains gold text");
 {
-  // Roughly one man in twelve cannot separate amber from gold, and nor can
-  // anybody reading a phone outdoors at 2 a.m. The shape exists so a caution
-  // is also a rule and an icon.
-  check("the caution-note shape exists", /\.caution-note\s*\{/.test(CSS));
-  const block = CSS.match(/\.caution-note\s*\{([^}]*)\}/)?.[1] ?? "";
-  check("it draws a left rule", /border-left\s*:/.test(block), "colour alone was the original fault");
-  check("the rule uses the caution token rather than a literal", /var\(--color-caution\)/.test(block));
-  check("and it tints its ground", /background\s*:/.test(block));
+  /*
+    The check that used to sit here asserted a `.caution-note` class existed in
+    globals.css. It passed, and it was worthless: **nothing ever used the
+    class.** The codebase is Tailwind utilities throughout, a bespoke class cuts
+    against that grain, and so the shape sat in the stylesheet being described
+    rather than applied — the same "declared but never reached a page" failure
+    as the surface tokens it sat next to, committed one round later.
+
+    This checks the collision that actually shipped. Eight components rendered
+    an amber caution box with `text-gold-200` inside it, gold being the colour
+    of every price in the product. Among them the closed-tonight notice on the
+    home page: the most-seen caution here, an amber box with gold writing in it.
+
+    A rule about the code beats a shape nobody adopts.
+  */
+  const GOLD_TEXT = /\btext-gold-\d{3}\b/;
+  const CAUTION_SURFACE = /\b(?:bg|border|from|via|to)-caution\b/;
+
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx?$/.test(entry.name)) {
+        fs.readFileSync(full, "utf8")
+          .split("\n")
+          .forEach((line, i) => {
+            // Same className string: a caution ground with gold writing on it.
+            if (CAUTION_SURFACE.test(line) && GOLD_TEXT.test(line)) {
+              offenders.push(`${path.relative(ROOT, full)}:${i + 1}`);
+            }
+          });
+      }
+    }
+  };
+  walk(path.join(ROOT, "src"));
+
+  check(
+    "no component puts gold text on a caution ground",
+    offenders.length === 0,
+    `${offenders.length} place(s):\n       ${offenders.slice(0, 8).join("\n       ")}\n` +
+      `       Gold means money here. A warning written in it is the original bug wearing a new box.`
+  );
+
+  // And the shape that was never adopted must not quietly return.
+  check(
+    "no unused caution class was reintroduced",
+    !/\.caution-note\s*\{/.test(CODE),
+    "a class the codebase does not use is a claim the code does not keep"
+  );
 }
 
 console.log("\nNothing in the product is smaller than the 13px floor");
