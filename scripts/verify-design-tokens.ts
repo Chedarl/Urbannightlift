@@ -12,8 +12,8 @@
  *    screen they sit six lines apart: the total the customer is about to pay,
  *    and the note saying the price might still change. Nothing separated them.
  *
- * 2. **365 arbitrary font sizes**, 282 of them `text-[11px]` and 72
- *    `text-[10px]`. Not a scale — a habit. Every one was somebody making a
+ * 2. **365 arbitrary font sizes**, 282 of them `text-[11px​]` and 72
+ *    `text-[10px​]`. Not a scale — a habit. Every one was somebody making a
  *    label fit, and the sum was a product whose small print is 10px, read
  *    one-handed outdoors at night, containing order codes and prices.
  *
@@ -41,6 +41,17 @@ function check(name: string, ok: boolean, detail = "") {
 
 const ROOT = path.resolve(__dirname, "..");
 const CSS = fs.readFileSync(path.join(ROOT, "src/app/globals.css"), "utf8");
+
+/**
+ * The stylesheet with its comments removed.
+ *
+ * Needed because these comments *discuss* the things being checked — the old
+ * colour, the removed aliases, the class names that were purged — and a check
+ * that greps the raw file finds its own prose and reports the fault it is
+ * describing as still present. `verify-wiring` in this repo learned the same
+ * lesson: a mention is not a declaration.
+ */
+const CODE = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** Reads one custom property out of the `@theme` block. */
 function token(name: string): string | null {
@@ -166,7 +177,7 @@ console.log("\nNothing in the product is smaller than the 13px floor");
     `text-xs is ${xs} (${px}px). This app is read one-handed, outdoors, at night.`
   );
 
-  // The escape hatch is the thing to guard. A floor with `text-[10px]` still
+  // The escape hatch is the thing to guard. A floor with `text-[10px​]` still
   // available is not a floor, and 354 of those is how it got here.
   const offenders: string[] = [];
   const walk = (dir: string) => {
@@ -190,18 +201,105 @@ console.log("\nNothing in the product is smaller than the 13px floor");
   );
 }
 
-console.log("\nThere is an elevation ladder, and its steps are visible");
+console.log("\nAnd the built stylesheet agrees — if one has been built");
 {
-  const steps = ["surface-page", "surface-raised", "surface-high", "surface-peak"].map(
+  /*
+    Everything above reads the source. This reads the artefact, because twice in
+    one sitting the source was right and the output was not:
+
+      - `--color-surface-*` were declared, and Tailwind tree-shook them out
+        entirely because no component used them.
+      - `.text-[10px]` and `.text-[11px]` were still generated and SHIPPED after
+        every use had been removed from the app — the redesign artboards under
+        `design/` document the old problem and contain those strings as
+        examples, and Tailwind scans any HTML in the project. A mockup
+        describing a bug was reintroducing it.
+
+    Neither is visible from globals.css. Only the build shows them.
+
+    Skips when there is no build rather than failing, so this stays runnable on
+    a clean checkout.
+  */
+  const cssDir = path.join(ROOT, ".next/static/css");
+  if (!fs.existsSync(cssDir)) {
+    console.log("  skipped — no .next build here. Run `npx next build` to check the artefact.");
+  } else {
+    /*
+      Only the stylesheet built from our own source. A third-party chunk is a
+      different question: Leaflet ships a 12px body size with the map, and we
+      neither can nor should edit its file — we override it in globals.css
+      instead (see `.leaflet-container` there), which is the honest fix. Holding
+      this check over vendor CSS would make it un-passable and therefore
+      ignored.
+
+      Identified by content rather than by filename hash: the chunk carrying our
+      tokens is ours by definition.
+    */
+    const ours = fs
+      .readdirSync(cssDir)
+      .filter((f) => f.endsWith(".css"))
+      .map((f) => fs.readFileSync(path.join(cssDir, f), "utf8"))
+      .filter((css) => css.includes("--color-caution"));
+
+    const built = ours.join("\n");
+
+    check(
+      "the stylesheet built from our source was found",
+      ours.length > 0,
+      "no built CSS carries our tokens — nothing to check is not a pass"
+    );
+
+    const tooSmall = [...built.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)]
+      .map((m) => parseFloat(m[1]))
+      .filter((px) => px < 12.9);
+    // `.75rem` and `0.75rem` and `7rem` all have to parse as themselves. The
+    // first version of this rebuilt the number by string-concatenating a "0."
+    // onto the captured digits, which read `font-size:7rem` — 112px — as 11.2px
+    // and failed the check on a heading. Capture the whole literal instead.
+    const tooSmallRem = [...built.matchAll(/font-size:\s*(\d*\.\d+|\d+)rem/g)]
+      .map((m) => parseFloat(m[1]) * 16)
+      .filter((px) => px > 0 && px < 12.9);
+
+    check(
+      "no rule in the shipped CSS sets a font below the floor",
+      tooSmall.length === 0 && tooSmallRem.length === 0,
+      `found ${[...new Set([...tooSmall, ...tooSmallRem])].join(", ")}px. ` +
+        `A utility that ships is a utility somebody can use.`
+    );
+
+    check(
+      "the floor itself reached the stylesheet",
+      /--text-xs:\s*\.?8125rem/.test(built.replace(/\s/g, "")) || /--text-xs:0?\.8125rem/.test(built),
+      "the token is declared in source but did not reach the build"
+    );
+
+    check(
+      "and so did the new caution colour",
+      /--color-caution:\s*#ff8c1a/i.test(built),
+      "declared in source, absent from the build — which is how the surface tokens failed"
+    );
+  }
+}
+
+console.log("\nThe elevation ladder is the ink scale, and its rungs are visible");
+{
+  /*
+    An earlier draft of this shipped `--color-surface-page/raised/high/peak` and
+    checked *those*. It passed, and it proved nothing: they were the same four
+    colours under second names, no component ever used one, and Tailwind
+    tree-shook them out of the built stylesheet entirely. The check was green
+    while the thing it described did not reach a single page.
+
+    So this checks the scale components actually use.
+  */
+  const rungs = ["ink-950", "ink-900", "ink-800", "ink-700"].map(
     (n) => [n, token(`color-${n}`)] as const
   );
-  for (const [name, value] of steps) check(`${name} is declared`, value !== null);
+  for (const [name, value] of rungs) check(`${name} is declared`, value !== null);
 
-  // A ladder whose rungs are a nudge apart is not a ladder. Each step has to be
-  // a change somebody can actually see on a phone at night.
-  for (let i = 1; i < steps.length; i++) {
-    const [prevName, prev] = steps[i - 1];
-    const [name, value] = steps[i];
+  for (let i = 1; i < rungs.length; i++) {
+    const [prevName, prev] = rungs[i - 1];
+    const [name, value] = rungs[i];
     const d = distance(prev ?? "", value ?? "");
     check(
       `${name} is visibly above ${prevName}`,
@@ -209,6 +307,19 @@ console.log("\nThere is an elevation ladder, and its steps are visible");
       `${prev} -> ${value} is ΔE ${d.toFixed(1)} — too close to read as a step`
     );
   }
+
+  // The roles are the whole point: four named rungs, written down where the
+  // colours are, so the next person picks a step instead of inventing one.
+  for (const rung of ["ink-950", "ink-900", "ink-800", "ink-700"]) {
+    check(`${rung} has its role written down`, new RegExp(`${rung}\\s+\\w`).test(CSS));
+  }
+
+  // The duplicate vocabulary must not come back.
+  check(
+    "there is no second set of surface tokens",
+    !/--color-surface-[a-z]+\s*:/.test(CODE),
+    "aliases for colours that already have names are a vocabulary nobody speaks"
+  );
 }
 
 console.log(
