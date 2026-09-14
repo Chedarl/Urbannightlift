@@ -13,6 +13,7 @@ import { WatchmanStatus } from "@/components/admin/WatchmanStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 import { groupXaf } from "@/lib/utils";
+import { quoteFare } from "@/lib/orders/fare";
 
 /** 0–23, labelled so nobody has to translate 18 into 6 PM in their head. */
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -59,6 +60,14 @@ export function SettingsManager({
     orangeMerchantCode: string;
     orangeUssdTemplate: string;
     riderSharePercent: number;
+    fareMinimumXaf: number;
+    fareIncludedKm: number;
+    farePerKmXaf: number;
+    fareErrandXaf: number;
+    fareLateNightPercent: number;
+    fareLateNightFromHour: number;
+    fareYellowPercent: number;
+    fareRedPercent: number;
     testMode: boolean;
     voiceOrderingEnabled: boolean;
     requireAccountToOrder: boolean;
@@ -97,6 +106,14 @@ export function SettingsManager({
         orangeUssdTemplate: form.orangeUssdTemplate,
         enabledServices: form.enabledServices,
         riderSharePercent: form.riderSharePercent,
+        fareMinimumXaf: form.fareMinimumXaf,
+        fareIncludedKm: form.fareIncludedKm,
+        farePerKmXaf: form.farePerKmXaf,
+        fareErrandXaf: form.fareErrandXaf,
+        fareLateNightPercent: form.fareLateNightPercent,
+        fareLateNightFromHour: form.fareLateNightFromHour,
+        fareYellowPercent: form.fareYellowPercent,
+        fareRedPercent: form.fareRedPercent,
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
         requireAccountToOrder: form.requireAccountToOrder,
@@ -435,6 +452,105 @@ export function SettingsManager({
         {/* The revenue share. Changing it applies to future deliveries only —
             an order already delivered keeps the terms it was completed under,
             so past accounts and past rider statements never move. */}
+        {/*
+          The fare, with its working shown live.
+
+          These numbers were a hardcoded constant carrying the comment "the
+          knobs, all admin-editable" — no table, no screen, no way to move a
+          figure without a deploy. Customers complained about pricing and there
+          was nothing anybody here could do about it.
+
+          The worked example is the important half. A per-km rate is abstract; a
+          real Yaoundé route with the market price beside it is a decision. Every
+          change below recomputes it before you save.
+        */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <p className="mb-1 text-sm font-semibold text-mist-100">The fare</p>
+          <p className="mb-3 text-xs leading-relaxed text-mist-400">
+            What a delivery costs, and why. Every figure here is one you should be able
+            to say out loud to a customer at the door.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            {([
+              ["fareMinimumXaf", "Minimum (XAF)", "The least any delivery costs"],
+              ["fareIncludedKm", "…which buys (km)", "Distance the minimum already covers"],
+              ["farePerKmXaf", "Per km after that (XAF)", "Charged on road distance"],
+              ["fareErrandXaf", "We shop for you (XAF)", "When the rider buys, not just carries"],
+              ["fareLateNightPercent", "Late-night premium (%)", "Fewer riders, worse roads"],
+              ["fareLateNightFromHour", "…from (hour)", "24-hour clock, Yaoundé time"],
+              ["fareYellowPercent", "Further out (%)", "Yellow zones"],
+              ["fareRedPercent", "Harder to reach (%)", "Red zones"],
+            ] as const).map(([key, label, hint]) => (
+              <label key={key} className="text-xs text-mist-500">
+                {label}
+                <input
+                  className={inputCls}
+                  type="number"
+                  step={key === "fareIncludedKm" ? 0.5 : 1}
+                  min={0}
+                  value={form[key]}
+                  onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })}
+                />
+                <span className="mt-1 block text-xs text-mist-500">{hint}</span>
+              </label>
+            ))}
+          </div>
+
+          {/* One real route, priced three ways, against what the market charges
+              for the same journey. Yango publishes 450 minimum and 88 XAF/km in
+              Yaoundé, which is the number a customer is comparing us against
+              whether or not we look at it. */}
+          <div className="mt-3 rounded-lg border border-ink-700 bg-ink-900/60 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-mist-500">
+              Bastos → Mvan · 11.6 km by road
+            </p>
+            {(() => {
+              const km = 8.9;
+              const rules = {
+                minimumXaf: form.fareMinimumXaf,
+                includedKm: form.fareIncludedKm,
+                perKmXaf: form.farePerKmXaf,
+                tierMultiplier: { GREEN: 1, YELLOW: 1 + form.fareYellowPercent / 100, RED: 1 + form.fareRedPercent / 100 },
+                busyMultiplier: 1,
+                errandXaf: form.fareErrandXaf,
+                lateNightPercent: form.fareLateNightPercent,
+                lateNightFromHour: form.fareLateNightFromHour,
+                riderFloorXaf: 500,
+              };
+              const ride = quoteFare({ km, tier: "YELLOW" }, rules).totalXaf;
+              const errand = quoteFare({ km, tier: "YELLOW", errand: true }, rules).totalXaf;
+              const late = quoteFare({ km, tier: "YELLOW", errand: true, hour: form.fareLateNightFromHour }, rules).totalXaf;
+              const yango = Math.max(450, Math.round(88 * km * 1.3));
+              const rows: [string, number, string][] = [
+                ["Yango, same trip", yango, "text-mist-500"],
+                ["Carrying only", ride, "text-mist-200"],
+                ["With shopping", errand, "text-mist-200"],
+                [`After ${form.fareLateNightFromHour}:00, with shopping`, late, "text-gold-400"],
+              ];
+              return (
+                <div className="mt-2 flex flex-col gap-1">
+                  {rows.map(([label, v, cls]) => (
+                    <div key={label} className="flex items-baseline justify-between gap-3">
+                      <span className="text-xs text-mist-400">{label}</span>
+                      <span className={`text-sm font-semibold tabular-nums ${cls}`}>{groupXaf(v)} XAF</span>
+                    </div>
+                  ))}
+                  <p className="mt-1.5 border-t border-ink-700 pt-1.5 text-xs leading-relaxed text-mist-500">
+                    Yango sells a ride; we sell the errand. Keeping the errand as its own
+                    line is what makes the total defensible next to a ride-hailing fare —
+                    and it is {yango > 0 ? Math.round((late / yango) * 10) / 10 : "—"}× theirs at the moment.
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+
+          <p className="mt-2 text-xs text-mist-500">
+            Applies to orders placed from now on. Orders already quoted keep their price.
+          </p>
+        </div>
+
         <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
           <p className="mb-2 text-sm font-semibold text-mist-100">Revenue share</p>
           <label className="text-xs text-mist-500">

@@ -16,6 +16,7 @@
  * Run: npx tsx scripts/verify-auto-price.ts
  */
 import { decideAutoPrice } from "../src/lib/orders/autoPrice";
+import { DEFAULT_FARE } from "../src/lib/orders/fare";
 import { estimateDeliveryFee, type ZonePricing } from "../src/lib/orders/pricing";
 
 let failures = 0;
@@ -56,21 +57,35 @@ const decide = (
     riskFlag: false,
   });
 
+
+/*
+  The fees here are derived, not typed.
+
+  Every one of these used to be a literal — 1000, 1100, 1250 — which was the
+  minimum fare written down a second time. When the minimum moved from 1000 to
+  850 all six failed on prices that were exactly right, and a stale expectation
+  reads like a defect until somebody checks.
+
+  What these checks are actually about is firm-versus-review and the reason
+  given. The money comes from the rules so it tracks them.
+*/
+const round50 = (n: number) => Math.round(n / 50) * 50;
+
 console.log("\nFirm prices — the system quotes and the customer goes straight to payment");
 check(
   "an unpinned green → green trip is firm at the minimum fare",
   decide(green, green),
-  { firm: true, feeXaf: 1000, reason: "FIRM" }
+  { firm: true, feeXaf: DEFAULT_FARE.minimumXaf, reason: "FIRM" }
 );
 check(
   "green → yellow is firm, and the yellow tier nudges the fee rather than being it",
   decide(green, yellow),
-  { firm: true, feeXaf: 1100, reason: "FIRM" }
+  { firm: true, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.YELLOW), reason: "FIRM" }
 );
 check(
   "the medicine surcharge is still added on top of the firm fee",
   decide(green, green, { isMedicine: true }),
-  { firm: true, feeXaf: 1300, reason: "FIRM" }
+  { firm: true, feeXaf: DEFAULT_FARE.minimumXaf + green.medicineFeeXaf, reason: "FIRM" }
 );
 
 console.log("\nDistance decides the firm figure now, not the postcode");
@@ -89,7 +104,7 @@ console.log(`       Bastos → Mvan:        ${crossTown.feeXaf} XAF`);
 
 check("a pinned hop down the street is firm at the minimum", hop, {
   firm: true,
-  feeXaf: 1000,
+  feeXaf: DEFAULT_FARE.minimumXaf,
   reason: "FIRM",
 });
 checkThat("a pinned cross-town run is firm too", crossTown.firm);
@@ -113,12 +128,12 @@ console.log("\nA human still prices these");
 check(
   "a RED delivery zone goes to review",
   decide(green, red),
-  { firm: false, feeXaf: 1250, reason: "REVIEW_TIER" }
+  { firm: false, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.RED), reason: "REVIEW_TIER" }
 );
 check(
   "a RED pickup zone goes to review even with a green drop",
   decide(red, green),
-  { firm: false, feeXaf: 1250, reason: "REVIEW_TIER" }
+  { firm: false, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.RED), reason: "REVIEW_TIER" }
 );
 checkThat(
   "a RED end still goes to review however short the ride is",

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
-import { orderMoney } from "@/lib/orders/goodsMoney";
+import { orderMoney, isShoppingService } from "@/lib/orders/goodsMoney";
 import { canChargeToFloat } from "@/lib/merchants/float";
 import { merchantPickupLabel } from "@/lib/merchants/complete";
 import { normalizePhone } from "@/lib/utils";
@@ -19,6 +19,7 @@ import { afterOrderCreated } from "@/lib/orders/afterCreate";
 import { resolveCode } from "@/lib/ambassadors/accrual";
 import { creditToApply } from "@/lib/referrals/rules";
 import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
+import { fareRulesFrom } from "@/lib/orders/fare";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -153,10 +154,28 @@ export async function POST(req: NextRequest) {
         ? { lat: deliveryGeo.latitude, lng: deliveryGeo.longitude }
         : null;
 
+  /*
+    Priced with the owner's numbers, not a constant compiled into the bundle.
+
+    `SHOPPING_SERVICES` are the ones where the rider does more than carry —
+    they go, queue, buy and come back — and that labour is now its own line
+    rather than buried in a delivery fee that then looked three times a Yango
+    ride for the same distance.
+
+    The hour is Yaoundé's, not the server's: Vercel runs in UTC and a late-night
+    band keyed to the wrong clock would charge the premium in the afternoon.
+  */
+  const yaoundeHour = Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Douala", hour: "2-digit", hour12: false }).format(new Date())
+  );
+
   const estimatedFee = estimateDeliveryFee(effectivePickupZone, effectiveDeliveryZone, {
     isMedicine: input.isMedicine,
     pickup: pickupPoint,
     delivery: deliveryPoint,
+    rules: fareRulesFrom(settings),
+    errand: isShoppingService(input.serviceType),
+    hour: Number.isFinite(yaoundeHour) ? yaoundeHour : undefined,
   });
 
   const highValueFlag = input.declaredValueXaf > INSURED_VALUE_CAP_XAF;

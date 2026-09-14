@@ -1418,6 +1418,32 @@ model OperatingSettings {
   mtnUssdTemplate            String? // e.g. "*126*4*857539*{amount}#" — {amount} is replaced by the fee
   orangeMerchantCode         String? // customer-facing Orange Money merchant number
   orangeUssdTemplate         String?
+  /// ── The fare, as numbers somebody can change ─────────────────────────────
+  /// `DEFAULT_FARE` in `src/lib/orders/fare.ts` carried the comment "the knobs,
+  /// all admin-editable" while being a hardcoded constant with no table, no
+  /// screen, and no way for the owner to move a single figure. These are the
+  /// knobs, actually.
+  ///
+  /// Every one is a number the business should be able to defend out loud to a
+  /// customer at the door, which is why they are separate fields rather than a
+  /// JSON blob: a column somebody can read is a column somebody can argue with.
+  fareMinimumXaf      Int   @default(850)
+  /// How much distance the minimum already buys. Float — 2.5 km is a real answer.
+  fareIncludedKm      Float @default(2.5)
+  farePerKmXaf        Int   @default(150)
+  /// Charged when the rider shops, queues or collects on the customer's behalf.
+  /// Yango sells a ride; we sell the errand. Keeping the errand as its own line
+  /// is what makes the total defensible next to a ride-hailing fare.
+  fareErrandXaf       Int   @default(500)
+  /// The real night premium, replacing a vague always-off "busy" multiplier.
+  /// After this hour there are fewer riders out and the roads are worse.
+  fareLateNightPercent  Int @default(15)
+  fareLateNightFromHour Int @default(23)
+  /// Zone tiers, as percentages on top. Deliberately gentle: a RED zone is
+  /// harder to reach, which is worth a fifth, not a doubling.
+  fareYellowPercent   Int   @default(8)
+  fareRedPercent      Int   @default(20)
+
   updatedByUserId            String?
   updatedAt                  DateTime @updatedAt
 }

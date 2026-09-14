@@ -54,6 +54,10 @@ export function estimateDeliveryFee(
     delivery?: { lat: number; lng: number } | null;
     rules?: FareRules;
     busy?: boolean;
+    /** The rider shops or collects, rather than only carrying. */
+    errand?: boolean;
+    /** Hour of day, 0-23, for the late-night band. */
+    hour?: number;
   } = {}
 ): number | null {
   return quoteDeliveryFee(pickupZone, deliveryZone, options)?.totalXaf ?? null;
@@ -75,6 +79,10 @@ export function quoteDeliveryFee(
     delivery?: { lat: number; lng: number } | null;
     rules?: FareRules;
     busy?: boolean;
+    /** The rider shops or collects, rather than only carrying. */
+    errand?: boolean;
+    /** Hour of day in Yaoundé, 0-23, for the late-night band. */
+    hour?: number;
   } = {}
 ) {
   const km =
@@ -110,7 +118,7 @@ export function quoteDeliveryFee(
     ? Math.max(pickupZone?.medicineFeeXaf ?? 0, deliveryZone?.medicineFeeXaf ?? 0)
     : 0;
 
-  return quoteFare({ km, tier, surchargeXaf, busy: options.busy }, options.rules);
+  return quoteFare({ km, tier, surchargeXaf, busy: options.busy, errand: options.errand, hour: options.hour }, options.rules);
 }
 
 /** Haversine distance in km between two lat/lng points. */
