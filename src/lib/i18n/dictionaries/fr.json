@@ -547,6 +547,7 @@
     },
     "order": {
       "customer": "Client",
+      "messageCustomer": "Écrire au client",
       "pickup": "Récupération",
       "delivery": "Livraison",
       "item": "Article",

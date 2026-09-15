@@ -22,7 +22,19 @@ export interface RiderOrderData {
   paymentStatus: PaymentStatus;
   serviceType: ServiceType;
   customerName: string;
-  customerWhatsapp: string;
+  /**
+   * A ready-made `wa.me` link, built on the server.
+   *
+   * The number itself is deliberately **not** a prop. This screen used to print
+   * the customer's full WhatsApp number in the middle of the card, and the
+   * whole premise of in-app calling is that neither party learns how to reach
+   * the other again tomorrow — a promise that was one-sided while the rider
+   * could read the customer's number straight off their job.
+   *
+   * The rider keeps the ability to message; they lose the ability to keep the
+   * number. Null when the order has no usable number on file.
+   */
+  customerWaLink: string | null;
   pickupLocation: string;
   pickupLandmark: string | null;
   /** Pins, when the order has them — turn-by-turn beats an address string. */
@@ -308,14 +320,20 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
           <span className="text-mist-500">{t("rider.order.payment")}</span>
           <PaymentStatusBadge status={order.paymentStatus} />
         </div>
-        <a
-          href={buildWaLink(normalizePhone(order.customerWhatsapp), `Urban Night Lift — ${order.orderCode}`)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-ink-950"
-        >
-          <MessageCircle className="h-4 w-4" /> {order.customerWhatsapp}
-        </a>
+        {/* The label is what they are about to do, not who they are about to
+            do it to — the name is already on the row above, and the number is
+            not this screen's to show. */}
+        {order.customerWaLink && (
+          <a
+            href={order.customerWaLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2 text-sm font-semibold text-ink-950"
+          >
+            <MessageCircle className="h-4 w-4" />
+            {t("rider.order.messageCustomer")}
+          </a>
+        )}
       </section>
 
       <section className={card}>

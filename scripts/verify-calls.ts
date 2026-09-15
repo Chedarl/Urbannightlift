@@ -30,7 +30,7 @@ import {
   GRACE_AFTER_DELIVERED_MINUTES,
   type CanCallInput,
 } from "../src/lib/calls/policy";
-import { callChannelName, mintCallSecret, secretHash } from "../src/lib/calls/channel";
+import { callChannelName, callSecret, secretHash } from "../src/lib/calls/channel";
 import { acceptSignal, constantTimeEqual, SIGNAL_KINDS } from "../src/lib/calls/signal";
 import { callEventDetail, safeReason, END_REASONS } from "../src/lib/calls/redact";
 import { iceProviderMode, normaliseIceServers, MAX_TTL_SECONDS } from "../src/lib/calls/iceServers";
@@ -181,11 +181,44 @@ console.log("\nA rider in motion is asked, not rung");
     worse.
   */
   for (const moving of ["RIDER_GOING_TO_PICKUP", "RIDER_GOING_TO_DELIVERY"] as const) {
-    check(`${moving} asks for a call back`, ringMode(moving) === "REQUEST_CALLBACK");
+    check(
+      `${moving} asks for a call back when the customer calls`,
+      ringMode(moving, "CUSTOMER") === "REQUEST_CALLBACK"
+    );
   }
   for (const stopped of ["RIDER_ARRIVED_AT_PICKUP", "RIDER_ARRIVED_AT_DELIVERY", "RIDER_ASSIGNED"] as const) {
-    check(`${stopped} may ring`, ringMode(stopped) === "RING");
+    check(`${stopped} may ring`, ringMode(stopped, "CUSTOMER") === "RING");
   }
+
+  /*
+    And the half that was wrong. `ringMode` took only a status, so a rider
+    tapping call mid-delivery was told they had asked the *customer* to ring
+    them back — the one person the gate exists to protect was the one it was
+    applied to. The gate is about not making a phone ring in a moving rider's
+    pocket; a rider who has stopped and pressed call is not in that situation,
+    which is what the function's own docstring had always claimed.
+  */
+  for (const status of [
+    "RIDER_GOING_TO_PICKUP",
+    "RIDER_GOING_TO_DELIVERY",
+    "RIDER_ARRIVED_AT_DELIVERY",
+  ] as const) {
+    check(
+      `a rider calling on ${status} rings, never asks for a callback`,
+      ringMode(status, "RIDER") === "RING",
+      "a rider who has already stopped to call is not the person the motion gate protects"
+    );
+  }
+
+  // And the server is the one deciding it — a client that chose could be told
+  // to ring a rider who is mid-ride.
+  check(
+    "invite passes the party rather than the status alone",
+    /ringMode\(auth\.order\.orderStatus,\s*auth\.party\)/.test(
+      read("src/app/api/calls/invite/route.ts")
+    ),
+    "the status-only call is what produced the bug"
+  );
 }
 
 console.log("\nThe channel name gives nothing away");
@@ -212,7 +245,7 @@ console.log("\nThe channel name gives nothing away");
 
 console.log("\nNo message reaches the peer connection without the call secret");
 {
-  const secret = mintCallSecret();
+  const secret = callSecret("call-1", "test-channel-secret");
   /*
     The customer's side, judging messages from the rider. `self` is what makes
     it drop its own echoes — Supabase broadcasts back to the sender by default,
@@ -232,7 +265,7 @@ console.log("\nNo message reaches the peer connection without the call secret");
   check("a genuine message is accepted", acceptSignal(good, expect) !== null);
   check(
     "a wrong secret is refused",
-    acceptSignal({ ...good, secret: mintCallSecret() }, expect) === null,
+    acceptSignal({ ...good, secret: callSecret("call-2", "test-channel-secret") }, expect) === null,
     "this is the check that stops an SDP substitution, which is how you would listen in"
   );
   check("a message for another call is refused", acceptSignal({ ...good, callId: "call-2" }, expect) === null);
@@ -461,10 +494,43 @@ console.log("\nNo /api/calls response can carry a way to reach somebody");
     /authoriseCall/.test(answer) && /session\.orderId !== auth\.order\.id/.test(answer),
     "a call id travels through a push notification, which lands on a lock screen"
   );
+  /*
+    This check used to assert the opposite — that `answer` must **not** return
+    the secret — and was wrong in a way that made the feature impossible.
+
+    The secret is what every message on the line carries. It was minted at
+    `invite`, and only the *caller* calls invite. So under the old rule the
+    answering party could never obtain it, could neither verify what it received
+    nor sign what it sent, and the call could not connect. The stated reason
+    ("two ways to obtain it is one too many") mistook a second *door* for a
+    weaker one: both sit behind the same `authoriseCall` and the same
+    "is this call on your order" check.
+
+    What is worth guarding is that it never escapes those checks.
+  */
   check(
-    "and does not re-issue the call secret",
-    !/\bsecret,/.test(answer.replace(/channelSecret/g, "").replace(/\/\*[\s\S]*?\*\//g, "")),
-    "two ways to obtain the thing that authenticates every message is one too many"
+    "answer returns the secret, so the other side can actually take the call",
+    /secret: callSecret\(/.test(answer),
+    "without it the answerer cannot authenticate anything, and the call cannot connect"
+  );
+  check(
+    "and only after the order and the call have both been checked",
+    answer.indexOf("authoriseCall") < answer.indexOf("secret: callSecret(") &&
+      answer.indexOf("session.orderId !== auth.order.id") < answer.indexOf("secret: callSecret("),
+    "a call id travels through a push notification, which lands on a lock screen"
+  );
+  check(
+    "no refusal path carries a secret",
+    [...answer.matchAll(/return NextResponse\.json\(\s*\{\s*error:[\s\S]*?\n\s*\)/g)].every(
+      (m) => !/secret/.test(m[0])
+    ),
+    "a 403 that leaks the value it is refusing is worse than no check at all"
+  );
+  check(
+    "and it is derived rather than stored, so there is none at rest to steal",
+    /callSecret/.test(read("src/lib/calls/channel.ts")) &&
+      !/mintCallSecret/.test(read("src/app/api/calls/invite/route.ts")),
+    "a stored secret is a stored impersonation"
   );
 }
 
@@ -642,6 +708,78 @@ console.log("\nThe call surface says the true thing, and always offers a human")
     "the screen asks the authorised endpoint instead",
     code("src/components/customer/LiveTrackMap.tsx").includes("/api/calls/can"),
     "a call button rendered off a public payload appears for anybody holding a screenshot"
+  );
+}
+
+console.log("\nThe product does not claim a notification it did not send");
+{
+  /*
+    v50 shipped `CallSheet` telling the customer *"they have been told, and will
+    call you back as soon as they stop"* while `/api/calls/invite` sent nothing
+    at all. Not a bug in the notification path — there was no notification path.
+    A screen asserting an action the server never took is the worst kind of
+    defect here, because it reads as working and leaves somebody waiting.
+  */
+  const invite = code("src/app/api/calls/invite/route.ts");
+  const sheet = code("src/components/customer/call/CallSheet.tsx");
+  const hook = code("src/lib/calls/useCall.ts");
+
+  check(
+    "invite actually notifies the rider on the callback path",
+    /notifyCallbackRequest\(/.test(invite),
+    "the sentence the customer reads depends on this having happened"
+  );
+  check(
+    "and reports whether a device was reached",
+    /notified/.test(invite),
+    "sendPush returns 0 with no VAPID keys, which is production today"
+  );
+  check(
+    "the hook carries that answer through",
+    /callbackNotified/.test(hook),
+    "the screen cannot tell the truth about something it was not told"
+  );
+  check(
+    "and the sheet has a different sentence for each case",
+    /callbackNotified\s*$/m.test(sheet) || /callbackNotified/.test(sheet),
+    "one reassuring sentence for both outcomes is how the untrue one shipped"
+  );
+  check(
+    "including one that does not promise a call back nobody was asked for",
+    /could not get a notification|n'avons pas pu le pr\u00e9venir/i.test(
+      read("src/components/customer/call/CallSheet.tsx")
+    ),
+    "when nobody was reached, saying so and pointing at dispatch is the only honest option"
+  );
+}
+
+console.log("\nA rider is never shown the customer's number");
+{
+  /*
+    The promise is symmetrical — neither party learns how to reach the other
+    again tomorrow — and it was not. The rider's job screen printed the
+    customer's full WhatsApp number in the middle of the card, and the jobs API
+    returned it in JSON that **nothing consumed**: leaked for no purpose at all.
+  */
+  const view = code("src/components/rider/RiderOrderView.tsx");
+  const jobs = code("src/app/api/rider/jobs/[orderId]/route.ts");
+  const page = code("src/app/rider/(protected)/orders/[orderId]/page.tsx");
+
+  for (const [name, src] of [
+    ["RiderOrderView", view],
+    ["the jobs API", jobs],
+    ["the rider order page", page],
+  ] as const) {
+    check(
+      `${name} never handles a raw customer number`,
+      !/customerWhatsapp/.test(src),
+      "a wa.me link built on the server gives the rider the same ability and none of the number"
+    );
+  }
+  check(
+    "the rider still has a way to message",
+    /customerWaLink/.test(view) && /buildWaLink/.test(jobs) && /buildWaLink/.test(page),
+    "closing the leak by removing the feature would be a different kind of wrong"
   );
 }
 

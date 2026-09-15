@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { authoriseCall, denyStatus } from "@/lib/calls/authorise";
-import { callChannelName, mintCallSecret, secretHash } from "@/lib/calls/channel";
+import { callChannelName, callSecret, secretHash } from "@/lib/calls/channel";
 import { mintIceServers } from "@/lib/calls/ice";
 import { ringMode } from "@/lib/calls/policy";
 import { checkRateLimit } from "@/lib/security/rateLimit";
+import { notifyCallbackRequest } from "@/lib/notify/triggers";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,12 @@ export const dynamic = "force-dynamic";
  * customer would like a word* — and the rider calls back when they are stopped.
  * That decision belongs on the server, because a client that decided it could
  * be told to ring anyway.
+ *
+ * And when that is the answer, the rider is **actually notified here**. v50
+ * shipped this route sending nothing while the call sheet told the customer
+ * "they have been told, and will call you back" — a sentence that was untrue
+ * for every single caller. The response now carries `notified`, so the screen
+ * can say what really happened rather than what we hoped had.
  */
 export async function POST(req: NextRequest) {
   let body: { orderCode?: string };
@@ -74,8 +81,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "NOT_CONFIGURED" }, { status: 503 });
   }
 
-  const secret = mintCallSecret();
-  const mode = ringMode(auth.order.orderStatus);
+  const mode = ringMode(auth.order.orderStatus, auth.party);
 
   const [session, ice] = await Promise.all([
     prisma.callSession.create({
@@ -84,7 +90,15 @@ export async function POST(req: NextRequest) {
         initiatedBy: auth.party,
         riderUserId: auth.order.assignedRiderId,
         customerId: auth.order.customerId,
-        secretHash: secretHash(secret),
+        /*
+          Filled in immediately below, once the row has an id.
+
+          The secret is *derived from the call id*, so it cannot be computed
+          before the insert that mints one. Written as a second statement rather
+          than by generating the id here, so call ids keep the one format the
+          rest of the schema uses.
+        */
+        secretHash: "",
         ringMode: mode,
         events: { create: { kind: "ring", detail: { ringMode: mode } } },
       },
@@ -93,8 +107,35 @@ export async function POST(req: NextRequest) {
     mintIceServers(),
   ]);
 
+  const secret = callSecret(session.id, channelSecret);
+  /*
+    Audit only. Nothing authenticates against this — both browsers derive the
+    secret themselves — so a failure here must not fail the call, and the column
+    is vestigial enough to drop in a later migration.
+  */
+  await prisma.callSession
+    .update({ where: { id: session.id }, data: { secretHash: secretHash(secret) } })
+    .catch(() => null);
+
+  /*
+    Tell the rider, and find out whether anybody was actually reached.
+
+    `sendPush` returns a device count and returns **0 whenever VAPID keys are
+    unset** — which they are in production today. So this is not a theoretical
+    failure path, it is the current one, and the customer is told so.
+  */
+  const notified =
+    mode === "REQUEST_CALLBACK" && auth.order.assignedRiderId
+      ? (await notifyCallbackRequest(auth.order.assignedRiderId, auth.order.orderCode, auth.order.id)) > 0
+      : false;
+
   return NextResponse.json({
     callId: session.id,
+    /*
+      Whether the rider's phone actually buzzed. Only meaningful on the
+      callback path; a direct ring reaches them through the open app instead.
+    */
+    notified,
     channel: callChannelName(auth.order.id, channelSecret),
     secret,
     /** Which side this caller is, so their browser can drop its own echoes. */

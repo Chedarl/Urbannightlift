@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildWaLink } from "@/lib/whatsapp/links";
+import { normalizePhone } from "@/lib/utils";
 import { riderTipShareXaf, tipCustody } from "@/lib/orders/tip";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
@@ -62,7 +64,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ orderId: s
       paymentMethod: order.paymentMethod,
       serviceType: order.serviceType,
       customerName: order.customer.fullName,
-      customerWhatsapp: order.customer.whatsappNumber,
+      /*
+        A ready-made link, never the number.
+
+        This field was `customer.whatsappNumber` and **nothing consumed it** —
+        so the customer's number was being handed to the rider's browser, where
+        a console prints it, for no purpose at all. The rider keeps the ability
+        to message and loses the ability to keep the number, which is the same
+        asymmetry in-app calling exists to close from the other side.
+      */
+      customerWaLink: order.customer.whatsappNumber
+        ? buildWaLink(normalizePhone(order.customer.whatsappNumber), `Urban Night Lift — ${order.orderCode}`)
+        : null,
       pickup: {
         text: order.pickupLocation,
         landmark: order.pickupLandmark,

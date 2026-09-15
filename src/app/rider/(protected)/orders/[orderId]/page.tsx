@@ -1,4 +1,6 @@
 import { notFound, redirect } from "next/navigation";
+import { buildWaLink } from "@/lib/whatsapp/links";
+import { normalizePhone } from "@/lib/utils";
 import { riderTipShareXaf, tipCustody } from "@/lib/orders/tip";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/session";
@@ -50,7 +52,10 @@ export default async function RiderOrderPage({
         paymentStatus: order.paymentStatus,
         serviceType: order.serviceType,
         customerName: order.customer.fullName,
-        customerWhatsapp: order.customer.whatsappNumber,
+        /* Built here so the number never reaches the browser. */
+        customerWaLink: order.customer.whatsappNumber
+          ? buildWaLink(normalizePhone(order.customer.whatsappNumber), `Urban Night Lift — ${order.orderCode}`)
+          : null,
         pickupLocation: order.pickupLocation,
         pickupLandmark: order.pickupLandmark,
         pickupLat: order.pickupLat,
