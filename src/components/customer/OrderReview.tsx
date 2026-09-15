@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertTriangle, BadgeCheck } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
-import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
+import { loadDraft, saveDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
 import { priceCopy } from "@/lib/orders/priceCopy";
 import { isShoppingService, orderMoney } from "@/lib/orders/goodsMoney";
 import { MoneyBreakdown } from "@/components/customer/order/MoneyBreakdown";
@@ -13,6 +13,9 @@ import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { CheckoutBar } from "@/components/customer/order/CheckoutBar";
+import { PaymentSelector } from "@/components/customer/order/PaymentSelector";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
+import type { PaymentMethod } from "@/lib/payments/methods";
 import { applyLaunchOffer } from "@/lib/orders/launchOffer";
 import { formatXaf } from "@/lib/utils";
 
@@ -97,11 +100,32 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(false);
+  // Above the early returns, because hooks are not allowed to be conditional
+  // and this screen returns early for an expired draft.
+  const payMethods = usePaymentMethods();
 
   useEffect(() => {
     setDraft(loadDraft());
     setLoaded(true);
   }, []);
+
+  /*
+    A draft can outlive the configuration it was made under.
+
+    Somebody who chose Orange Money in a tab left open, or before the merchant
+    code was removed, arrives here holding a method the server will now refuse.
+    Correcting it silently would change what they chose without telling them, so
+    the selector below shows the new choice and they can see it; what is not
+    acceptable is letting them reach the slider on a method that cannot be paid.
+    Cash leads `payMethods`, so there is always somewhere to land.
+  */
+  useEffect(() => {
+    if (!draft || payMethods.length === 0) return;
+    if (payMethods.includes(draft.paymentMethod as PaymentMethod)) return;
+    const next = { ...draft, paymentMethod: payMethods[0] };
+    setDraft(next);
+    saveDraft(next);
+  }, [draft, payMethods]);
 
   if (!loaded) return null;
   if (!draft) {
@@ -211,7 +235,12 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-32">
+    /* `pb-52` rather than `pb-32`: `CheckoutBar` grew a second row when the
+       submit became a slider, and at `pb-32` it sat on top of the PDF button
+       and the legal notice. The clearance is measured against the bar's real
+       height, not guessed — a pinned bar that covers the last two controls on
+       the page is the defect the pinned bar was introduced to fix. */
+    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-52">
       {/*
         The stepper is gone from the whole journey.
 
@@ -301,10 +330,10 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
             value={draft.estimatedFeeXaf != null ? formatXaf(draft.estimatedFeeXaf) : "—"}
           />
         )}
-        <Row
-          label={t("review.paymentMethod")}
-          value={draft.paymentMethod === "MTN_MOMO" ? t("orderForm.mtnMomo") : draft.paymentMethod === "ORANGE_MONEY" ? t("orderForm.orangeMoney") : t("orderForm.cashOnDelivery")}
-        />
+        {/* Payment used to be a read-only row here — the customer was shown
+            what they picked before they knew the price, and could not change
+            it without going back through the whole form. It is now a live
+            control of its own, below. */}
         <Row
           label={t("review.disclaimerConfirmed")}
           value={<CheckCircle2 className="ml-auto h-5 w-5 text-safe" />}
@@ -314,6 +343,26 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
       {/* The arithmetic, shown rather than asserted. Goods, fee, total — never
           blended into one number, because a blended number is exactly what
           somebody skimming would show you. */}
+      {/*
+        The method, chosen where the amount is.
+
+        Writing straight back to the draft means the order submitted is the one
+        on screen — there is no second copy of this decision to fall out of step
+        with. The server still validates it: a method with no merchant code is
+        rejected there too, so a tampered draft cannot conjure one.
+      */}
+      <PaymentSelector
+        fr={fr}
+        methods={payMethods}
+        value={draft.paymentMethod as PaymentMethod}
+        shopping={shopping}
+        onChange={(m) => {
+          const next = { ...draft, paymentMethod: m };
+          setDraft(next);
+          saveDraft(next);
+        }}
+      />
+
       <MoneyBreakdown
         money={money}
         items={goodsItems(draft)}

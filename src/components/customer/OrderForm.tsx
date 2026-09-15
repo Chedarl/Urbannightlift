@@ -20,6 +20,7 @@ import { getDisclaimer } from "@/lib/i18n/legal";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { quoteDeliveryFee, TIER_META, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 import { getExperience } from "@/lib/services/experiences";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
@@ -111,6 +112,8 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
     fetch("/api/zones").then((r) => r.json()).then((d) => setZones(d.zones ?? [])).catch(() => {});
   }, []);
 
+  const payMethods = usePaymentMethods();
+
   const {
     register, handleSubmit, watch, setValue, getValues, control,
     formState: { errors },
@@ -130,6 +133,20 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
       acceptedTerms: undefined as unknown as true,
     },
   });
+
+  /*
+    The default is `MTN_MOMO`, which is right in production and wrong the
+    moment it is not configured — a form that opens on an option it will not
+    accept is a form that fails on submit for a reason the customer cannot see.
+    Once the real list arrives, a selection that is not on it moves to the first
+    thing that is. Cash leads that list, so the fallback always works.
+  */
+  const chosenPayment = watch("paymentMethod");
+  useEffect(() => {
+    if (payMethods.length > 0 && !payMethods.includes(chosenPayment)) {
+      setValue("paymentMethod", payMethods[0]);
+    }
+  }, [payMethods, chosenPayment, setValue]);
 
   useProfilePrefill((p) => {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
@@ -544,7 +561,11 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
         <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900/40 p-4">
           <h2 className="font-display text-sm font-semibold" style={{ color: exp.accent }}>{t("orderForm.paymentSection")}</h2>
           <div className="flex flex-wrap gap-2">
-            {(["MTN_MOMO", "ORANGE_MONEY", "CASH"] as const).map((v) => (
+            {/* The five service forms were taught to ask which methods actually
+                work; this one — the router form, and the live `/order/new` —
+                was not, so it went on offering Orange Money with no Orange
+                merchant code behind it. Same list, same source. */}
+            {payMethods.map((v) => (
               <button key={v} type="button" onClick={() => setValue("paymentMethod", v)}
                 className={cn("min-w-[30%] flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold", watch("paymentMethod") === v ? "border-transparent text-ink-950" : "border-ink-700 bg-ink-800 text-mist-400")}
                 style={watch("paymentMethod") === v ? { backgroundColor: exp.accent } : undefined}>

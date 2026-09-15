@@ -2,6 +2,8 @@
 
 import { Loader2, ShieldCheck } from "lucide-react";
 
+import { SlideToConfirm } from "@/components/ui/SlideToConfirm";
+
 import { groupXaf } from "@/lib/utils";
 import type { OrderMoney } from "@/lib/orders/goodsMoney";
 
@@ -43,6 +45,19 @@ import type { OrderMoney } from "@/lib/orders/goodsMoney";
  * **It never hides the waiver.** When the first delivery is free that is a line
  * of its own with the original fee still legible beside it. A discount that
  * simply makes a number smaller teaches nobody that they were given anything.
+ *
+ * ## Why placing the order is a drag and signing up is a tap
+ *
+ * The control that commits somebody's money is a `SlideToConfirm`, because this
+ * is a one-handed phone screen at one in the morning and the recovery path for
+ * an accidental order is a phone call to dispatch with a rider already moving.
+ * A drag cannot be produced by a twitch.
+ *
+ * Signing up is not that. It spends nothing, it is reversible, and making
+ * somebody drag a slider to reach a sign-up form would be ceremony pretending
+ * to be safety — the exact instinct that put a wall in front of the shop window
+ * in the first place. So the gated state is a plain button, and the slider
+ * appears at the moment there is something to be careful about.
  */
 
 export interface CheckoutBarProps {
@@ -81,7 +96,8 @@ export function CheckoutBar({
       hand-rolled footers this replaces.
     */
     <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-xl px-4 py-3">
+      <div className="glass-raised mx-auto flex max-w-lg flex-col gap-3 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-1.5">
             {/*
@@ -98,14 +114,33 @@ export function CheckoutBar({
           </p>
 
           {waivedXaf > 0 ? (
-            /* The gift, said as a gift — with what it came off still legible. */
+            /*
+              The gift, said as a gift — with the thing it came off still
+              legible beside it.
+
+              What is struck through is the **delivery fee**, not the total.
+              On a shopping order those are different numbers with different
+              owners: striking a 10,500 total to show a 1,500 waiver reads as
+              though we had discounted the pharmacy's goods, which is not ours
+              to discount and not what happened. The fee is the only part of
+              that number we could ever give away, so the fee is what is shown
+              being given away. On a delivery-only order the two are the same
+              figure and nothing is lost.
+            */
             <p className="mt-0.5 flex items-center gap-1.5 text-xs text-safe">
               <ShieldCheck className="h-3 w-3 shrink-0" />
               <span className="truncate">
                 {fr ? "Première livraison offerte" : "First delivery on us"}
                 <span className="ml-1 text-mist-500 line-through tabular-nums">
-                  {groupXaf(money.totalXaf)}
+                  {groupXaf(money.deliveryFeeXaf)}
                 </span>
+                {money.shopping && (
+                  <span className="ml-1 text-mist-500">
+                    {fr
+                      ? `· achats jusqu'à ${groupXaf(money.goodsXaf)}`
+                      : `· goods up to ${groupXaf(money.goodsXaf)}`}
+                  </span>
+                )}
               </span>
             </p>
           ) : (
@@ -125,15 +160,29 @@ export function CheckoutBar({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={submitting}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-gold-400 px-5 py-3 font-display text-sm font-bold text-ink-950 disabled:opacity-60"
-        >
-          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {gated ? (fr ? "Continuer" : "Continue") : cta}
-        </button>
+        {/* Gated: a tap, because there is nothing yet to be careful about. */}
+        {gated && (
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting}
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-gold-400 px-5 py-3 font-display text-sm font-bold text-ink-950 disabled:opacity-60"
+          >
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {fr ? "Continuer" : "Continue"}
+          </button>
+        )}
+        </div>
+
+        {/* Not gated: the money is about to move, so it takes a deliberate drag. */}
+        {!gated && (
+          <SlideToConfirm
+            label={cta}
+            busyLabel={fr ? "Envoi…" : "Placing your order…"}
+            busy={submitting}
+            onConfirm={onSubmit}
+          />
+        )}
       </div>
     </div>
   );

@@ -178,6 +178,65 @@ console.log("\nThe public settings endpoint says which methods work, and nothing
   }
 }
 
+console.log("\nEvery screen that offers a method asks which ones work");
+{
+  /*
+    The filter shipped to the five service forms and stopped there. `OrderForm`
+    — the router form, and the component `/order/new` actually renders — kept
+    its hardcoded `["MTN_MOMO", "ORANGE_MONEY", "CASH"]`, so the fix was live
+    everywhere except the one screen most customers see. That is the specific
+    failure this checks: not "does the helper exist" but "does every chooser
+    use it".
+  */
+  const choosers = [
+    "src/components/customer/OrderForm.tsx",
+    "src/components/customer/OrderReview.tsx",
+    "src/components/customer/order/forms/FoodForm.tsx",
+    "src/components/customer/order/forms/MedicineForm.tsx",
+    "src/components/customer/order/forms/ParcelForm.tsx",
+    "src/components/customer/order/forms/ErrandForm.tsx",
+    "src/components/customer/order/forms/GroceryForm.tsx",
+  ];
+
+  for (const rel of choosers) {
+    const src = fs.readFileSync(path.join(ROOT, rel), "utf8");
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const name = rel.split("/").pop();
+    check(`${name} asks which methods work`, code.includes("usePaymentMethods"));
+    check(
+      `${name} does not carry its own list of three`,
+      !/\[\s*"(?:CASH|MTN_MOMO|ORANGE_MONEY)"[^\]]*"(?:CASH|MTN_MOMO|ORANGE_MONEY)"[^\]]*"(?:CASH|MTN_MOMO|ORANGE_MONEY)"\s*\]/.test(code),
+      "a hardcoded triple is the bug, wherever it is written"
+    );
+  }
+}
+
+console.log("\nAnd the server refuses one that cannot be paid");
+{
+  /*
+    The chooser filters a *client* list. A stale tab, a draft saved before a
+    merchant code was pulled, or a hand-made request all reach the order route
+    carrying whatever they like — and until this check the route took it. The
+    result is worse than a hidden button: a customer who has committed, and a
+    payment screen with nothing on it.
+  */
+  const route = fs
+    .readFileSync(path.join(ROOT, "src/app/api/orders/route.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  check(
+    "POST /api/orders checks the method against the configuration",
+    route.includes("isPaymentMethodConfigured"),
+    "the client filter is the only guard, and the client is not a guard"
+  );
+  check(
+    "and refuses it with a reason the client can act on",
+    route.includes("PAYMENT_METHOD_UNAVAILABLE"),
+    "a bare 400 tells the customer nothing and the UI nothing"
+  );
+}
+
 console.log(
   `\n${failures === 0 ? "Every way of paying that is offered is a way that works." : `${failures} check(s) FAILED — a customer could be offered a payment they cannot make.`}\n`
 );

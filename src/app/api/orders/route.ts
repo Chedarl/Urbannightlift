@@ -11,6 +11,7 @@ import { merchantPickupLabel } from "@/lib/merchants/complete";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import { isPaymentMethodConfigured } from "@/lib/payments/methods";
 import { getCustomerId } from "@/lib/auth/customer";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
@@ -76,6 +77,30 @@ export async function POST(req: NextRequest) {
   const settings = await getOperatingSettings();
   if (!isServiceEnabled(settings, input.serviceType)) {
     return NextResponse.json({ error: "Service not available yet", code: "SERVICE_DISABLED" }, { status: 403 });
+  }
+
+  /*
+    A way of paying that cannot actually be paid is refused here, not merely
+    hidden in the chooser.
+
+    The chooser filters the list — but it filters a *client* list, and until
+    now the server took whatever came. So a stale tab, a draft saved before a
+    merchant code was removed, or a hand-made request could still create an
+    order on Orange Money with no Orange merchant code behind it. That order is
+    not a smaller problem than a hidden button: it is a customer who has
+    committed, and a payment screen with nothing on it.
+
+    Refused with the reason named, so the client can put them on a method that
+    works rather than showing "something went wrong".
+  */
+  if (!isPaymentMethodConfigured(input.paymentMethod, settings)) {
+    return NextResponse.json(
+      {
+        error: "That way of paying is not available right now. Please choose another.",
+        code: "PAYMENT_METHOD_UNAVAILABLE",
+      },
+      { status: 400 }
+    );
   }
 
   // Account-first ordering, enforced on the server so a hand-made request cannot
