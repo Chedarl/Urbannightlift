@@ -81,7 +81,7 @@ export function CheckoutBar({
       hand-rolled footers this replaces.
     */
     <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-[--radius-xl] px-4 py-3">
+      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-xl px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-1.5">
             {/*
@@ -129,7 +129,7 @@ export function CheckoutBar({
           type="button"
           onClick={onSubmit}
           disabled={submitting}
-          className="flex shrink-0 items-center gap-2 rounded-[--radius-lg] bg-gold-400 px-5 py-3 font-display text-sm font-bold text-ink-950 disabled:opacity-60"
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-gold-400 px-5 py-3 font-display text-sm font-bold text-ink-950 disabled:opacity-60"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {gated ? (fr ? "Continuer" : "Continue") : cta}

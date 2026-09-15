@@ -343,7 +343,7 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
         what is about to happen to this order.
       */}
       {gated && (
-        <div className="rounded-[--radius-lg] border border-violet-500/30 bg-violet-950/20 p-4">
+        <div className="rounded-lg border border-violet-500/30 bg-violet-950/20 p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-violet-200">
             <BadgeCheck className="h-4 w-4 shrink-0" />
             {fr ? "Un compte, et cette commande est à vous" : "One account, and this order is yours"}

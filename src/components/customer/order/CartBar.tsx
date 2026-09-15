@@ -100,7 +100,7 @@ export function CartBar({
       off an iPhone's home indicator.
     */
     <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-[--radius-xl] px-4 py-3">
+      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-xl px-4 py-3">
         <div className="shrink-0">{glyph}</div>
 
         <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ export function CartBar({
           type="button"
           onClick={onCta}
           disabled={disabled}
-          className={`shrink-0 rounded-[--radius-lg] px-5 py-3 font-display text-sm font-bold ${tone.fill} ${tone.ink} disabled:opacity-50`}
+          className={`shrink-0 rounded-lg px-5 py-3 font-display text-sm font-bold ${tone.fill} ${tone.ink} disabled:opacity-50`}
         >
           {cta}
         </button>

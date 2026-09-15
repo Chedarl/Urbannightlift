@@ -382,7 +382,7 @@ export function GroceryForm() {
         fr={fr}
         accent="green"
         glyph={
-          <span className="flex h-11 w-11 items-center justify-center rounded-[--radius-md] border border-green-400/30 bg-green-500/10">
+          <span className="flex h-11 w-11 items-center justify-center rounded-md border border-green-400/30 bg-green-500/10">
             <ShoppingBasket className="h-5 w-5 text-green-300" />
           </span>
         }

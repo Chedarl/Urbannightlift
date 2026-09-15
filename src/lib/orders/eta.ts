@@ -70,3 +70,45 @@ export function etaMinutes(rider: Point | null, destination: Point | null, stale
   const minutes = Math.round((km / NIGHT_SPEED_KMH) * 60 * ROAD_FACTOR) + HANDOVER_MINUTES;
   return Math.max(2, Math.min(90, minutes));
 }
+
+/**
+ * How old a position is, as a shape the copy can be built from.
+ *
+ * ## The bug this exists to kill
+ *
+ * Both screens that show a freshness label built it the same way: a helper
+ * returning a *string*, where the first branch returned a complete phrase
+ * ("just now") and the other two returned bare durations ("16s", "2 min").
+ * The caller then dropped whatever came back into a frame built for a duration:
+ *
+ *     "updated {time} ago"   →  "updated just now ago"
+ *     "last sent {time} ago" →  "last sent just now ago · 12 updates"
+ *
+ * On the rider's own screen that was not an edge case, it was the normal
+ * reading — location is shared every few seconds, so the rider who is doing the
+ * thing correctly is the one being shown broken English. It survived because
+ * "just now" is a perfectly good string and nothing about the type said it
+ * could not be substituted into a sentence.
+ *
+ * So this returns the *category*, not the words. A phrase and a duration are
+ * different kinds of thing and now have different shapes, which means the
+ * grammar is decided at the call site — where the surrounding sentence is —
+ * and a frame that only fits a duration cannot be handed a phrase.
+ */
+export type Freshness =
+  | { kind: "unknown" }
+  /** Recent enough that any number would be noise. Needs its own sentence. */
+  | { kind: "now" }
+  | { kind: "seconds"; n: number }
+  | { kind: "minutes"; n: number };
+
+/** Under this, a position is "just now" rather than a count. */
+export const JUST_NOW_MS = 10_000;
+
+export function freshness(ageMs: number | null | undefined): Freshness {
+  if (ageMs == null || !Number.isFinite(ageMs)) return { kind: "unknown" };
+  const sec = Math.max(0, Math.round(ageMs / 1000));
+  if (sec * 1000 < JUST_NOW_MS) return { kind: "now" };
+  if (sec < 60) return { kind: "seconds", n: sec };
+  return { kind: "minutes", n: Math.max(1, Math.round(sec / 60)) };
+}

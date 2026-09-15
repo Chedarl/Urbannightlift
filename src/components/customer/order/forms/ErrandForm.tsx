@@ -334,7 +334,7 @@ export function ErrandForm() {
         fr={fr}
         accent="violet"
         glyph={
-          <span className="flex h-11 w-11 items-center justify-center rounded-[--radius-md] border border-violet-400/30 bg-violet-500/10">
+          <span className="flex h-11 w-11 items-center justify-center rounded-md border border-violet-400/30 bg-violet-500/10">
             <ClipboardList className="h-5 w-5 text-violet-300" />
           </span>
         }
