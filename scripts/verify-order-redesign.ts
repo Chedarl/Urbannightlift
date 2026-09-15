@@ -392,9 +392,15 @@ console.log("\nEvery touched file is still text");
 {
   /*
     A raw NUL byte got into `MerchantMenu.tsx` writing this change — from a
-    ` ` sentinel that reached the file as an actual byte rather than an
+    U+0000 sentinel that reached the file as an actual byte rather than as an
     escape. Git then treats the file as binary: no diff, no review, no blame.
     Cheap to check, and invisible until somebody opens a pull request.
+
+    This comment used to contain the byte itself, inside backticks, to show
+    what had gone wrong. So the suite that checks for control bytes was a
+    binary file, and the change that fixed the bug could not be read in a pull
+    request either. The name is written out instead, and the list below now
+    includes this file — a check that exempts itself is not a check.
   */
   for (const path of [
     FOOD,
@@ -407,6 +413,11 @@ console.log("\nEvery touched file is still text");
     GROCERY,
     "src/components/customer/food/MerchantRow.tsx",
     "src/lib/orders/useLiveFare.ts",
+    // Including this suite. It carried a NUL for weeks, inside the comment
+    // explaining NULs, and was therefore itself a binary file that nobody could
+    // review. A check that exempts the file it lives in is the easiest kind to
+    // fool, and the only one that fools itself.
+    "scripts/verify-order-redesign.ts",
   ]) {
     const bytes = readFileSync(join(ROOT, path));
     check(
@@ -434,6 +445,75 @@ console.log("\nThe menu is a rail and rows, not a grid of missing photographs");
     "dishes are list rows",
     /<ul\b[\s\S]*<li\b/.test(menu),
     "the two-column picture grid is the pattern that needs photographs we do not have"
+  );
+}
+
+console.log("\nThe shop window is not boarded up");
+{
+  /*
+    The owner's decision was that people browse, build an order and see the
+    real price without an account, and that the gate stands at checkout where
+    the three things an account buys are about to become true.
+
+    It was half done. `/order/new` had the gate removed; `/order` — the screen
+    the bottom nav's **Order** tab actually opens — still returned `OrderGate`
+    before a single service was visible. A guest tapping the main call to
+    action hit a wall having seen nothing at all.
+  */
+  for (const page of ["src/app/order/page.tsx", "src/app/order/new/page.tsx"]) {
+    const src = code(page);
+    check(
+      `${page.replace("src/app/", "")} does not gate browsing`,
+      !/<OrderGate/.test(src),
+      "the gate belongs on the control that places the order, not in front of the catalogue"
+    );
+  }
+
+  check(
+    "and the gate component is deleted rather than left unimported",
+    !existsSync(join(ROOT, "src/components/customer/OrderGate.tsx")),
+    "a component with no importers is how a wall gets quietly put back"
+  );
+
+  // Checkout is where it stands now. That must stay true.
+  const review = code("src/components/customer/OrderReview.tsx");
+  check(
+    "checkout still knows the gate",
+    /accountRequired/.test(review) && /signup\?next=/.test(review),
+    "moving the gate to checkout and then losing it there is a worse outcome than the wall"
+  );
+}
+
+console.log("\nThe launch offer is said before the till, and only to people who get it");
+{
+  const banner = code("src/components/customer/order/LaunchOfferBanner.tsx");
+  const picker = code("src/components/customer/ServiceSelection.tsx");
+  const page = code("src/app/order/page.tsx");
+
+  check(
+    "the picker can show the offer",
+    picker.includes("LaunchOfferBanner"),
+    "an offer only revealed at checkout has done none of the work it exists to do"
+  );
+  check(
+    "eligibility is decided on the server",
+    /eligibleForLaunchOffer/.test(page) && /prisma\.order\.count/.test(page),
+    "'have you ordered before' is a fact about the database"
+  );
+  check(
+    "the banner renders nothing when the viewer is not eligible",
+    /capXaf\s*<=\s*0\s*\)\s*return null/.test(banner),
+    "a promotional surface showing an offer the checkout declines teaches people the prices are not real"
+  );
+  check(
+    "and it states the cap next to the promise",
+    banner.includes("capNote"),
+    "the cap belongs beside the offer, not three screens later"
+  );
+  check(
+    "the picker gates the banner on the cap it was given",
+    /firstOrderFreeCapXaf\s*>\s*0\s*&&/.test(picker),
+    "rendering it unconditionally would show a gift to somebody who has already had it"
   );
 }
 
