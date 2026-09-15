@@ -199,6 +199,20 @@ export async function PATCH(req: NextRequest) {
     data.voiceOrderingEnabled = body.voiceOrderingEnabled;
   }
 
+  /*
+    In-app calling. Owner-only for the same reason as voice ordering, plus one
+    of its own: turning it on without `CALL_CHANNEL_SECRET` and a TURN provider
+    produces a call button that refuses or times out, and a feature that fails
+    in front of a customer standing at a gate at one in the morning is worse
+    than one that is not offered.
+  */
+  if (typeof body.callingEnabled === "boolean") {
+    if (user.role !== "OWNER") {
+      return NextResponse.json({ error: "Only the owner can turn calling on" }, { status: 403 });
+    }
+    data.callingEnabled = body.callingEnabled;
+  }
+
   // Whether ordering requires an account. On by default; lifting it opens a
   // guest path, which is a business decision, so it is the owner's alone.
   if (typeof body.requireAccountToOrder === "boolean") {

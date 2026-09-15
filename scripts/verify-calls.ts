@@ -43,6 +43,17 @@ function check(name: string, ok: boolean, detail = "") {
 
 const ROOT = join(__dirname, "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
+/**
+ * The same file with its comments gone.
+ *
+ * Needed because these files *explain* the rules being checked — `signal.ts`
+ * says why `channel.ts` is server-only, `CallSheet.tsx` says why the dispatch
+ * line is unconditional — and a check that greps the raw text finds its own
+ * prose and reports the rule it describes as broken. This repo has now lost six
+ * checks that way; a mention is not a directive.
+ */
+const code = (p: string) =>
+  read(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 const NOW = new Date("2026-09-15T01:00:00Z");
 const base: CanCallInput = {
@@ -488,6 +499,189 @@ console.log("\nThe signalling judge runs in a browser, so it uses no Node builti
     "while channel.ts, which mints, stays on the server",
     /from ["']node:crypto["']/.test(read("src/lib/calls/channel.ts")),
     "minting a secret in a browser would mean the browser chose it"
+  );
+}
+
+console.log("\nThe browser half never sends us anything it should not");
+{
+  /*
+    `useCall` holds the one object in this system that knows both parties' IP
+    addresses — the peer connection. Its candidates and its SDP are the most
+    sensitive thing a call produces, and the temptation to POST the stats object
+    wholesale to our own server for "diagnostics" is exactly how a call log
+    becomes a map of where every customer lives.
+
+    The server's allowlist would drop it anyway. That is not a reason to send
+    it: a body that has to be stripped is a body that was written down in a log
+    somewhere on the way.
+  */
+  const hook = code("src/lib/calls/useCall.ts");
+
+  check(
+    "the hook never posts an SDP to our server",
+    !/body:\s*JSON\.stringify\([^)]*\b(sdp|localDescription|remoteDescription)\b/i.test(hook),
+    "an SDP carries the DTLS fingerprint and the whole candidate list"
+  );
+  check(
+    "nor a candidate",
+    !/\/event[\s\S]{0,400}candidate/i.test(hook),
+    "a candidate string contains both parties' local and public addresses"
+  );
+  check(
+    "candidates go to the peer over the signalling channel instead",
+    /send\("candidate"/.test(hook),
+    "which is the only place they belong"
+  );
+  check(
+    "it asks for the microphone before anybody is rung",
+    hook.indexOf("getUserMedia") < hook.indexOf('"/api/calls/invite"'),
+    "a permission prompt after a rider has pulled over is the worst possible ordering"
+  );
+  check(
+    "it stops every track when the call ends",
+    /getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/.test(hook),
+    "a live track leaves the recording dot lit after somebody thinks they hung up"
+  );
+  check(
+    "and releases the microphone when the rider is only notified",
+    /REQUEST_CALLBACK[\s\S]{0,200}releaseMic\(\)/.test(hook),
+    "holding it open while waiting for a call back lights the indicator for minutes"
+  );
+  check(
+    "a closing tab is a hang-up",
+    /pagehide/.test(hook),
+    "otherwise the row stays open forever"
+  );
+  check(
+    "there is exactly one automatic retry",
+    /retriedRef\.current = true/.test(hook) && /!retriedRef\.current/.test(hook),
+    "a retry loop on a network that cannot relay is a screen that says connecting until they give up"
+  );
+  check(
+    "and it does not retry when there is no relay to retry through",
+    /!retriedRef\.current && invite\.relayCapable/.test(hook),
+    "forcing relay-only with no relay configured fails faster and no more usefully"
+  );
+  check(
+    "the ring gives up rather than ringing forever",
+    /RING_TIMEOUT_MS/.test(hook),
+    "a call that rings forever is a customer who thinks it is connecting"
+  );
+}
+
+console.log("\nThe call surface says the true thing, and always offers a human");
+{
+  const sheet = read("src/components/customer/call/CallSheet.tsx");
+  const sheetCode = code("src/components/customer/call/CallSheet.tsx");
+
+  check(
+    "the dispatch line is not behind a condition",
+    /href={`tel:\$\{DISPATCH_TEL\}`}/.test(sheetCode) &&
+      !/\{\s*(?:failed|error|call\.endReason)[^}]*&&\s*\(?\s*<a\s+href={`tel:/.test(sheetCode),
+    "the logic deciding when to offer a human is the logic most likely to be wrong when one is needed"
+  );
+  check(
+    "it takes a name, never a number",
+    /peerName/.test(sheetCode) && !/\+?237\s?\d{6,}/.test(sheetCode.replace(/DISPATCH_\w+/g, "")),
+    "the rider's number is the thing this feature exists to avoid disclosing"
+  );
+  check(
+    "every end reason has copy in both languages",
+    (() => {
+      /*
+        Per key rather than by counting. The first version compared a count of
+        `fr:` against the number of reasons and failed on an eighth `fr:` that
+        was simply somewhere else in the slice — a check that is right about the
+        rule and wrong about the file, which is the most annoying kind.
+      */
+      const block = sheet.slice(
+        sheet.indexOf("const ENDED_COPY"),
+        sheet.indexOf("export interface CallSheetProps")
+      );
+      return END_REASONS.every((r) => {
+        const at = block.indexOf(`${r}:`);
+        if (at < 0) return false;
+        // The entry's own body: up to the next reason, or the end of the block.
+        const rest = block.slice(at, at + 400);
+        return /\ben:/.test(rest) && /\bfr:/.test(rest);
+      });
+    })(),
+    "a single 'call failed' leaves every one of these people stuck in a different way"
+  );
+  check(
+    "there is no 'call again' while a call is still starting",
+    /call\.state === "requesting-mic"/.test(sheetCode) && /\{inProgress \? \(/.test(sheetCode),
+    "a button inviting a restart before anything has failed is one tap from two calls"
+  );
+  check(
+    "and it says nothing is recorded",
+    /(recorded|enregistr)/i.test(sheetCode),
+    "a voice feature that does not say this is one people assume the worst of"
+  );
+
+  const button = code("src/components/customer/call/CallRiderButton.tsx");
+  check(
+    "the button renders nothing rather than disabling itself",
+    /if \(!callable\) return null/.test(button),
+    "a greyed-out phone advertises a feature, invites a tap, and answers with nothing"
+  );
+  check(
+    "and the sheet is only mounted once somebody has chosen to call",
+    /\{open && \(/.test(button),
+    "mounting it eagerly would prompt for the microphone on a page nobody asked to call from"
+  );
+
+  // The callability question must not be answered by the public tracking route.
+  const track = code("src/app/api/track/[orderCode]/route.ts");
+  check(
+    "the public tracking payload does not decide who may call",
+    !/callable/.test(track),
+    "that route answers any order code; whether *you* may call depends on who is asking"
+  );
+  check(
+    "the screen asks the authorised endpoint instead",
+    code("src/components/customer/LiveTrackMap.tsx").includes("/api/calls/can"),
+    "a call button rendered off a public payload appears for anybody holding a screenshot"
+  );
+}
+
+console.log("\nAnd the published policy says what the code does");
+{
+  /*
+    A feature that changes what a product records has to change what the
+    product *says* it records, and the two drift apart the moment they live in
+    different files with nobody comparing them.
+
+    The privacy page is the promise. These checks are the thin thread tying it
+    to the implementation — not a proof that the sentences are true, but a
+    guarantee that removing them is a deliberate act rather than an oversight.
+  */
+  const privacy = read("src/app/privacy/page.tsx");
+
+  check(
+    "the policy mentions calling at all",
+    /calling your rider|call the rider on your order/i.test(privacy),
+    "a feature that records something new and says nothing about it is the definition of a surprise"
+  );
+  check(
+    "it says neither party sees a number",
+    /neither of you sees the other(?:&apos;|')s phone number/i.test(privacy),
+    "this is the claim the whole feature exists to make good on"
+  );
+  check(
+    "it says calls are not recorded",
+    /we do not record calls/i.test(privacy),
+    "people assume the worst of a voice feature that stays quiet about this"
+  );
+  check(
+    "it says what *is* kept, rather than only what is not",
+    /how long it lasted|whether the connection worked/i.test(privacy),
+    "a policy that lists only the reassuring half is the one that gets caught out"
+  );
+  check(
+    "and it names the relay",
+    /relayed through a third-party server/i.test(privacy),
+    "audio leaving our infrastructure is exactly the thing a policy has to disclose"
   );
 }
 

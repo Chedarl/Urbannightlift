@@ -70,6 +70,7 @@ export function SettingsManager({
     fareRedPercent: number;
     testMode: boolean;
     voiceOrderingEnabled: boolean;
+    callingEnabled: boolean;
     requireAccountToOrder: boolean;
     googleSiteVerification: string;
     notificationEmail: string;
@@ -116,6 +117,7 @@ export function SettingsManager({
         fareRedPercent: form.fareRedPercent,
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
+        callingEnabled: form.callingEnabled,
         requireAccountToOrder: form.requireAccountToOrder,
         googleSiteVerification: form.googleSiteVerification,
         notificationEmail: form.notificationEmail,
@@ -345,6 +347,42 @@ export function SettingsManager({
               {form.voiceOrderingEnabled && (
                 <span className="mt-1 block text-xs font-semibold text-gold-200">
                   On — customers see the microphone on the order form.
+                </span>
+              )}
+            </span>
+          </label>
+        </div>
+
+        {/* In-app calling. Off until the two pieces of infrastructure exist —
+            the note under the checkbox is the whole setup guide, deliberately,
+            because a switch whose prerequisites live in a README is a switch
+            that gets turned on without them. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.callingEnabled}
+              onChange={(e) => setForm({ ...form, callingEnabled: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-mist-100">
+                In-app calling (customer ↔ rider)
+              </span>
+              <span className="block text-xs text-mist-400">
+                Lets a customer talk to their rider over the internet from the tracking screen.
+                Neither side ever sees the other&apos;s number, nothing is recorded, and a rider
+                who is riding is notified rather than rung. Dispatch stays on the call screen the
+                whole time.
+              </span>
+              <span className="mt-1 block text-xs text-mist-500">
+                Before switching this on: set <code className="text-mist-300">CALL_CHANNEL_SECRET</code>{" "}
+                in Vercel, and add a TURN provider (Cloudflare&apos;s is free) — without a relay,
+                roughly one call in five will not connect at all.
+              </span>
+              {form.callingEnabled && (
+                <span className="mt-1 block text-xs font-semibold text-gold-200">
+                  On — customers see a Call button once a rider has accepted their order.
                 </span>
               )}
             </span>

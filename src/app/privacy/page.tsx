@@ -120,11 +120,38 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section title="Calling your rider in the app">
+        <p className="text-sm leading-relaxed text-mist-300">
+          You can call the rider on your order from inside the app, over the internet.{" "}
+          <strong>Neither of you sees the other&apos;s phone number</strong> — that is the whole
+          point of doing it this way. Our server introduces the two phones to each other and then
+          gets out of the way; the conversation goes directly between them.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-mist-300">
+          <strong>We do not record calls.</strong> There is no audio, no transcript and nothing
+          derived from either anywhere in our systems. What we keep is that a call happened on an
+          order, how long it lasted, and whether the connection worked — the last one so that when
+          somebody tells us they could not hear their rider, we can tell whether it was the network.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-mist-300">
+          Your phone asks for the microphone before a call starts, and you can refuse. If you do,
+          nothing happens and nobody is disturbed. The dispatch number is on the call screen the
+          whole time, so there is always a person you can reach instead.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-mist-300">
+          When a call cannot go directly between the two phones — which happens on some mobile
+          networks — it is relayed through a third-party server that passes the audio along without
+          being able to listen to it, because the call is encrypted end to end. Riders on the road
+          are not rung: they are notified, and they call back when they have stopped.
+        </p>
+      </Section>
+
       <Section title="How long we keep it">
         <p className="text-sm leading-relaxed text-mist-300">
           Order records are kept while we are trading, because they are our accounts and your
           receipts. Prescriptions and voice notes are kept only as long as the order they belong to
-          needs them. Assistant conversations are deleted after 30 days. If you want your account
+          needs them. Records of calls — that one happened, and how long — are kept with the order
+          they belong to. Assistant conversations are deleted after 30 days. If you want your account
           and its saved addresses deleted, email us and we will do it — your assistant conversation
           goes with it.
         </p>

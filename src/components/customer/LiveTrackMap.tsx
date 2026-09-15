@@ -12,6 +12,7 @@ import { useTranslation } from "@/lib/i18n";
 import { etaMinutes, freshness } from "@/lib/orders/eta";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import { DISPATCH_TEL } from "@/lib/contact";
+import { CallRiderButton } from "@/components/customer/call/CallRiderButton";
 
 
 interface Pt { lat: number; lng: number }
@@ -74,6 +75,14 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
   // Comes free with the poll below — `/api/track` already returns it, and
   // fetching a second time for a name we are handed would be silly.
   const [courier, setCourier] = useState<Courier | null>(null);
+  /*
+    Whether this viewer may open a voice line, asked separately.
+
+    `/api/track` is public — any order code returns a snapshot — so it cannot
+    answer a question that depends on who is asking. A call button rendered off
+    that payload would appear for anybody holding a screenshot.
+  */
+  const [callable, setCallable] = useState(false);
   // re-render every 15s so the "updated N ago" label stays fresh
   const [, setTick] = useState(0);
 
@@ -92,10 +101,26 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
         setCourier((d.riderIdentity as Courier | null) ?? null);
       } catch {}
     };
+    /*
+      Slower than the position poll on purpose. Callability turns over when a
+      rider accepts or an order changes status — a few times per delivery, not
+      every seven seconds — and this one runs the full authorisation check.
+    */
+    const askCallable = async () => {
+      try {
+        const r = await fetch(`/api/calls/can?orderCode=${encodeURIComponent(orderCode)}`);
+        if (!r.ok) return;
+        const d = (await r.json()) as { callable?: boolean };
+        if (live) setCallable(d.callable === true);
+      } catch {}
+    };
+
     poll();
+    askCallable();
+    const callId = setInterval(askCallable, 30_000);
     const id = setInterval(poll, 7000);
     const tickId = setInterval(() => setTick((n) => n + 1), 15000);
-    return () => { live = false; clearInterval(id); clearInterval(tickId); };
+    return () => { live = false; clearInterval(id); clearInterval(tickId); clearInterval(callId); };
   }, [orderCode]);
 
   const pts = [pickup, delivery, rider].filter(Boolean) as Pt[];
@@ -297,6 +322,27 @@ export function LiveTrackMap({ orderCode }: { orderCode: string }) {
                   {courier.vehicleRef ?? (locale === "fr" ? "Votre livreur" : "Your rider")}
                 </p>
               </div>
+
+              {/*
+                The in-app call, and the human rail beside it.
+
+                Both, never one instead of the other. The call is the better
+                answer when it works — data only, neither number disclosed —
+                and dispatch is the answer when it does not, which on a Yaoundé
+                mobile network is roughly one connection in five. Showing only
+                the first would leave those people with a button and no way
+                through; showing only the second is what we had.
+
+                `CallRiderButton` renders nothing at all when the server says
+                no. A greyed-out phone icon advertises a feature, invites a tap
+                and answers with nothing.
+              */}
+              <CallRiderButton
+                orderCode={orderCode}
+                riderFirstName={courier.fullName.trim().split(/\s+/)[0]}
+                fr={locale === "fr"}
+                callable={callable}
+              />
 
               <a
                 href={`tel:${DISPATCH_TEL}`}
