@@ -88,11 +88,42 @@ export function callEventDetail(raw: unknown): Record<string, string | number> |
 }
 
 /**
+ * Every way a call is allowed to have ended.
+ *
+ * Lived only in the suite, which meant the route that writes `endReason` and
+ * the test that checks it were each carrying their own idea of what a reason
+ * may be — and the route's idea was "whatever the client sent". One list, in
+ * the module both of them import.
+ */
+export const END_REASONS = [
+  /** Somebody pressed the red button. */
+  "HANGUP",
+  /** The other side said no. */
+  "DECLINED",
+  /** Nobody picked up. */
+  "TIMEOUT",
+  /** The connection never came up — usually no relay on a hostile network. */
+  "ICE_FAILED",
+  /** The caller's browser refused the microphone. */
+  "MIC_DENIED",
+  /** A browser with no WebRTC at all. */
+  "UNSUPPORTED",
+  /** The window closed underneath it — the order moved on mid-call. */
+  "EXPIRED",
+] as const;
+
+export type EndReason = (typeof END_REASONS)[number];
+
+/**
  * Whether a string is safe to store on a call row at all.
  *
  * Used for the one free-text field a call has — `endReason` — because a reason
  * is exactly where somebody will one day put "customer said to try 6 90 11 12
  * 22 instead".
+ *
+ * `allowed` is an argument rather than a closed-over constant so this stays
+ * usable for any future field with the same shape, and so the suite can prove
+ * it rejects on membership rather than on the specific list.
  */
 export function safeReason(reason: unknown, allowed: readonly string[]): string | null {
   if (typeof reason !== "string") return null;

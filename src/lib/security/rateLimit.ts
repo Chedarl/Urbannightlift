@@ -125,6 +125,20 @@ export const LIMITS: Record<string, Limit> = {
    * else's.
    */
   assistant: { max: 40, windowMinutes: 60 },
+  /**
+   * Opening a voice call to the other party on an order.
+   *
+   * Lower than the rest, and it is the one limit here that is not about
+   * machines. A call rings somebody — a rider at a junction, a customer at a
+   * gate — and a person who taps it thirty times in an hour is not being
+   * throttled for load, they are being stopped from using the product to
+   * harass the other party. Twelve is far more than any real delivery needs
+   * (the honest number is one or two) and low enough that nothing useful is
+   * lost by refusing the thirteenth.
+   *
+   * Counted per caller, so one rider's bad night never uses up another's.
+   */
+  call: { max: 12, windowMinutes: 60 },
 };
 
 export interface LimitResult {

@@ -954,6 +954,9 @@ model Order {
   /// person on the bike is not a promotion.
   launchWaiverXaf Int?
 
+  /// Voice calls opened on this order. See `lib/calls/policy.ts` for who may.
+  callSessions CallSession[]
+
   /// ── Cash reconciliation ──
   /// On cash on delivery the rider physically holds our money. Recording what
   /// they collected, and when it was settled, is the difference between a
@@ -1401,6 +1404,14 @@ model OperatingSettings {
   /// Voice-note ordering. Built and tested, but OFF until the owner decides
   /// the market wants it — flipped from admin Settings, no deploy needed.
   voiceOrderingEnabled         Boolean       @default(false)
+  /// In-app voice calling between a customer and their assigned rider, over
+  /// data, with neither number disclosed. Off by default and for the same
+  /// reason as voice ordering: it is built and proved, and it depends on
+  /// infrastructure the owner has to set up — VAPID keys for the ring, a TURN
+  /// provider for the roughly one connection in five that cannot go direct.
+  /// Switching it on before those exist produces a button that fails, which is
+  /// worse than a button that is not there.
+  callingEnabled               Boolean       @default(false)
   /// Ordering requires an account. On by default: the business decided every
   /// client signs up before they can order, so every order lives inside their
   /// own portal — private, and building a real customer base rather than a pile
@@ -1674,4 +1685,76 @@ model RateLimitHit {
 
   @@index([purpose, subject, createdAt])
   @@index([createdAt])
+}
+
+/// A voice call between the customer and their rider, over data.
+///
+/// ## What is deliberately not here
+///
+/// No phone number, no email, no audio, no transcript. A `CallSession` row
+/// records that two people on one order were connected, for how long, and how
+/// it ended — nothing about what was said. The whole reason in-app calling is
+/// acceptable where handing out a rider's number is not, is that this channel
+/// is moderatable *and* leaves the conversation alone.
+///
+/// The secret the two browsers authenticate with is stored only as a hash, so
+/// the row is enough to prove after the fact that a given secret belonged to a
+/// given call and useless for producing one.
+///
+/// Row-level security is enabled on this table in its migration, not left to
+/// the schema-wide sweep: a table created later inherits the revoked default
+/// grants but **not** RLS, which is exactly how a new table ends up exposed on
+/// day one.
+model CallSession {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// Who pressed call. `CUSTOMER` or `RIDER`.
+  initiatedBy String
+  /// The rider on the order at the time, for the audit trail.
+  riderUserId String?
+  customerId  String
+
+  /// SHA-256 of the per-call secret. Never the secret itself.
+  secretHash String
+
+  /// Whether the customer's tap rang the rider or asked them to call back.
+  /// A rider in motion is not rung; see `ringMode` in `lib/calls/policy.ts`.
+  ringMode String
+
+  createdAt   DateTime  @default(now())
+  /// When media actually flowed. Null for a call that was never answered.
+  connectedAt DateTime?
+  endedAt     DateTime?
+  /// One of a small allowlist — see `safeReason` in `lib/calls/redact.ts`.
+  /// Never free text: a reason field is where an IP address ends up.
+  endReason   String?
+
+  events CallEvent[]
+
+  @@index([orderId, createdAt])
+  @@index([riderUserId, createdAt])
+}
+
+/// What happened during a call, at the level of "it connected over a relay".
+///
+/// Exists to answer one question the dispatcher will actually be asked: *why
+/// could they not hear each other?* The answer is almost always the ICE state
+/// and whether the connection had to relay, and both are safe to keep.
+///
+/// `detail` is written by `callEventDetail`, which is an **allowlist** — a
+/// careless edit fails toward an empty object rather than toward storing a
+/// candidate string, which contains the home IP address of whoever was on the
+/// call.
+model CallEvent {
+  id        String      @id @default(cuid())
+  callId    String
+  call      CallSession @relation(fields: [callId], references: [id], onDelete: Cascade)
+  /// "ring", "answer", "connected", "ice", "end".
+  kind      String
+  detail    Json?
+  createdAt DateTime    @default(now())
+
+  @@index([callId, createdAt])
 }
