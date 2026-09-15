@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #08060e; font-family: Figtree, ui-sans-serif, system-ui, sans-serif; }
+    .d { font-family: Sora, Figtree, sans-serif; }
+    .n { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<!-- MEDICINE — the same mechanics, a different duty of care -->
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #08060e; color: #f6f4fb; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- ══ Header ══ -->
+  <div style="flex: 0 0 auto; padding: 14px 14px 10px; border-bottom: 1px solid #1c1230;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 32px; height: 32px; border-radius: 10px; background: #110b1c; border: 1px solid #271a44; display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b4a9c6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </div>
+      <h1 class="d" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em;">Médicaments</h1>
+      <!-- The live fact that decides whether this is even possible tonight.
+           Meituan puts availability where you cannot miss it; for a pharmacy
+           at 1 a.m. it is the whole question. -->
+      <span style="margin-left: auto; display: flex; align-items: center; gap: 5px; background: rgba(47,174,96,0.12); border: 1px solid rgba(47,174,96,0.35); border-radius: 99px; padding: 4px 9px; font-size: 13px; font-weight: 600; color: #6fdc9b;">
+        <span style="width: 5px; height: 5px; border-radius: 99px; background: #2fae60;"></span>3 de garde
+      </span>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; padding: 12px 14px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden;">
+
+    <!-- ══ The fork that changes everything downstream ══
+         Asked first, not buried in a form, because the answer decides whether
+         a photograph is needed, whether a pharmacist has to approve, and how
+         long the whole thing takes. -->
+    <div>
+      <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #9a8fb0;">Ce qu'il vous faut</div>
+      <div style="margin-top: 8px; display: flex; gap: 8px;">
+        <div style="flex: 1; border-radius: 13px; border: 1px solid #2fae60; background: rgba(47,174,96,0.10); padding: 11px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6fdc9b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>
+            <span style="font-size: 14px; font-weight: 700; color: #6fdc9b;">Sans ordonnance</span>
+          </div>
+          <div style="margin-top: 3px; font-size: 13px; line-height: 1.4; color: #9fd9b8;">Paracétamol, pansements, tests</div>
+        </div>
+        <div style="flex: 1; border-radius: 13px; border: 1px solid #271a44; background: #110b1c; padding: 11px;">
+          <div style="font-size: 14px; font-weight: 600; color: #cfc6db;">Sur ordonnance</div>
+          <div style="margin-top: 3px; font-size: 13px; line-height: 1.4; color: #9a8fb0;">Photo requise · validée par le pharmacien</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ The shelf. Same dense-row pattern as the food menu — one product
+         vocabulary across the whole app, which is the real lesson from apps
+         that run twenty categories on one grid. ══ -->
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 9px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="flex: 1; display: flex; align-items: center; gap: 7px; border-radius: 11px; border: 1px solid #271a44; background: #0d0817; padding: 9px 11px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b6280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span style="font-size: 14px; color: #6b6280;">Paracétamol, Doliprane, sirop…</span>
+        </div>
+      </div>
+
+      <!-- Row 1 — in the basket -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="flex: 0 0 46px; height: 46px; border-radius: 10px; background: #12241c; border: 1px solid #1d3b2c; display: flex; align-items: center; justify-content: center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6fdc9b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb;">Paracétamol 500 mg</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0;">Plaquette de 20 · générique</div>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <span class="n d" style="font-size: 15px; font-weight: 700; color: #d4af37;">1 200</span>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <span style="width: 22px; height: 22px; border-radius: 99px; border: 1px solid #5b1e8c; color: #c6a6ef; display: flex; align-items: center; justify-content: center; font-size: 14px;">−</span>
+            <span class="n" style="font-size: 14px; font-weight: 700;">1</span>
+            <span style="width: 22px; height: 22px; border-radius: 99px; background: #9645de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;">+</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: #170f26;"></div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="flex: 0 0 46px; height: 46px; border-radius: 10px; background: #0d0817; border: 1px solid #241845; display: flex; align-items: center; justify-content: center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b4a9c6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 5h-6z"/><path d="M9 8v11a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V8"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb;">Sirop antitussif</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0;">125 ml · adulte</div>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <span class="n d" style="font-size: 15px; font-weight: 700; color: #d4af37;">2 800</span>
+          <span style="width: 22px; height: 22px; border-radius: 99px; background: #9645de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;">+</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: #170f26;"></div>
+
+      <!-- The item that needs a prescription, shown on the same shelf but
+           unmistakably gated. Hiding it would be worse: people search for it,
+           and finding nothing reads as us not having it. -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="flex: 0 0 46px; height: 46px; border-radius: 10px; background: #221607; border: 1px solid #3d2a0d; display: flex; align-items: center; justify-content: center;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8c1a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb;">Amoxicilline 500 mg</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #ff8c1a;">Ordonnance obligatoire</div>
+        </div>
+        <span style="flex: 0 0 auto; border-radius: 10px; border: 1px solid rgba(255,140,26,0.4); background: rgba(255,140,26,0.10); padding: 7px 11px; font-size: 13px; font-weight: 600; color: #ff8c1a;">Joindre</span>
+      </div>
+    </div>
+
+    <!-- ══ The promise, where it is decided rather than in the small print ══ -->
+    <div style="flex: 0 0 auto; display: flex; gap: 9px; border-left: 3px solid #9645de; background: rgba(150,69,222,0.08); border-radius: 11px; padding: 11px 12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c6a6ef" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: 0 0 auto; margin-top: 1px;"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #cfc6db;">
+        <span style="font-weight: 700; color: #f6f4fb;">Ce que votre livreur voit :</span> le nom de la pharmacie et votre adresse. Pas votre ordonnance, pas ce que vous avez commandé. Le sachet est scellé à la pharmacie.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ Same sticky bar as food. One vocabulary. ══ -->
+  <div style="flex: 0 0 auto; border-top: 1px solid #241845; background: #110b1c; padding: 10px 12px 12px;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <div style="position: relative; flex: 0 0 auto;">
+        <div style="width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #14532d, #2fae60); display: flex; align-items: center; justify-content: center;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14l-1.4 8.4a2 2 0 0 1-2 1.6H8.4a2 2 0 0 1-2-1.6z"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/></svg>
+        </div>
+        <span class="n" style="position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: #d4af37; color: #1a1400; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;">1</span>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: baseline; gap: 6px;">
+          <span class="n d" style="font-size: 20px; font-weight: 800; color: #d4af37;">1 200</span>
+          <span style="font-size: 13px; color: #9a8fb0;">médicaments</span>
+        </div>
+        <div class="n" style="margin-top: 1px; font-size: 13px; color: #9a8fb0;">+ 1 350 livraison · 2 550 au total</div>
+      </div>
+      <div style="flex: 0 0 auto; border-radius: 13px; background: #d4af37; padding: 11px 18px;">
+        <span class="d" style="font-size: 15px; font-weight: 700; color: #1a1400;">Suivant</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

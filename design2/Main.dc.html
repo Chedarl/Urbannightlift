@@ -1,0 +1,179 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #08060e; font-family: Figtree, ui-sans-serif, system-ui, sans-serif; }
+    .d { font-family: Sora, Figtree, sans-serif; }
+    .n { font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<!-- FOOD — the order screen, rebuilt on Meituan's mechanics -->
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #08060e; color: #f6f4fb; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- ══ Merchant header: everything you need to decide, above the fold ══ -->
+  <div style="position: relative; flex: 0 0 auto; height: 132px; background-color: hsl(268 62% 22%); background-image: radial-gradient(60% 80% at 50% 54%, hsl(303 80% 44% / 0.33), transparent 70%), linear-gradient(30deg, hsl(268 62% 22%), hsl(303 54% 11%));">
+    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+      <span class="d" style="font-size: 52px; font-weight: 700; color: rgba(255,255,255,0.13); letter-spacing: 0.04em;">MJ</span>
+    </div>
+    <div style="position: absolute; inset: 0; background: linear-gradient(to top, #08060e 4%, rgba(8,6,14,0.55) 48%, transparent 78%);"></div>
+
+    <div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 6px;">
+      <span style="display: flex; align-items: center; gap: 5px; background: rgba(8,6,14,0.75); border: 1px solid rgba(47,174,96,0.45); border-radius: 99px; padding: 4px 9px; font-size: 13px; font-weight: 600; color: #6fdc9b;">
+        <span style="width: 5px; height: 5px; border-radius: 99px; background: #2fae60;"></span>Open
+      </span>
+      <span style="background: rgba(8,6,14,0.75); border: 1px solid #33224f; border-radius: 99px; padding: 4px 9px; font-size: 13px; color: #9a8fb0;">No photo yet</span>
+    </div>
+
+    <div style="position: absolute; left: 14px; right: 14px; bottom: 10px;">
+      <h1 class="d" style="margin: 0 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.015em;">Chez Maman Josephine</h1>
+      <!-- Meituan puts rating, time and fee on one line before you open a menu.
+           Ours carries the same three, plus the thing they never have to say:
+           how far. -->
+      <div style="display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px;">
+        <span style="color: #f1d97a; font-weight: 600;">4.6 ★</span>
+        <span style="width: 2px; height: 2px; border-radius: 99px; background: #462e6b;"></span>
+        <span style="color: #cfc6db;">25–35 min</span>
+        <span style="width: 2px; height: 2px; border-radius: 99px; background: #462e6b;"></span>
+        <span style="color: #cfc6db;">1.4 km · Biyem-Assi</span>
+        <span style="width: 2px; height: 2px; border-radius: 99px; background: #462e6b;"></span>
+        <span class="n" style="color: #d4af37; font-weight: 600;">1 000 delivery</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ The split: category rail + dishes. Meituan's signature layout. ══ -->
+  <div style="flex: 1; display: flex; min-height: 0;">
+
+    <!-- Left rail. The pattern worth stealing outright: a tall menu becomes
+         two taps instead of forty scrolls, and you always know where you are. -->
+    <div style="flex: 0 0 92px; background: #0d0817; border-right: 1px solid #1c1230; display: flex; flex-direction: column; padding-top: 6px;">
+      <div style="position: relative; padding: 11px 8px 11px 12px; background: #110b1c;">
+        <span style="position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: #d4af37;"></span>
+        <span style="font-size: 14px; font-weight: 700; color: #f6f4fb;">Populaires</span>
+        <span class="n" style="display: block; margin-top: 2px; font-size: 13px; color: #9a8fb0;">6</span>
+      </div>
+      <div style="padding: 11px 8px 11px 12px;">
+        <span style="font-size: 14px; color: #b4a9c6;">Grillades</span>
+        <span class="n" style="display: block; margin-top: 2px; font-size: 13px; color: #6b6280;">9</span>
+      </div>
+      <div style="padding: 11px 8px 11px 12px;">
+        <span style="font-size: 14px; color: #b4a9c6;">Sauces</span>
+        <span class="n" style="display: block; margin-top: 2px; font-size: 13px; color: #6b6280;">7</span>
+      </div>
+      <div style="padding: 11px 8px 11px 12px;">
+        <span style="font-size: 14px; color: #b4a9c6;">Poisson</span>
+        <span class="n" style="display: block; margin-top: 2px; font-size: 13px; color: #6b6280;">4</span>
+      </div>
+      <div style="padding: 11px 8px 11px 12px;">
+        <span style="font-size: 14px; color: #b4a9c6;">Boissons</span>
+        <span class="n" style="display: block; margin-top: 2px; font-size: 13px; color: #6b6280;">11</span>
+      </div>
+    </div>
+
+    <!-- Dishes. Dense on purpose: three fit where one used to. -->
+    <div style="flex: 1; min-width: 0; padding: 8px 10px 0; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
+
+      <!-- In cart — the stepper replaces the button once you have one. -->
+      <div style="display: flex; gap: 9px;">
+        <div style="flex: 0 0 58px; height: 58px; border-radius: 10px; background-color: hsl(32 62% 16%); background-image: radial-gradient(60% 80% at 34% 38%, hsl(58 80% 38% / 0.33), transparent 70%), linear-gradient(120deg, hsl(32 62% 16%), hsl(58 54% 8%));"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb; line-height: 1.2;">Poulet DG</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0; line-height: 1.35;">Plantain, poulet, légumes</div>
+          <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 13px; color: #6fdc9b;">◍ 48 commandés</span>
+          </div>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <span class="n d" style="font-size: 15px; font-weight: 700; color: #d4af37;">4 500</span>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <span style="width: 22px; height: 22px; border-radius: 99px; border: 1px solid #5b1e8c; color: #c6a6ef; display: flex; align-items: center; justify-content: center; font-size: 14px;">−</span>
+            <span class="n" style="font-size: 14px; font-weight: 700; min-width: 8px; text-align: center;">2</span>
+            <span style="width: 22px; height: 22px; border-radius: 99px; background: #9645de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;">+</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: #170f26;"></div>
+
+      <div style="display: flex; gap: 9px;">
+        <div style="flex: 0 0 58px; height: 58px; border-radius: 10px; background-color: hsl(348 62% 16%); background-image: radial-gradient(60% 80% at 66% 30%, hsl(14 80% 38% / 0.33), transparent 70%), linear-gradient(240deg, hsl(348 62% 16%), hsl(14 54% 8%));"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb; line-height: 1.2;">Ndolé aux crevettes</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0; line-height: 1.35;">Avec miondo</div>
+          <div style="margin-top: 4px; font-size: 13px; color: #6b6280;">◍ 31 commandés</div>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <span class="n d" style="font-size: 15px; font-weight: 700; color: #d4af37;">3 000</span>
+          <span style="width: 22px; height: 22px; border-radius: 99px; background: #9645de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;">+</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: #170f26;"></div>
+
+      <!-- Sold out, stated rather than hidden. Meituan greys and keeps; we do
+           the same, because a missing dish reads as a broken list. -->
+      <div style="display: flex; gap: 9px; opacity: 0.45;">
+        <div style="flex: 0 0 58px; height: 58px; border-radius: 10px; background-color: hsl(172 62% 16%); background-image: linear-gradient(60deg, hsl(172 62% 16%), hsl(200 54% 8%)); filter: saturate(0.4);"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #cfc6db; line-height: 1.2;">Poisson braisé</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0;">Terminé pour ce soir</div>
+        </div>
+        <span class="n d" style="font-size: 15px; font-weight: 700; color: #9a8fb0;">5 500</span>
+      </div>
+
+      <div style="height: 1px; background: #170f26;"></div>
+
+      <div style="display: flex; gap: 9px;">
+        <div style="flex: 0 0 58px; height: 58px; border-radius: 10px; background-color: hsl(292 62% 16%); background-image: radial-gradient(60% 80% at 40% 60%, hsl(318 80% 38% / 0.33), transparent 70%), linear-gradient(300deg, hsl(292 62% 16%), hsl(318 54% 8%));"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #f6f4fb; line-height: 1.2;">Eru + water fufu</div>
+          <div style="margin-top: 2px; font-size: 13px; color: #9a8fb0;">Portion généreuse</div>
+        </div>
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+          <span class="n d" style="font-size: 15px; font-weight: 700; color: #d4af37;">3 500</span>
+          <span style="width: 22px; height: 22px; border-radius: 99px; background: #9645de; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px;">+</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ The sticky cart. The single most valuable pattern in the whole study. ══
+       Meituan and Ele.me both keep the running total and the way forward pinned
+       to the bottom of every screen inside a merchant. You never lose the
+       thread and you never wonder what it costs. Ours adds the delivery fee to
+       the line, because that is the number people actually argue about. -->
+  <div style="flex: 0 0 auto; border-top: 1px solid #241845; background: #110b1c; padding: 10px 12px 12px;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <div style="position: relative; flex: 0 0 auto;">
+        <div style="width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(135deg, #5b1e8c, #9645de); display: flex; align-items: center; justify-content: center;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h14l-1.4 8.4a2 2 0 0 1-2 1.6H8.4a2 2 0 0 1-2-1.6z"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/></svg>
+        </div>
+        <span class="n" style="position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: #d4af37; color: #1a1400; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;">2</span>
+      </div>
+
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: baseline; gap: 6px;">
+          <span class="n d" style="font-size: 20px; font-weight: 800; color: #d4af37; letter-spacing: -0.01em;">9 000</span>
+          <span style="font-size: 13px; color: #9a8fb0;">plats</span>
+        </div>
+        <!-- Said before the next screen, not after it. -->
+        <div class="n" style="margin-top: 1px; font-size: 13px; color: #9a8fb0;">+ 1 000 livraison · 10 000 au total</div>
+      </div>
+
+      <div style="flex: 0 0 auto; border-radius: 13px; background: #d4af37; padding: 11px 18px;">
+        <span class="d" style="font-size: 15px; font-weight: 700; color: #1a1400;">Suivant</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
