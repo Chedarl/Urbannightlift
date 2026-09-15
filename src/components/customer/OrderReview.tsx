@@ -13,6 +13,8 @@ import { MoneyBreakdown } from "@/components/customer/order/MoneyBreakdown";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
+import { CheckoutBar } from "@/components/customer/order/CheckoutBar";
+import { applyLaunchOffer } from "@/lib/orders/launchOffer";
 import { formatXaf } from "@/lib/utils";
 
 /** Flatten structured serviceDetails into readable label/value rows for review. */
@@ -81,7 +83,15 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function OrderReview() {
+export interface OrderReviewProps {
+  signedIn: boolean;
+  /** Whether placing an order needs an account at all. The owner's switch. */
+  accountRequired: boolean;
+  /** The launch-offer cap, or 0 when this person is not eligible. */
+  firstOrderFreeCapXaf: number;
+}
+
+export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }: OrderReviewProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
@@ -122,6 +132,29 @@ export function OrderReview() {
     overCapApprovedXaf: null,
   });
   const goodsAtDoor = shopping && draft.paymentMethod !== "CASH";
+
+  /*
+    The first delivery, free — shown here, decided on the server.
+
+    `applyLaunchOffer` is the same function `POST /api/orders` waives with, so
+    the figure on the bar is the figure that will be charged. The eligibility
+    is not the browser's to judge: the page was told whether this person
+    qualifies, and a cap of zero means no.
+  */
+  const offer = applyLaunchOffer({
+    feeXaf: money.deliveryFeeXaf,
+    completedOrders: firstOrderFreeCapXaf > 0 ? 0 : 1,
+    capXaf: firstOrderFreeCapXaf,
+  });
+
+  /*
+    Whether "Place order" places an order, or asks for an account first.
+
+    This is the gate, moved from the top of the screen to the one control it
+    belongs on. Everything above it renders either way: the summary, the
+    address, and above all the price.
+  */
+  const gated = accountRequired && !signedIn;
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
   const pdfData: OrderPdfData = {
@@ -146,6 +179,14 @@ export function OrderReview() {
 
   async function submit() {
     if (!draft) return;
+    /*
+      The draft is already in storage, so sign-up costs a screen and no lost
+      work — they come back to this exact summary with `next`.
+    */
+    if (gated) {
+      router.push(`/account/signup?next=${encodeURIComponent("/order/review")}`);
+      return;
+    }
     setSubmitting(true);
     setError(false);
     try {
@@ -171,7 +212,7 @@ export function OrderReview() {
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-16">
+    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-32">
       <Stepper current={2} />
       <div>
         <h1 className="font-display text-2xl font-bold">{t("review.title")}</h1>
@@ -286,14 +327,42 @@ export function OrderReview() {
 
       {error && <p className="text-sm text-restricted">{t("common.error")}</p>}
 
-      <div className="flex flex-col gap-3">
-        <Button size="lg" onClick={() => submit()} disabled={submitting}>
-          {submitting ? t("review.submitting") : t("review.submitOrder")}
-        </Button>
-        <LinkButton href="/order/new" variant="outline" size="lg">
-          {t("review.editOrder")}
-        </LinkButton>
-      </div>
+      {/*
+        What an account buys, said here rather than as a wall.
+
+        The old gate stood in front of this screen and made these three
+        promises to somebody who had not yet seen a price. Said at the moment
+        of placing the order they are not a toll — they are a description of
+        what is about to happen to this order.
+      */}
+      {gated && (
+        <div className="rounded-[--radius-lg] border border-violet-500/30 bg-violet-950/20 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-violet-200">
+            <BadgeCheck className="h-4 w-4 shrink-0" />
+            {fr ? "Un compte, et cette commande est à vous" : "One account, and this order is yours"}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1 text-xs leading-relaxed text-mist-300">
+            <li>{fr ? "Le suivi en direct de ce livreur" : "Live tracking of this rider"}</li>
+            <li>{fr ? "Ce reçu, gardé pour vous" : "This receipt, kept for you"}</li>
+            <li>{fr ? "Un lien pour vous faire suivre par un proche" : "A link to let someone watch you home"}</li>
+          </ul>
+        </div>
+      )}
+
+      <LinkButton href="/order/new" variant="outline" size="lg">
+        {t("review.editOrder")}
+      </LinkButton>
+
+      <CheckoutBar
+        fr={fr}
+        money={money}
+        waivedXaf={offer.waivedXaf}
+        priceFirm={firm}
+        submitting={submitting}
+        onSubmit={() => submit()}
+        gated={gated}
+        cta={submitting ? t("review.submitting") : t("review.submitOrder")}
+      />
     </div>
   );
 }

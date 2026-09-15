@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/CustomerHeader";
+import { BottomNav } from "@/components/customer/BottomNav";
 import { OrderConfirmation } from "@/components/customer/OrderConfirmation";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
@@ -144,6 +145,16 @@ export default async function ConfirmationPage({
           }}
         />
       </main>
+      {/*
+        The nav belongs here and nowhere else in the order flow.
+
+        This screen has no pinned bar to collide with, and it is where somebody
+        lands once the order is placed — so it is the moment they most want to
+        go and look at something else while they wait. Without it the only way
+        off a confirmation page was the browser's back button, into a review
+        screen for an order that had already been submitted.
+      */}
+      <BottomNav signedIn={Boolean(customerId)} />
     </>
   );
 }
