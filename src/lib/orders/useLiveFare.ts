@@ -144,16 +144,34 @@ function coords(loc: SelectedLocation | null): { lat: number; lng: number } | nu
   return { lat: loc.latitude, lng: loc.longitude };
 }
 
-/** A tariff that arrived over the wire is untrusted until it has every field. */
+/**
+ * A tariff that arrived over the wire is untrusted until it has every field.
+ *
+ * The bands are what price an order now, so they are what this checks — an
+ * earlier version validated `minimumXaf`/`perKmXaf`/`errandXaf` and would have
+ * happily accepted a response with no bands in it at all, quoting every trip at
+ * the bare minimum while the server charged the real figure. A screen that says
+ * 850 against a receipt that says 2,000 is worse than a screen that says
+ * nothing, which is what the `DEFAULT_FARE` fallback gives instead.
+ */
 function isFareRules(v: unknown): v is FareRules {
   if (!v || typeof v !== "object") return false;
   const r = v as Record<string, unknown>;
+  const ladder = (x: unknown) =>
+    Array.isArray(x) &&
+    x.length > 0 &&
+    x.every(
+      (b) =>
+        b != null &&
+        typeof b === "object" &&
+        typeof (b as Record<string, unknown>).upToKm === "number" &&
+        typeof (b as Record<string, unknown>).xaf === "number"
+    );
   return (
+    ladder(r.bands) &&
+    ladder(r.errandBands) &&
     typeof r.minimumXaf === "number" &&
-    typeof r.includedKm === "number" &&
-    typeof r.perKmXaf === "number" &&
-    typeof r.errandXaf === "number" &&
-    typeof r.tierMultiplier === "object" &&
-    r.tierMultiplier !== null
+    typeof r.tierSurchargeXaf === "object" &&
+    r.tierSurchargeXaf !== null
   );
 }

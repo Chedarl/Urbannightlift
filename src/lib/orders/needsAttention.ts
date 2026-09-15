@@ -109,6 +109,7 @@ export const ATTENTION_SELECT = {
   goodsRecordedAt: true,
   goodsReceiptReadXaf: true,
   overCapApprovedXaf: true,
+  tipXaf: true,
   overCapApprovedAt: true,
   safetyFlag: true,
   safetyFlaggedAt: true,
@@ -213,6 +214,7 @@ export function classifyAttention(o: AttentionOrder, now: number): AttentionRow 
     goodsCapXaf: o.goodsCapXaf,
     goodsActualXaf: o.goodsActualXaf,
     overCapApprovedXaf: o.overCapApprovedXaf,
+    tipXaf: o.tipXaf,
   });
   // A decline is stored as "answered, with nothing approved".
   const overCapDeclined =

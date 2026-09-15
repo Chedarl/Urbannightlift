@@ -40,6 +40,7 @@ export default async function SettingsPage() {
         fareRedPercent: settings.fareRedPercent,
         testMode: settings.testMode,
         voiceOrderingEnabled: settings.voiceOrderingEnabled,
+        callingEnabled: settings.callingEnabled,
         requireAccountToOrder: settings.requireAccountToOrder,
         googleSiteVerification: settings.googleSiteVerification ?? "",
         notificationEmail: settings.notificationEmail ?? "",

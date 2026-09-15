@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { riderTipShareXaf, tipCustody } from "@/lib/orders/tip";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/session";
 import { getOperatingSettings } from "@/lib/settings";
@@ -82,6 +83,8 @@ export default async function RiderOrderPage({
         riderAcceptedAt: order.riderAcceptedAt?.toISOString() ?? null,
         riderPayoutXaf: order.riderPayoutXaf,
         estimatedPayoutXaf,
+        tipXaf: riderTipShareXaf(order.tipXaf ?? 0),
+        tipCustody: tipCustody(order.tipXaf ?? 0, order.paymentMethod),
         // Shopping services need the rider to record what the shop charged.
         isShopping: isShoppingService(order.serviceType),
         goodsCapXaf: order.goodsCapXaf,

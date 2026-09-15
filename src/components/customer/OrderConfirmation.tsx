@@ -118,6 +118,10 @@ export interface ConfirmationOrder {
   goodsActualXaf: number | null;
   /** Set once they agreed to a spend above their cap. */
   overCapApprovedXaf: number | null;
+  /** What the customer added for the rider, if anything. */
+  tipXaf: number | null;
+  /** What the launch offer took off, so the receipt matches what was paid. */
+  launchWaiverXaf: number | null;
 }
 
 /**
@@ -212,6 +216,7 @@ export function OrderConfirmation({
     goodsCapXaf: order.goodsCapXaf,
     goodsActualXaf: order.goodsActualXaf,
     overCapApprovedXaf: order.overCapApprovedXaf,
+    tipXaf: order.tipXaf,
   });
   // On mobile money the fee was taken up front and the goods settle in cash at
   // the door — the receipt says which part was which.
@@ -248,6 +253,8 @@ export function OrderConfirmation({
     goodsXaf: receiptMoney.shopping ? receiptMoney.goodsXaf : null,
     goodsCapXaf: order.goodsCapXaf,
     deliveryFeeXaf: receiptMoney.deliveryFeeXaf,
+    tipXaf: receiptMoney.tipXaf,
+    launchWaiverXaf: order.launchWaiverXaf,
     totalXaf: receiptMoney.totalXaf,
     goodsDueAtDoorXaf,
   };

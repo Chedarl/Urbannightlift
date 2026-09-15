@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { riderTipShareXaf } from "@/lib/orders/tip";
 import { requireRole } from "@/lib/auth/session";
 import { getOperatingSettings } from "@/lib/settings";
 import { tonightWindow } from "@/lib/orders/tonight";
@@ -53,6 +54,7 @@ export default async function RiderEarningsPage() {
         goodsActualXaf: true,
         overCapApprovedXaf: true,
         goodsAdvancedXaf: true,
+        tipXaf: true,
       },
     }),
     loadRiderFloat(rider.id),
@@ -67,7 +69,16 @@ export default async function RiderEarningsPage() {
   const earned = (since?: Date) =>
     orders
       .filter((o) => !since || (o.completedAt && o.completedAt >= since))
-      .reduce((sum, o) => sum + (o.riderPayoutXaf ?? 0), 0);
+      /*
+        Their share of the fee, plus the whole of any tip.
+
+        Without the tip this page tells a rider they earned less than they were
+        actually given — the money is in their hand or in our ledger, and the
+        one screen that says what the night was worth leaves it out. That is the
+        specific silence this feature had to avoid: a tip nobody sees is a tip
+        nobody can tell is missing.
+      */
+      .reduce((sum, o) => sum + (o.riderPayoutXaf ?? 0) + riderTipShareXaf(o.tipXaf ?? 0), 0);
 
   // Positive = they are holding company cash. Negative = the company owes them,
   // which is what a night of mobile-money orders plus goods advances looks like.

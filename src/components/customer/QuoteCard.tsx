@@ -82,8 +82,16 @@ export function QuoteCard({
   }
 
   return (
-    <div className="rounded-2xl border border-gold-400/50 bg-gold-400/10 p-4">
-      <p className="font-display text-base font-bold text-gold-200">
+    /*
+      Gold comes off the surface and stays on the number.
+
+      This was gold text on a gold ground, so the heading, the ground and the
+      fee all said "money" equally and the fee — the only one that is money —
+      had nothing left to distinguish it. The card is now a plain raised
+      surface and `formatXaf` below is the single gold thing on it.
+    */
+    <div className="rounded-2xl border border-ink-700 bg-ink-900 p-4">
+      <p className="font-display text-base font-bold text-mist-100">
         {fr ? "Votre commande est acceptée" : "Your order has been accepted"}
       </p>
       <p className="mt-1 text-sm text-mist-200">

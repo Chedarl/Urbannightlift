@@ -33,6 +33,8 @@
  *    leave them down.
  */
 
+import { clampTip, riderTipShareXaf } from "@/lib/orders/tip";
+
 /** Services where we buy things for the customer rather than just move them. */
 export const SHOPPING_SERVICES = ["FOOD_PICKUP", "MEDICINE_PICKUP", "GROCERY_PICKUP"] as const;
 
@@ -52,6 +54,23 @@ export interface OrderMoneyInput {
   goodsActualXaf: number | null;
   /** Set once the customer has approved going over their cap. */
   overCapApprovedXaf: number | null;
+  /**
+   * What the customer chose to add for the rider.
+   *
+   * Kept out of `deliveryFeeXaf` deliberately and permanently: the fee is the
+   * published price and the thing the commission splits, and a tip that found
+   * its way into it would be quietly taken 40% of. It is its own line here and
+   * its own line on every screen.
+   *
+   * **Required, not optional.** There are nine places in this codebase that
+   * compute an order's money, and an optional field means eight of them keep
+   * compiling while quietly dropping a customer's tip out of the total — a
+   * rider short by the exact amount somebody meant them to have, with nothing
+   * anywhere saying so. Making it required turns that into a build failure, so
+   * a new caller has to state what it knows. `null` is a perfectly good answer
+   * and means "no tip on this order".
+   */
+  tipXaf: number | null;
 }
 
 export interface OrderMoney {
@@ -62,7 +81,9 @@ export interface OrderMoney {
   goodsXaf: number;
   /** Whether `goodsXaf` is a real receipt or still just the cap. */
   goodsSettled: boolean;
-  /** What the customer owes. A ceiling until the goods are settled. */
+  /** The rider's tip, clamped. Never blended into the fee. */
+  tipXaf: number;
+  /** What the customer owes, tip included. A ceiling until the goods settle. */
   totalXaf: number;
   /** Copy hint: is `totalXaf` exact, or a maximum? */
   totalIsCeiling: boolean;
@@ -82,16 +103,18 @@ export interface OrderMoney {
  */
 export function orderMoney(input: OrderMoneyInput): OrderMoney {
   const fee = Math.max(0, input.deliveryFeeXaf ?? 0);
+  const tip = clampTip(input.tipXaf ?? 0);
   const shopping = isShoppingService(input.serviceType);
 
   if (!shopping) {
-    // Moving something we did not buy: the fee is the whole story.
+    // Moving something we did not buy: the fee, plus anything they added.
     return {
       shopping: false,
       deliveryFeeXaf: fee,
       goodsXaf: 0,
       goodsSettled: true,
-      totalXaf: fee,
+      tipXaf: tip,
+      totalXaf: fee + tip,
       totalIsCeiling: false,
       needsCustomerApproval: false,
       overCapByXaf: 0,
@@ -109,7 +132,10 @@ export function orderMoney(input: OrderMoneyInput): OrderMoney {
       deliveryFeeXaf: fee,
       goodsXaf: cap,
       goodsSettled: false,
-      totalXaf: fee + cap,
+      tipXaf: tip,
+      totalXaf: fee + cap + tip,
+      // Still a ceiling: the tip is exact, the shopping is not, and a total
+      // containing one unknown is an unknown.
       totalIsCeiling: true,
       needsCustomerApproval: false,
       overCapByXaf: 0,
@@ -126,7 +152,8 @@ export function orderMoney(input: OrderMoneyInput): OrderMoney {
     deliveryFeeXaf: fee,
     goodsXaf: actual,
     goodsSettled: true,
-    totalXaf: fee + actual,
+    tipXaf: tip,
+    totalXaf: fee + actual + tip,
     totalIsCeiling: false,
     // Over the agreed ceiling: somebody has to ask before this is collectable.
     needsCustomerApproval: overBy > 0,
@@ -154,17 +181,39 @@ export function riderSettlementForOrder(args: {
   goodsAdvancedXaf: number | null;
   /** The full amount due on the order, from `orderMoney().totalXaf`. */
   totalDueXaf: number;
+  /**
+   * What the customer added for the rider. All of it is theirs.
+   *
+   * Required for the same reason as above: a settlement that silently omits it
+   * is a rider paid less than the customer paid, which is the one arithmetic
+   * error in this system that nobody would ever report.
+   */
+  tipXaf: number | null;
 }): number {
   const payout = args.riderPayoutXaf ?? 0;
   const advanced = Math.max(0, args.goodsAdvancedXaf ?? 0);
+  /*
+    The tip comes off the rider's side in both branches, because in both
+    branches the rider keeps it — the only difference is who was holding it.
+
+    On cash it is inside what they collected at the door, so subtracting it here
+    is what stops it being counted as company money they owe back. On mobile
+    money it arrived with our fee, so subtracting it here is what puts it on the
+    list of things we owe them.
+
+    `riderTipShareXaf` rather than the raw number, so there is exactly one place
+    in the codebase where the rider's portion of a tip is decided.
+  */
+  const tip = riderTipShareXaf(args.tipXaf ?? 0);
 
   if (args.paymentMethod === "CASH") {
     // A shortfall stays visible as a shortfall rather than being netted away.
     const collected = args.cashCollectedXaf ?? args.totalDueXaf;
-    return collected - payout - advanced;
+    return collected - payout - advanced - tip;
   }
-  // Paid to us directly: we owe them their share, plus whatever they advanced.
-  return -(payout + advanced);
+  // Paid to us directly: we owe them their share, what they advanced, and the
+  // whole of the tip.
+  return -(payout + advanced + tip);
 }
 
 /**
@@ -191,6 +240,7 @@ export function riderSettlementFromOrder(order: {
   goodsActualXaf: number | null;
   overCapApprovedXaf: number | null;
   goodsAdvancedXaf: number | null;
+  tipXaf: number | null;
 }): number {
   // No frozen split yet means the delivery is not finished; there is nothing to
   // settle, and guessing would put a number on an order that has not earned one.
@@ -202,6 +252,7 @@ export function riderSettlementFromOrder(order: {
     goodsCapXaf: order.goodsCapXaf,
     goodsActualXaf: order.goodsActualXaf,
     overCapApprovedXaf: order.overCapApprovedXaf,
+    tipXaf: order.tipXaf,
   });
 
   return riderSettlementForOrder({
@@ -210,5 +261,6 @@ export function riderSettlementFromOrder(order: {
     cashCollectedXaf: order.cashCollectedXaf,
     goodsAdvancedXaf: order.goodsAdvancedXaf,
     totalDueXaf: money.totalXaf,
+    tipXaf: order.tipXaf,
   });
 }

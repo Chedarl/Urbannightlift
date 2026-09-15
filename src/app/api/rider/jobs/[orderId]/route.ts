@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { riderTipShareXaf, tipCustody } from "@/lib/orders/tip";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { getOperatingSettings } from "@/lib/settings";
@@ -49,6 +50,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ orderId: s
     goodsCapXaf: order.goodsCapXaf,
     goodsActualXaf: order.goodsActualXaf,
     overCapApprovedXaf: order.overCapApprovedXaf,
+    tipXaf: order.tipXaf,
   });
 
   return NextResponse.json({
@@ -99,6 +101,20 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ orderId: s
         order.riderPayoutXaf ??
         (fee > 0 ? splitEarnings(fee, settings.riderSharePercent).riderPayoutXaf : null),
       payoutIsEstimate: order.riderPayoutXaf == null,
+      /*
+        The tip, told to the rider on the job rather than discovered at
+        settlement.
+
+        `custody` is what they actually need. On a cash order the tip is inside
+        the figure they collect at the door, so a rider who does not know it is
+        there will hand the whole lot back and be short by exactly the amount
+        somebody meant them to have. On mobile money it is already with us and
+        appears in their balance. Two different facts, so two different words.
+      */
+      tip: {
+        xaf: riderTipShareXaf(order.tipXaf ?? 0),
+        custody: tipCustody(order.tipXaf ?? 0, order.paymentMethod),
+      },
       shopping: {
         isShopping: isShoppingService(order.serviceType),
         capXaf: order.goodsCapXaf,

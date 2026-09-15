@@ -200,7 +200,7 @@ export function ParcelForm() {
   const PhonePrefix = () => <span className="flex shrink-0 items-center gap-1 rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">🇨🇲 +237</span>;
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-32">
       {/* Just a way back.
 
           This row used to repeat the logo and the language switch that

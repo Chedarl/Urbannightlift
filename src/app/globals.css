@@ -70,6 +70,13 @@
   --color-mist-300: #cfc6db;
   --color-mist-400: #b4a9c6;
   --color-mist-500: #9a8fb0;
+  /* The dimmest step, and it existed only as a habit until now: five files —
+     QuickIntake, OrderConfirmation, WatchDelivery, FoodForm — already wrote
+     `text-mist-600`, which Tailwind resolved to nothing at all. Placeholder
+     text and disabled captions were rendering in whatever they inherited.
+     Declared rather than removed, because a sixth step is genuinely wanted
+     under mist-500: it is the difference between "quiet" and "off". */
+  --color-mist-600: #6b6280;
 
   /* ── Status colours ───────────────────────────────────────────────────────
      `caution` was #d4af37 — **byte-identical to --color-gold-400**, the brand
@@ -144,6 +151,49 @@
   --text-2xl--line-height: 1.25;
   --text-3xl: 1.875rem; /* 30px */
   --text-3xl--line-height: 1.15;
+  /* The home hero and the quote page both reach for this and were landing on
+     Tailwind's 36px/1 default — off the scale in size and in leading. */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-4xl--line-height: 1.1;
+
+  /* ── Spacing, radius, elevation ───────────────────────────────────────────
+     None of these existed. Every `rounded-2xl`, every `p-4`, every
+     `shadow-[0_0_6px_…]` in the product was picked in the moment, which is why
+     four container widths and three page shells could drift apart without
+     anything looking obviously wrong at any single step.
+
+     The scale is the 8-pt system, because that is what the phone frames these
+     screens are designed against use. It is deliberately short: six spacing
+     steps, five radii, two elevations. A long scale is the same problem as no
+     scale — if there is a value for everything, nothing is a decision.
+
+     Radius carries meaning here rather than taste:
+       sm   a chip, an inline control
+       md   an input, a small button
+       lg   a card, a thumbnail
+       xl   a sheet, a floating bar — the things that sit *above* the page
+       pill anything fully round: steppers, status pills, the primary CTA
+
+     Elevation is two steps and no more. `raise` is a card lifting under a
+     press. `float` is the pinned bar and the bottom sheet — the only things
+     that genuinely hover. Both are high-blur and low-opacity, and both are
+     darkened well past a light-theme shadow because they fall on a #08060e
+     ground, where a 0.08 alpha shadow is invisible. */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 100px;
+
+  --shadow-raise: 0 4px 16px rgb(0 0 0 / 0.18);
+  --shadow-float: 0 12px 32px rgb(0 0 0 / 0.28);
 
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer: shimmer 2.5s linear infinite;
@@ -270,11 +320,36 @@ textarea {
 }
 
 /* Reusable glass surface */
+/* ── Glass ──────────────────────────────────────────────────────────────────
+   The one definition of a translucent surface.
+
+   It existed and was used in exactly two places — the header and the bottom
+   nav — while every other surface that wanted the same effect hand-rolled
+   `bg-ink-950/95 … backdrop-blur`: the cart bar, the assistant sheet, the
+   coming-soon sheet, the map overlays. Five near-identical blurs at four
+   different radii, none of which could be changed in one place.
+
+   `.glass` is now what all of them use. The blur is 20px rather than 14 —
+   enough that content genuinely dissolves behind a pinned bar instead of
+   showing through as legible text, which was the complaint. The border is a
+   hairline of the violet the night backdrop is made of, so an edge reads as
+   light catching the panel rather than as a drawn line.
+
+   `.glass-raised` is the same material for something that floats clear of the
+   screen edge — a sheet, an inset bar — and carries the elevation with it. */
 .glass {
   background: linear-gradient(180deg, rgba(26, 17, 48, 0.72), rgba(17, 11, 28, 0.72));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(198, 166, 239, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(198, 166, 239, 0.15);
+}
+
+.glass-raised {
+  background: linear-gradient(180deg, rgba(26, 17, 48, 0.82), rgba(17, 11, 28, 0.86));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(198, 166, 239, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 /* Gold gradient text */
@@ -299,4 +374,70 @@ textarea {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ── The map, made part of the product ─────────────────────────────────────
+   Leaflet ships its own stylesheet and it does not know what this app looks
+   like. Three of its defaults fight ours, and none of them can be fixed by
+   editing its file:
+
+   **Its body size is 12px.** Below the 13px floor the whole product holds to,
+   and it lands on the attribution line — the one piece of Leaflet text a
+   customer actually reads. `verify-design-tokens` explicitly exempts vendor
+   CSS from the floor check *on the grounds that we override it here*, so
+   this is that override, and now the comment is true.
+
+   **Its attribution sits bottom-right on a white pill**, which on a screen
+   whose bottom-right is a dark floating sheet reads as a stray piece of
+   another website. It keeps its position and its link — OpenStreetMap's
+   licence requires the credit and hiding it behind the floating sheet would
+   be the same as deleting it, so the sheet is inset far enough to leave the
+   strip its own band along the bottom edge. It just stops being white.
+
+   **Its zoom control is a white box.** Same treatment: the app's ink, the
+   app's radius, the app's hairline. */
+.leaflet-container {
+  font-size: var(--text-xs);
+  /* Leaflet's own ground is `#ddd`, and it is what a customer looks at while
+     the tiles come in — or for the whole delivery, on the edge of the network,
+     which is where this app is used. A light-grey rectangle in a night-black
+     screen reads as something broken. Flagged for the same reason as the rules
+     below: Leaflet's stylesheet is injected after this one, so an
+     equally-specific rule loses. */
+  background: #16121f !important;
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(17, 11, 28, 0.72) !important;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm) 0 0 0;
+}
+.leaflet-container .leaflet-control-attribution,
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--color-mist-400) !important;
+}
+
+/* Specificity deliberately higher than Leaflet's own `.leaflet-bar a`, and the
+   background flagged: `leaflet.css` is imported inside the map component, so
+   Next injects it *after* this file and an equally-specific rule loses. The
+   first attempt at this was a plain `.leaflet-bar a` and the zoom buttons
+   stayed white. */
+.leaflet-container .leaflet-bar,
+.leaflet-container .leaflet-bar a,
+.leaflet-container .leaflet-bar a:link,
+.leaflet-container .leaflet-bar a:visited {
+  background: rgba(17, 11, 28, 0.82) !important;
+  color: var(--color-mist-200);
+  border-color: rgba(198, 166, 239, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.leaflet-container .leaflet-bar a:hover {
+  background: rgba(38, 26, 66, 0.92) !important;
+  color: var(--color-mist-100);
+}
+.leaflet-container .leaflet-bar {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-raise);
 }

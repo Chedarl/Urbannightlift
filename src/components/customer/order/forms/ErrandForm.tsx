@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, ClipboardList, Info, Pencil, FileText, MapPin, Flag, Wallet, Upload,
-  BellRing, Phone, Banknote, MessageSquare, ChevronRight, ShieldCheck,
+  BellRing, Phone, Banknote, MessageSquare,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
-import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
@@ -24,8 +23,9 @@ import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
-import { cn, groupXaf } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
+import { CartBar } from "@/components/customer/order/CartBar";
 
 /**
  * The dropped pin, when there is one.
@@ -62,6 +62,9 @@ export function ErrandForm() {
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
+  // The bar lives outside the field stack, so it asks the form to submit
+  // itself rather than being a submit button that has to live inside it.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const { register, handleSubmit, watch, setValue, getValues } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -169,24 +172,29 @@ export function ErrandForm() {
   const PhonePrefix = () => <span className="flex shrink-0 items-center gap-1 rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">🇨🇲 +237</span>;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-32">
       {/* Just a way back. This row used to repeat the logo and the language
           switch that `CustomerHeader` has already drawn immediately above it —
           two brand bars stacked before the form begins. */}
       <div className="px-4 pt-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
       </div>
-      <div className="relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b from-violet-500/25 via-fuchsia-600/10 to-transparent px-5 pb-7 pt-4">
-        <div className="flex items-start gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-300"><ClipboardList className="h-8 w-8" /></span>
-          <div>
-            <h1 className="font-display text-2xl font-bold leading-tight">{fr ? "Course personnalisée" : "Custom errand request"}</h1>
-            <p className="mt-1 text-sm font-medium text-violet-300">{fr ? "Étape 1 sur 3" : "Step 1 of 3"} <span className="text-mist-400">· {fr ? "Détails de la demande" : "Request details"}</span></p>
-          </div>
-        </div>
+      {/* A title, not a hero.
+
+          This was sixteen lines of gradient with a 64px icon tile and a
+          hardcoded "Step 1 of 3" badge — the same block Medicine and Parcel
+          deleted, left behind here because the redesign only reached three
+          of the five forms. The step badge went with it: the pinned bar
+          already says where you are, and a text label on two screens plus a
+          graphical stepper on a third is worse than neither. */}
+      <div className="px-4 pb-3 pt-2">
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold leading-tight">
+          <ClipboardList className="h-5 w-5 text-violet-300" />
+          {fr ? "Course personnalisée" : "Custom errand request"}
+        </h1>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-5">
+      <div className="flex flex-col gap-4 px-4">
         <WelcomeBack accent={ACCENT} fr={fr} />
 
 
@@ -319,18 +327,27 @@ export function ErrandForm() {
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-violet-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        {estimatedFee != null && (
-          <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, false).label}</span>
-            <span className="font-display text-base font-bold text-mist-100">{groupXaf(estimatedFee)} XAF</span>
-          </div>
-        )}
-        <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-violet-500 py-3.5 font-display text-base font-bold text-white">
-          <ClipboardList className="h-5 w-5" /><span>{fr ? "Vérifier la demande" : "Review request summary"}</span><ChevronRight className="h-5 w-5" />
-        </button>
-        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-violet-400" />{fr ? "Vos informations sont en sécurité, traitées avec discrétion." : "Your details are safe with us. We handle every request with care."}</p>
-      </div>
+      {/* The same bar as the other four services — see `CartBar` for why
+          five hand-rolled footers was how customers learned that food and
+          parcel must be priced by different rules. */}
+      <CartBar
+        fr={fr}
+        accent="violet"
+        glyph={
+          <span className="flex h-11 w-11 items-center justify-center rounded-md border border-violet-400/30 bg-violet-500/10">
+            <ClipboardList className="h-5 w-5 text-violet-300" />
+          </span>
+        }
+        fare={
+          estimatedFee == null
+            ? null
+            : { totalXaf: estimatedFee, estimated: fare?.estimated ?? true, lines: fare?.lines ?? [] }
+        }
+        missing={missing.length > 0 ? missing : undefined}
+        hint={fr ? "Complétez pour voir le prix" : "Fill this in to see the fee"}
+        cta={fr ? "Vérifier la demande" : "Review request"}
+        onCta={() => formRef.current?.requestSubmit()}
+      />
     </form>
   );
 }

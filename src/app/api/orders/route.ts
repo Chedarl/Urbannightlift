@@ -11,6 +11,8 @@ import { merchantPickupLabel } from "@/lib/merchants/complete";
 import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
+import { isPaymentMethodConfigured } from "@/lib/payments/methods";
+import { clampTip } from "@/lib/orders/tip";
 import { getCustomerId } from "@/lib/auth/customer";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
@@ -20,6 +22,7 @@ import { resolveCode } from "@/lib/ambassadors/accrual";
 import { creditToApply } from "@/lib/referrals/rules";
 import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
 import { fareRulesFrom } from "@/lib/orders/fare";
+import { applyLaunchOffer } from "@/lib/orders/launchOffer";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -77,6 +80,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Service not available yet", code: "SERVICE_DISABLED" }, { status: 403 });
   }
 
+  /*
+    A way of paying that cannot actually be paid is refused here, not merely
+    hidden in the chooser.
+
+    The chooser filters the list — but it filters a *client* list, and until
+    now the server took whatever came. So a stale tab, a draft saved before a
+    merchant code was removed, or a hand-made request could still create an
+    order on Orange Money with no Orange merchant code behind it. That order is
+    not a smaller problem than a hidden button: it is a customer who has
+    committed, and a payment screen with nothing on it.
+
+    Refused with the reason named, so the client can put them on a method that
+    works rather than showing "something went wrong".
+  */
+  if (!isPaymentMethodConfigured(input.paymentMethod, settings)) {
+    return NextResponse.json(
+      {
+        error: "That way of paying is not available right now. Please choose another.",
+        code: "PAYMENT_METHOD_UNAVAILABLE",
+      },
+      { status: 400 }
+    );
+  }
+
   // Account-first ordering, enforced on the server so a hand-made request cannot
   // slip past the gate the pages put up. When it is on, the order is tied to the
   // signed-in account rather than matched by whatever number was typed.
@@ -114,6 +141,21 @@ export async function POST(req: NextRequest) {
     where: { whatsappNumber: whatsapp },
     select: { id: true },
   });
+
+  /*
+    How many deliveries this person has actually received.
+
+    Counted server-side off the Customer row their WhatsApp number resolves to,
+    never off a cookie or a device: a guest ordering from a fresh browser every
+    night is the same person, and the launch offer is once per person. Counting
+    DELIVERED rather than placed is the other half of that — an order that was
+    cancelled before a rider moved did not use anybody's free delivery.
+  */
+  const completedOrders = existingCustomer
+    ? await prisma.order.count({
+        where: { customerId: existingCustomer.id, orderStatus: "DELIVERED" },
+      })
+    : 0;
 
   const [pickupGeo, deliveryGeo] = await Promise.all([
     input.pickupLat == null || input.pickupLng == null
@@ -215,12 +257,23 @@ export async function POST(req: NextRequest) {
    * the rider has bought anything the only honest figure is the cap, so this is
    * a ceiling — `orderMoney` says as much and every screen reads it from there.
    */
+  /*
+    The tip, re-clamped on the way in.
+
+    The schema already rejects a value out of range; this repairs one that is
+    merely odd — a float, a numeric string, a negative. Belt and braces on the
+    one field a customer types a number into by hand, and the only place in this
+    route where a client-supplied figure becomes money owed to a person.
+  */
+  const tip = clampTip(input.tipXaf ?? 0);
+
   const money = orderMoney({
     serviceType: input.serviceType,
     deliveryFeeXaf: estimatedFee,
     goodsCapXaf: input.goodsCapXaf ?? null,
     goodsActualXaf: null,
     overCapApprovedXaf: null,
+    tipXaf: tip,
   });
 
   /**
@@ -232,8 +285,38 @@ export async function POST(req: NextRequest) {
    * the cap up front would mean holding money that is not ours and owing a
    * refund, which is exactly what an honest service must never look like.
    */
-  const payableNowXaf =
-    money.shopping && input.paymentMethod !== "CASH" ? money.deliveryFeeXaf : money.totalXaf;
+  /*
+    The launch offer, applied to the fee and to nothing else.
+
+    It comes off what the customer pays, never off what the rider earns: the
+    earnings split further down still works from `estimatedFee`, the full
+    quoted figure. A promotion funded by the person on the bike is not a
+    promotion.
+  */
+  const offer = applyLaunchOffer({
+    feeXaf: money.deliveryFeeXaf ?? 0,
+    completedOrders,
+    capXaf: settings.firstOrderFreeCapXaf ?? 0,
+  });
+
+  /*
+    The tip rides with whatever is paid now.
+
+    On a shopping order paid by mobile money only the fee is taken up front, so
+    the tip joins it there — the customer means to give it tonight, not to be
+    asked for it again at the door. Everywhere else `money.totalXaf` already
+    carries it.
+
+    The launch waiver deliberately does not touch it. The free delivery is ours
+    to give away; the tip is the customer's, and quietly cancelling somebody's
+    gift to the rider because the fee happened to be waived would be the
+    company taking credit with the rider's money.
+  */
+  const payableBeforeOffer =
+    money.shopping && input.paymentMethod !== "CASH"
+      ? money.deliveryFeeXaf + money.tipXaf
+      : money.totalXaf;
+  const payableNowXaf = Math.max(0, payableBeforeOffer - offer.waivedXaf);
 
   /**
    * A merchant with a granted float carries the delivery fee themselves and
@@ -389,6 +472,24 @@ export async function POST(req: NextRequest) {
         estimatedDeliveryFeeXaf: estimatedFee,
         // The ceiling the customer agreed to. Required on shopping services.
         goodsCapXaf: input.goodsCapXaf ?? null,
+        /*
+          Null and zero mean different things here and the distinction is kept.
+          Null is an order placed before tipping existed; zero is a customer who
+          was offered one and declined. Collapsing them would make take-up
+          unknowable from the first day, which is the only number that says
+          whether this was worth building.
+        */
+        tipXaf: input.tipXaf == null ? null : tip,
+        /*
+          What the offer took off, written down rather than only applied.
+
+          Every screen after this one recomputes the total from the fee, so a
+          waiver that lives only on the `Payment` row produces a confirmation
+          that disagrees with the payment card by exactly the size of the gift.
+          Null when nothing was waived, so "no offer" and "a zero offer" stay
+          distinguishable.
+        */
+        launchWaiverXaf: offer.waivedXaf > 0 ? offer.waivedXaf : null,
         paymentMethod: input.paymentMethod,
         paymentStatus: "PENDING",
         // A firm price is quoted and agreed at checkout, so the order opens on

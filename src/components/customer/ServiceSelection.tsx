@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
+import { LaunchOfferBanner } from "@/components/customer/order/LaunchOfferBanner";
 import { getExperience } from "@/lib/services/experiences";
 import type { ServiceType } from "@prisma/client";
 
@@ -43,9 +44,17 @@ export function ServiceSelection({
    * been the way in and always work.
    */
   intakeEnabled = false,
+  /**
+   * The launch-offer cap, or zero when this viewer is not eligible.
+   *
+   * Passed down rather than fetched, because "have you ordered before" is a
+   * fact about the database and a browser must never be the one to answer it.
+   */
+  firstOrderFreeCapXaf = 0,
 }: {
   enabledServices: ServiceType[];
   intakeEnabled?: boolean;
+  firstOrderFreeCapXaf?: number;
 }) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
@@ -60,6 +69,15 @@ export function ServiceSelection({
     <div className="mx-auto max-w-lg px-4 pb-28 pt-6">
       <h1 className="animate-fade-up font-display text-2xl font-bold">{t("services.title")}</h1>
       <p className="animate-fade-up mt-1 text-sm text-mist-500">{t("services.subtitle")}</p>
+
+      {/* The reason to try this once, said at the start rather than at the till.
+          Renders only for somebody who is actually eligible — see the
+          component. */}
+      {firstOrderFreeCapXaf > 0 && (
+        <div className="animate-fade-up mt-5">
+          <LaunchOfferBanner capXaf={firstOrderFreeCapXaf} fr={fr} />
+        </div>
+      )}
 
       {/* For somebody who already knows what they want. Deciding whether pizza
           is "food pickup" or "merchant delivery" is our taxonomy, not theirs —

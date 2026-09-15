@@ -317,7 +317,7 @@ export function MedicineForm() {
   );
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-32">
       {/* Just a way back.
 
           This row used to repeat the logo and the language switch that

@@ -6,6 +6,7 @@ import { Navigation, Loader2, Sun, AlertTriangle, CloudOff } from "lucide-react"
 import { useTranslation } from "@/lib/i18n";
 import { ScreenWakeLock, wakeLockSupported } from "@/lib/tracking/wakeLock";
 import { flushOutbox, queueFix, queuedCount, type QueuedFix } from "@/lib/tracking/outbox";
+import { freshness } from "@/lib/orders/eta";
 import { cn } from "@/lib/utils";
 
 /**
@@ -216,13 +217,22 @@ export function RiderLocationShare({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, autoStart, finished]);
 
-  const agoLabel = (() => {
-    if (lastSentAt == null) return "";
-    const sec = Math.max(0, Math.round((Date.now() - lastSentAt) / 1000));
-    if (sec < 10) return t("track.justNow");
-    if (sec < 60) return t("track.secondsShort").replace("{n}", String(sec));
-    return t("track.minutesShort").replace("{n}", String(Math.round(sec / 60)));
-  })();
+  /**
+   * How long since the last fix went up.
+   *
+   * This line used to read "last sent just now ago · 12 updates" — and on this
+   * screen that was not a rare state, it was the normal one: a rider who is
+   * sharing correctly sends every few seconds, so the rider doing the right
+   * thing was the one shown broken copy. The frame takes a duration; "just now"
+   * is a sentence. They are now different shapes so they cannot be swapped.
+   */
+  const fresh = freshness(lastSentAt == null ? null : Date.now() - lastSentAt);
+  const agoLabel =
+    fresh.kind === "seconds"
+      ? t("track.secondsShort").replace("{n}", String(fresh.n))
+      : fresh.kind === "minutes"
+        ? t("track.minutesShort").replace("{n}", String(fresh.n))
+        : "";
 
   if (finished) return null;
 
@@ -244,11 +254,13 @@ export function RiderLocationShare({
         <>
           {!error && (
             <p className="text-center text-xs text-mist-500">
-              {sentCount > 0
-                ? t("rider.order.share.sentAgo")
-                    .replace("{time}", agoLabel)
-                    .replace("{n}", String(sentCount))
-                : t("rider.order.share.hint")}
+              {sentCount === 0
+                ? t("rider.order.share.hint")
+                : fresh.kind === "now" || !agoLabel
+                  ? t("rider.order.share.sentJustNow").replace("{n}", String(sentCount))
+                  : t("rider.order.share.sentAgo")
+                      .replace("{time}", agoLabel)
+                      .replace("{n}", String(sentCount))}
             </p>
           )}
           {screenHeld && (

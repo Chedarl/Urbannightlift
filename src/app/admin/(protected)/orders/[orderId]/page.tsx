@@ -118,6 +118,7 @@ export default async function AdminOrderPage({
         goodsReceiptUrl={order.goodsReceiptUrl}
         goodsReceiptReadXaf={order.goodsReceiptReadXaf}
         deliveryFeeXaf={order.finalDeliveryFeeXaf ?? order.estimatedDeliveryFeeXaf}
+        tipXaf={order.tipXaf}
         overCapApprovedXaf={order.overCapApprovedXaf}
       />
       <OrderDetail

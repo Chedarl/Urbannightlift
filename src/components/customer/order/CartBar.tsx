@@ -6,7 +6,7 @@ import { groupXaf } from "@/lib/utils";
 import type { LiveFare } from "@/lib/orders/useLiveFare";
 
 /**
- * The bar welded to the bottom of every order screen.
+ * The bar that follows the customer down every order screen.
  *
  * ## Why this exists as one component
  *
@@ -17,11 +17,11 @@ import type { LiveFare } from "@/lib/orders/useLiveFare";
  * **delivery fee** on that line — the number customers actually argue about,
  * said while they are still choosing rather than after they have committed.
  *
- * Food, medicine and parcel each had their own hand-rolled footer. They drifted
- * — different heights, different z-indexes, one of them sitting *under* the
- * bottom nav — and each one phrased the price differently, which is how a
- * customer ends up believing food and parcel are priced by different rules.
- * One bar, three screens.
+ * All five services had their own hand-rolled footer. They drifted — different
+ * heights, different z-indexes, one of them sitting *under* the bottom nav —
+ * and each phrased the price differently, which is how a customer ends up
+ * believing food and parcel are priced by different rules. One bar, five
+ * screens, and it is the same object as `CheckoutBar` on the screen after.
  *
  * ## The three things it will not do
  *
@@ -39,8 +39,14 @@ import type { LiveFare } from "@/lib/orders/useLiveFare";
 
 export interface CartBarProps {
   fr: boolean;
-  /** The accent this service runs on — amber for food, green for medicine. */
-  accent: "amber" | "emerald" | "sky";
+  /**
+   * The accent this service runs on.
+   *
+   * One per service, matching the icon the customer tapped to get here — amber
+   * food, emerald medicine, sky parcel, violet errand, green grocery. Five
+   * words rather than a colour, so a screen cannot invent a sixth.
+   */
+  accent: "amber" | "emerald" | "sky" | "violet" | "green";
   /** Left slot: a cart glyph, a parcel glyph, a count badge. */
   glyph: ReactNode;
   /** What the shop will charge, where we know it. Never called a total. */
@@ -62,6 +68,8 @@ const ACCENTS = {
   amber: { fill: "bg-amber-500", ink: "text-black", price: "text-amber-300" },
   emerald: { fill: "bg-emerald-500", ink: "text-black", price: "text-emerald-300" },
   sky: { fill: "bg-gold-400", ink: "text-ink-950", price: "text-gold-300" },
+  violet: { fill: "bg-violet-500", ink: "text-white", price: "text-violet-300" },
+  green: { fill: "bg-green-400", ink: "text-black", price: "text-green-300" },
 } as const;
 
 export function CartBar({
@@ -82,12 +90,17 @@ export function CartBar({
 
   return (
     /*
-      z-30 keeps it under the bottom nav (z-40) rather than colliding with it,
-      and the safe-area inset keeps it off an iPhone's home indicator. Both were
-      bugs on the old per-screen footers.
+      Floating rather than welded to the browser edge, matching `CheckoutBar`,
+      so the two read as one object following the customer through the flow
+      rather than as two bars that happen to sit in the same place.
+
+      `max-w-lg` matches every other customer screen — it was `max-w-3xl`, wider
+      than the form it belonged to, which is the kind of half-millimetre
+      wrongness nobody names and everybody feels. The safe-area inset keeps it
+      off an iPhone's home indicator.
     */
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center gap-3">
+    <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+      <div className="glass-raised mx-auto flex max-w-lg items-center gap-3 rounded-xl px-4 py-3">
         <div className="shrink-0">{glyph}</div>
 
         <div className="min-w-0 flex-1">
@@ -159,7 +172,7 @@ export function CartBar({
           type="button"
           onClick={onCta}
           disabled={disabled}
-          className={`shrink-0 rounded-xl px-5 py-3 font-display text-sm font-bold ${tone.fill} ${tone.ink} disabled:opacity-50`}
+          className={`shrink-0 rounded-lg px-5 py-3 font-display text-sm font-bold ${tone.fill} ${tone.ink} disabled:opacity-50`}
         >
           {cta}
         </button>

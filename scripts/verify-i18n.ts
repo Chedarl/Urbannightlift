@@ -76,6 +76,41 @@ check(
   frenchInEnglish.slice(0, 5).map(([k, v]) => `${k} = ${v}`).join("\n       ")
 );
 
+/*
+  Placeholders, which are the half of a translation nobody proofreads.
+
+  A key like `"sentAgo": "last sent {time} ago · {n} updates"` is not one string,
+  it is a **frame with two holes**, and the French value has to have the same two
+  holes or the French reader loses a number with no error anywhere. Nothing in
+  the toolchain can see that: both sides are valid JSON, both sides are French
+  and English respectively, and the missing `{n}` only shows up as a sentence
+  that quietly stops making sense.
+
+  This is the cheap half of the lesson that produced `Freshness` in
+  `lib/orders/eta.ts`. The expensive half — a *phrase* being substituted into a
+  hole meant for a *duration*, which shipped "last sent just now ago" to every
+  rider actively sharing their location — is not decidable from the dictionary
+  and is now prevented by the type instead. This catches the half that is.
+*/
+{
+  const holes = (v: string) => [...v.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+  const mismatched: string[] = [];
+  for (const [key, enValue] of Object.entries(EN)) {
+    const frValue = FR[key];
+    if (typeof frValue !== "string") continue;
+    const a = holes(enValue);
+    const b = holes(frValue);
+    if (a.join("|") !== b.join("|")) {
+      mismatched.push(`${key}: en{${a.join(",")}} vs fr{${b.join(",")}}`);
+    }
+  }
+  check(
+    "and both sides of a key have the same placeholders",
+    mismatched.length === 0,
+    mismatched.slice(0, 8).join("\n       ")
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * 2. The components
  * ------------------------------------------------------------------ */

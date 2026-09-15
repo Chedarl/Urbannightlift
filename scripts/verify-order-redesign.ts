@@ -8,7 +8,7 @@
  *
  * Run: npx tsx scripts/verify-order-redesign.ts
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { quoteDeliveryFee } from "../src/lib/orders/pricing";
@@ -43,6 +43,10 @@ const MEDICINE = "src/components/customer/order/forms/MedicineForm.tsx";
 const PARCEL = "src/components/customer/order/forms/ParcelForm.tsx";
 const MENU = "src/components/customer/food/MerchantMenu.tsx";
 const BAR = "src/components/customer/order/CartBar.tsx";
+const ERRAND = "src/components/customer/order/forms/ErrandForm.tsx";
+const GROCERY = "src/components/customer/order/forms/GroceryForm.tsx";
+const REVIEW = "src/components/customer/OrderReview.tsx";
+const CHECKOUT = "src/components/customer/order/CheckoutBar.tsx";
 
 console.log("\nThe catalogue still cannot be filled in by the interface");
 {
@@ -131,9 +135,19 @@ console.log("\nThe bar never invents a price");
     "a zone-only figure must read 'about 1,500', never '1,500'"
   );
   check(
-    "all three services use the one bar",
-    [FOOD, MEDICINE, PARCEL].every((f) => /<CartBar\b/.test(code(f))),
-    "three hand-rolled footers is how customers learn the services are priced differently"
+    "all five services use the one bar",
+    [FOOD, MEDICINE, PARCEL, ERRAND, GROCERY].every((f) => /<CartBar\b/.test(code(f))),
+    "five hand-rolled footers is how customers learn the services are priced differently"
+  );
+  check(
+    "and the checkout screen has one too",
+    /<CheckoutBar\b/.test(code(REVIEW)),
+    "the screen whose whole job is confirming a price had the total below the fold"
+  );
+  check(
+    "which never calls a ceiling a total",
+    /totalIsCeiling/.test(code(CHECKOUT)),
+    "a shopping order's figure is a cap until the rider is at the counter"
   );
 }
 
@@ -304,13 +318,89 @@ console.log("\nA dish tile shows the dish's letter, not the restaurant's");
   }
 }
 
+console.log("\nThe journey is one product, not two");
+{
+  /*
+    The v49 redesign reached three of the five order forms and stopped. What
+    made that visible was not the forms themselves but the seams: a customer on
+    parcel saw one visual language, a customer on errand saw the one it
+    replaced, and nobody comparing two screens of the same app should have to
+    wonder which is the real one.
+  */
+  const JOURNEY = [
+    FOOD, MEDICINE, PARCEL, ERRAND, GROCERY, REVIEW,
+    "src/components/customer/OrderForm.tsx",
+    "src/components/customer/OrderConfirmation.tsx",
+  ];
+
+  for (const path of JOURNEY) {
+    check(
+      `${path.split("/").pop()} has no gradient hero left`,
+      !/rounded-b-\[2rem\]/.test(code(path)),
+      "the 2rem-radius gradient block is the pattern being replaced"
+    );
+  }
+
+  /*
+    `code()`, not `read()`.
+
+    The first version of this used `read()` and failed on three files whose
+    *comments* explain that the badge was removed. That is the fourth time a
+    check in this repo has matched its own prose rather than any shipped code —
+    it is a cheap mistake and it is always the same one, so: strip comments
+    first, every time.
+  */
+  check(
+    "no screen prints a hardcoded step number",
+    !JOURNEY.some((p) => /Step \d of \d|Étape \d sur \d/.test(code(p))),
+    "a text badge on two screens plus a graphical stepper on a third is worse than neither"
+  );
+  check(
+    "and the stepper component is gone entirely",
+    !existsSync(join(ROOT, "src/components/customer/order/Stepper.tsx")),
+    "it rendered at step 1 on two of seven services, step 2 on review, and never step 3"
+  );
+
+  // One width, so the bars and the content they belong to line up.
+  for (const path of [FOOD, MEDICINE, PARCEL, ERRAND, GROCERY, BAR, CHECKOUT]) {
+    check(
+      `${path.split("/").pop()} is max-w-lg like every other customer screen`,
+      !/max-w-(xl|3xl|md|6xl)\b/.test(code(path)),
+      "four container widths across one journey is how the seams become visible"
+    );
+  }
+}
+
+console.log("\nDead weight stays dead");
+{
+  check(
+    "the unused night-scene hero is deleted",
+    !existsSync(join(ROOT, "src/components/customer/NightSceneHero.tsx")),
+    "160 lines with zero importers, and the canonical example of the old hero"
+  );
+  const svc = code("src/components/customer/order/ServiceSection.tsx");
+  for (const dead of ["FOOD_PICKUP", "MEDICINE_PICKUP", "GROCERY_PICKUP", "SMALL_PARCEL", "CUSTOM_ERRAND"]) {
+    check(
+      `ServiceSection no longer carries a dead ${dead} branch`,
+      !new RegExp(`case "${dead}"`).test(svc),
+      "these five have their own screens; the bodies here were unreachable and answered searches with the wrong file"
+    );
+  }
+}
+
 console.log("\nEvery touched file is still text");
 {
   /*
     A raw NUL byte got into `MerchantMenu.tsx` writing this change — from a
-    ` ` sentinel that reached the file as an actual byte rather than an
+    U+0000 sentinel that reached the file as an actual byte rather than as an
     escape. Git then treats the file as binary: no diff, no review, no blame.
     Cheap to check, and invisible until somebody opens a pull request.
+
+    This comment used to contain the byte itself, inside backticks, to show
+    what had gone wrong. So the suite that checks for control bytes was a
+    binary file, and the change that fixed the bug could not be read in a pull
+    request either. The name is written out instead, and the list below now
+    includes this file — a check that exempts itself is not a check.
   */
   for (const path of [
     FOOD,
@@ -318,8 +408,16 @@ console.log("\nEvery touched file is still text");
     PARCEL,
     MENU,
     BAR,
+    CHECKOUT,
+    ERRAND,
+    GROCERY,
     "src/components/customer/food/MerchantRow.tsx",
     "src/lib/orders/useLiveFare.ts",
+    // Including this suite. It carried a NUL for weeks, inside the comment
+    // explaining NULs, and was therefore itself a binary file that nobody could
+    // review. A check that exempts the file it lives in is the easiest kind to
+    // fool, and the only one that fools itself.
+    "scripts/verify-order-redesign.ts",
   ]) {
     const bytes = readFileSync(join(ROOT, path));
     check(
@@ -347,6 +445,75 @@ console.log("\nThe menu is a rail and rows, not a grid of missing photographs");
     "dishes are list rows",
     /<ul\b[\s\S]*<li\b/.test(menu),
     "the two-column picture grid is the pattern that needs photographs we do not have"
+  );
+}
+
+console.log("\nThe shop window is not boarded up");
+{
+  /*
+    The owner's decision was that people browse, build an order and see the
+    real price without an account, and that the gate stands at checkout where
+    the three things an account buys are about to become true.
+
+    It was half done. `/order/new` had the gate removed; `/order` — the screen
+    the bottom nav's **Order** tab actually opens — still returned `OrderGate`
+    before a single service was visible. A guest tapping the main call to
+    action hit a wall having seen nothing at all.
+  */
+  for (const page of ["src/app/order/page.tsx", "src/app/order/new/page.tsx"]) {
+    const src = code(page);
+    check(
+      `${page.replace("src/app/", "")} does not gate browsing`,
+      !/<OrderGate/.test(src),
+      "the gate belongs on the control that places the order, not in front of the catalogue"
+    );
+  }
+
+  check(
+    "and the gate component is deleted rather than left unimported",
+    !existsSync(join(ROOT, "src/components/customer/OrderGate.tsx")),
+    "a component with no importers is how a wall gets quietly put back"
+  );
+
+  // Checkout is where it stands now. That must stay true.
+  const review = code("src/components/customer/OrderReview.tsx");
+  check(
+    "checkout still knows the gate",
+    /accountRequired/.test(review) && /signup\?next=/.test(review),
+    "moving the gate to checkout and then losing it there is a worse outcome than the wall"
+  );
+}
+
+console.log("\nThe launch offer is said before the till, and only to people who get it");
+{
+  const banner = code("src/components/customer/order/LaunchOfferBanner.tsx");
+  const picker = code("src/components/customer/ServiceSelection.tsx");
+  const page = code("src/app/order/page.tsx");
+
+  check(
+    "the picker can show the offer",
+    picker.includes("LaunchOfferBanner"),
+    "an offer only revealed at checkout has done none of the work it exists to do"
+  );
+  check(
+    "eligibility is decided on the server",
+    /eligibleForLaunchOffer/.test(page) && /prisma\.order\.count/.test(page),
+    "'have you ordered before' is a fact about the database"
+  );
+  check(
+    "the banner renders nothing when the viewer is not eligible",
+    /capXaf\s*<=\s*0\s*\)\s*return null/.test(banner),
+    "a promotional surface showing an offer the checkout declines teaches people the prices are not real"
+  );
+  check(
+    "and it states the cap next to the promise",
+    banner.includes("capNote"),
+    "the cap belongs beside the offer, not three screens later"
+  );
+  check(
+    "the picker gates the banner on the cap it was given",
+    /firstOrderFreeCapXaf\s*>\s*0\s*&&/.test(picker),
+    "rendering it unconditionally would show a gift to somebody who has already had it"
   );
 }
 

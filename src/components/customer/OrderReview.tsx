@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, AlertTriangle, BadgeCheck } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
-import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
+import { loadDraft, saveDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
 import { priceCopy } from "@/lib/orders/priceCopy";
 import { isShoppingService, orderMoney } from "@/lib/orders/goodsMoney";
-import { Stepper } from "@/components/customer/order/Stepper";
 import { MoneyBreakdown } from "@/components/customer/order/MoneyBreakdown";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
+import { CheckoutBar } from "@/components/customer/order/CheckoutBar";
+import { PaymentSelector } from "@/components/customer/order/PaymentSelector";
+import { TipChooser } from "@/components/customer/order/TipChooser";
+import { clampTip } from "@/lib/orders/tip";
+import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
+import type { PaymentMethod } from "@/lib/payments/methods";
+import { applyLaunchOffer } from "@/lib/orders/launchOffer";
 import { formatXaf } from "@/lib/utils";
 
 /** Flatten structured serviceDetails into readable label/value rows for review. */
@@ -81,18 +87,47 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function OrderReview() {
+export interface OrderReviewProps {
+  signedIn: boolean;
+  /** Whether placing an order needs an account at all. The owner's switch. */
+  accountRequired: boolean;
+  /** The launch-offer cap, or 0 when this person is not eligible. */
+  firstOrderFreeCapXaf: number;
+}
+
+export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }: OrderReviewProps) {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const [draft, setDraft] = useState<OrderDraft | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(false);
+  // Above the early returns, because hooks are not allowed to be conditional
+  // and this screen returns early for an expired draft.
+  const payMethods = usePaymentMethods();
 
   useEffect(() => {
     setDraft(loadDraft());
     setLoaded(true);
   }, []);
+
+  /*
+    A draft can outlive the configuration it was made under.
+
+    Somebody who chose Orange Money in a tab left open, or before the merchant
+    code was removed, arrives here holding a method the server will now refuse.
+    Correcting it silently would change what they chose without telling them, so
+    the selector below shows the new choice and they can see it; what is not
+    acceptable is letting them reach the slider on a method that cannot be paid.
+    Cash leads `payMethods`, so there is always somewhere to land.
+  */
+  useEffect(() => {
+    if (!draft || payMethods.length === 0) return;
+    if (payMethods.includes(draft.paymentMethod as PaymentMethod)) return;
+    const next = { ...draft, paymentMethod: payMethods[0] };
+    setDraft(next);
+    saveDraft(next);
+  }, [draft, payMethods]);
 
   if (!loaded) return null;
   if (!draft) {
@@ -114,14 +149,39 @@ export function OrderReview() {
   const copy = priceCopy(firm, fr, shopping);
   // The money, split the way the customer needs to see it: what they asked us
   // to buy, our fee, and the sum — never one blended number.
+  const tip = clampTip(draft.tipXaf ?? 0);
   const money = orderMoney({
     serviceType: draft.serviceType,
     deliveryFeeXaf: draft.estimatedFeeXaf,
     goodsCapXaf: draft.goodsCapXaf ?? null,
     goodsActualXaf: null,
     overCapApprovedXaf: null,
+    tipXaf: tip,
   });
   const goodsAtDoor = shopping && draft.paymentMethod !== "CASH";
+
+  /*
+    The first delivery, free — shown here, decided on the server.
+
+    `applyLaunchOffer` is the same function `POST /api/orders` waives with, so
+    the figure on the bar is the figure that will be charged. The eligibility
+    is not the browser's to judge: the page was told whether this person
+    qualifies, and a cap of zero means no.
+  */
+  const offer = applyLaunchOffer({
+    feeXaf: money.deliveryFeeXaf,
+    completedOrders: firstOrderFreeCapXaf > 0 ? 0 : 1,
+    capXaf: firstOrderFreeCapXaf,
+  });
+
+  /*
+    Whether "Place order" places an order, or asks for an account first.
+
+    This is the gate, moved from the top of the screen to the one control it
+    belongs on. Everything above it renders either way: the summary, the
+    address, and above all the price.
+  */
+  const gated = accountRequired && !signedIn;
   const paymentLabel = draft.paymentMethod === "MTN_MOMO" ? "MTN MoMo" : draft.paymentMethod === "ORANGE_MONEY" ? "Orange Money" : fr ? "Paiement à la livraison" : "Cash on delivery";
   const rows = structuredRows(draft, fr);
   const pdfData: OrderPdfData = {
@@ -146,6 +206,14 @@ export function OrderReview() {
 
   async function submit() {
     if (!draft) return;
+    /*
+      The draft is already in storage, so sign-up costs a screen and no lost
+      work — they come back to this exact summary with `next`.
+    */
+    if (gated) {
+      router.push(`/account/signup?next=${encodeURIComponent("/order/review")}`);
+      return;
+    }
     setSubmitting(true);
     setError(false);
     try {
@@ -171,8 +239,21 @@ export function OrderReview() {
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-16">
-      <Stepper current={2} />
+    /* `pb-52` rather than `pb-32`: `CheckoutBar` grew a second row when the
+       submit became a slider, and at `pb-32` it sat on top of the PDF button
+       and the legal notice. The clearance is measured against the bar's real
+       height, not guessed — a pinned bar that covers the last two controls on
+       the page is the defect the pinned bar was introduced to fix. */
+    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-52">
+      {/*
+        The stepper is gone from the whole journey.
+
+        It rendered at step 1 on two of seven services and step 2 here, and
+        never at step 3 because no screen showed it — so a parcel customer saw
+        nothing, then a "2 of 3" appearing from nowhere, then nothing again.
+        The pinned bars carry the context instead: what this costs and what
+        happens when you press the button, on the screen you are on.
+      */}
       <div>
         <h1 className="font-display text-2xl font-bold">{t("review.title")}</h1>
         <p className="mt-1 text-sm text-mist-500">{t("review.subtitle")}</p>
@@ -198,11 +279,21 @@ export function OrderReview() {
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
+        /*
+          A caution, and it now looks like one.
+
+          This said "the price may still change" in gold — the colour reserved
+          for money — six lines above the total the customer is about to agree
+          to. The two were indistinguishable at a glance, which is the exact
+          collision `globals.css` changed `--color-caution` away from
+          `--color-gold-400` to end. Colour alone was never enough either, so
+          it carries the shape as well: the left border and the icon.
+        */
+        <div className="flex items-start gap-3 rounded-2xl border border-caution/40 border-l-[3px] border-l-caution bg-caution/[0.08] p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-caution" />
           <div>
-            <p className="text-sm font-semibold text-gold-200">{t("review.pendingBadge")}</p>
-            <p className="mt-1 text-xs leading-relaxed text-gold-200/80">{copy.note}</p>
+            <p className="text-sm font-semibold text-mist-100">{t("review.pendingBadge")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-mist-300">{copy.note}</p>
           </div>
         </div>
       )}
@@ -243,10 +334,10 @@ export function OrderReview() {
             value={draft.estimatedFeeXaf != null ? formatXaf(draft.estimatedFeeXaf) : "—"}
           />
         )}
-        <Row
-          label={t("review.paymentMethod")}
-          value={draft.paymentMethod === "MTN_MOMO" ? t("orderForm.mtnMomo") : draft.paymentMethod === "ORANGE_MONEY" ? t("orderForm.orangeMoney") : t("orderForm.cashOnDelivery")}
-        />
+        {/* Payment used to be a read-only row here — the customer was shown
+            what they picked before they knew the price, and could not change
+            it without going back through the whole form. It is now a live
+            control of its own, below. */}
         <Row
           label={t("review.disclaimerConfirmed")}
           value={<CheckCircle2 className="ml-auto h-5 w-5 text-safe" />}
@@ -256,6 +347,42 @@ export function OrderReview() {
       {/* The arithmetic, shown rather than asserted. Goods, fee, total — never
           blended into one number, because a blended number is exactly what
           somebody skimming would show you. */}
+      {/*
+        The method, chosen where the amount is.
+
+        Writing straight back to the draft means the order submitted is the one
+        on screen — there is no second copy of this decision to fall out of step
+        with. The server still validates it: a method with no merchant code is
+        rejected there too, so a tampered draft cannot conjure one.
+      */}
+      <PaymentSelector
+        fr={fr}
+        methods={payMethods}
+        value={draft.paymentMethod as PaymentMethod}
+        shopping={shopping}
+        onChange={(m) => {
+          const next = { ...draft, paymentMethod: m };
+          setDraft(next);
+          saveDraft(next);
+        }}
+      />
+
+      {/*
+        Offered after the payment method, because the sentence about where the
+        money goes depends on it — "added to your payment" and "hand it over at
+        the door" are different facts and the customer has just chosen which.
+      */}
+      <TipChooser
+        fr={fr}
+        valueXaf={tip}
+        cash={draft.paymentMethod === "CASH"}
+        onChange={(xaf) => {
+          const next = { ...draft, tipXaf: xaf };
+          setDraft(next);
+          saveDraft(next);
+        }}
+      />
+
       <MoneyBreakdown
         money={money}
         items={goodsItems(draft)}
@@ -263,25 +390,56 @@ export function OrderReview() {
         goodsAtDoor={goodsAtDoor}
         fareLines={draft.fareLines ?? []}
         fareEstimated={draft.fareEstimated === true}
+        waivedXaf={offer.waivedXaf}
         fr={fr}
       />
 
       <DownloadPdfButton data={pdfData} label={t("review.downloadPdf")} className="w-full" />
 
-      <div className="rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4 text-xs leading-relaxed text-gold-200">
+      {/* Small print, set as small print. It was gold on gold, which made a
+          legal paragraph compete with the total for the same meaning. */}
+      <div className="rounded-2xl border border-ink-700 bg-ink-900/60 p-4 text-xs leading-relaxed text-mist-400">
         {getDisclaimer(locale)}
       </div>
 
       {error && <p className="text-sm text-restricted">{t("common.error")}</p>}
 
-      <div className="flex flex-col gap-3">
-        <Button size="lg" onClick={() => submit()} disabled={submitting}>
-          {submitting ? t("review.submitting") : t("review.submitOrder")}
-        </Button>
-        <LinkButton href="/order/new" variant="outline" size="lg">
-          {t("review.editOrder")}
-        </LinkButton>
-      </div>
+      {/*
+        What an account buys, said here rather than as a wall.
+
+        The old gate stood in front of this screen and made these three
+        promises to somebody who had not yet seen a price. Said at the moment
+        of placing the order they are not a toll — they are a description of
+        what is about to happen to this order.
+      */}
+      {gated && (
+        <div className="rounded-lg border border-violet-500/30 bg-violet-950/20 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-violet-200">
+            <BadgeCheck className="h-4 w-4 shrink-0" />
+            {fr ? "Un compte, et cette commande est à vous" : "One account, and this order is yours"}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1 text-xs leading-relaxed text-mist-300">
+            <li>{fr ? "Le suivi en direct de ce livreur" : "Live tracking of this rider"}</li>
+            <li>{fr ? "Ce reçu, gardé pour vous" : "This receipt, kept for you"}</li>
+            <li>{fr ? "Un lien pour vous faire suivre par un proche" : "A link to let someone watch you home"}</li>
+          </ul>
+        </div>
+      )}
+
+      <LinkButton href="/order/new" variant="outline" size="lg">
+        {t("review.editOrder")}
+      </LinkButton>
+
+      <CheckoutBar
+        fr={fr}
+        money={money}
+        waivedXaf={offer.waivedXaf}
+        priceFirm={firm}
+        submitting={submitting}
+        onSubmit={() => submit()}
+        gated={gated}
+        cta={submitting ? t("review.submitting") : t("review.submitOrder")}
+      />
     </div>
   );
 }

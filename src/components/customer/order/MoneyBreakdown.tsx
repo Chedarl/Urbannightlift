@@ -45,6 +45,16 @@ export function MoneyBreakdown({
   fareLines = [],
   /** True when nothing was pinned, so the figure is honestly approximate. */
   fareEstimated = false,
+  /**
+   * What the launch offer takes off, if anything.
+   *
+   * This block used to know nothing about the waiver, and `CheckoutBar` did —
+   * so on an eligible first order the pinned bar said 6,500 and the total four
+   * lines above it said 8,000. Two totals on one screen, differing by the size
+   * of the gift, with nothing explaining the gap. A customer reading that has
+   * to guess which number is real, and the guess they make is the larger one.
+   */
+  waivedXaf = 0,
   fr,
   className,
 }: {
@@ -54,6 +64,7 @@ export function MoneyBreakdown({
   goodsAtDoor?: boolean;
   fareLines?: FareLine[];
   fareEstimated?: boolean;
+  waivedXaf?: number;
   fr: boolean;
   className?: string;
 }) {
@@ -110,6 +121,24 @@ export function MoneyBreakdown({
             ))}
           </ul>
         )}
+
+        {/*
+          The tip, on its own line and below the fee's working rather than
+          inside it.
+
+          Placement is the whole argument. Inside the fee block it would read as
+          part of what we charge; below the working and above the total it reads
+          as what it is — a separate thing the customer added, on top of a price
+          that did not change. The label says who gets it, because "Tip" alone
+          leaves open the question every customer has about every tip, which is
+          whether the company keeps a slice.
+        */}
+        {money.tipXaf > 0 && (
+          <Line
+            label={fr ? "Pourboire livreur (intégralement pour lui)" : "Rider tip (all theirs)"}
+            value={formatXaf(money.tipXaf)}
+          />
+        )}
       </div>
 
       {/* Said plainly rather than hidden, because a fee that moves once the
@@ -125,11 +154,23 @@ export function MoneyBreakdown({
 
       <div className="my-3 border-t border-ink-700" />
 
+      {/* The gift, on its own line above the total, with a sign on it — so the
+          total below is the number the pinned bar shows and there is nothing
+          left to reconcile. */}
+      {waivedXaf > 0 && (
+        <div className="mb-2 flex justify-between gap-3 py-1 text-sm text-safe">
+          <span>{fr ? "Première livraison offerte" : "First delivery on us"}</span>
+          <span className="tabular-nums">−{formatXaf(waivedXaf)}</span>
+        </div>
+      )}
+
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-display text-sm font-bold text-mist-100">
           {money.totalIsCeiling ? (fr ? "Total maximum" : "Total at most") : fr ? "Total" : "Total"}
         </span>
-        <span className="font-display text-xl font-bold text-gold-400">{formatXaf(money.totalXaf)}</span>
+        <span className="font-display text-xl font-bold text-gold-400">
+          {formatXaf(Math.max(0, money.totalXaf - waivedXaf))}
+        </span>
       </div>
 
       {/* Charging less than we were allowed to is worth saying out loud. */}

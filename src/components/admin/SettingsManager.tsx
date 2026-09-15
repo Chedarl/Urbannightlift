@@ -13,7 +13,7 @@ import { WatchmanStatus } from "@/components/admin/WatchmanStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 import { groupXaf } from "@/lib/utils";
-import { quoteFare } from "@/lib/orders/fare";
+import { quoteFare, DEFAULT_FARE } from "@/lib/orders/fare";
 
 /** 0–23, labelled so nobody has to translate 18 into 6 PM in their head. */
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -70,6 +70,7 @@ export function SettingsManager({
     fareRedPercent: number;
     testMode: boolean;
     voiceOrderingEnabled: boolean;
+    callingEnabled: boolean;
     requireAccountToOrder: boolean;
     googleSiteVerification: string;
     notificationEmail: string;
@@ -116,6 +117,7 @@ export function SettingsManager({
         fareRedPercent: form.fareRedPercent,
         testMode: form.testMode,
         voiceOrderingEnabled: form.voiceOrderingEnabled,
+        callingEnabled: form.callingEnabled,
         requireAccountToOrder: form.requireAccountToOrder,
         googleSiteVerification: form.googleSiteVerification,
         notificationEmail: form.notificationEmail,
@@ -351,6 +353,42 @@ export function SettingsManager({
           </label>
         </div>
 
+        {/* In-app calling. Off until the two pieces of infrastructure exist —
+            the note under the checkbox is the whole setup guide, deliberately,
+            because a switch whose prerequisites live in a README is a switch
+            that gets turned on without them. */}
+        <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-violet-500"
+              checked={form.callingEnabled}
+              onChange={(e) => setForm({ ...form, callingEnabled: e.target.checked })}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-mist-100">
+                In-app calling (customer ↔ rider)
+              </span>
+              <span className="block text-xs text-mist-400">
+                Lets a customer talk to their rider over the internet from the tracking screen.
+                Neither side ever sees the other&apos;s number, nothing is recorded, and a rider
+                who is riding is notified rather than rung. Dispatch stays on the call screen the
+                whole time.
+              </span>
+              <span className="mt-1 block text-xs text-mist-500">
+                Before switching this on: set <code className="text-mist-300">CALL_CHANNEL_SECRET</code>{" "}
+                in Vercel, and add a TURN provider (Cloudflare&apos;s is free) — without a relay,
+                roughly one call in five will not connect at all.
+              </span>
+              {form.callingEnabled && (
+                <span className="mt-1 block text-xs font-semibold text-gold-200">
+                  On — customers see a Call button once a rider has accepted their order.
+                </span>
+              )}
+            </span>
+          </label>
+        </div>
+
         {/* Account-first ordering. On by default — every client signs up before
             ordering, so every order lives in their private portal. */}
         <div className="rounded-xl border border-ink-700 bg-ink-950 p-3">
@@ -508,10 +546,16 @@ export function SettingsManager({
             {(() => {
               const km = 8.9;
               const rules = {
+                // The bands are what price an order now; the preview reads the
+                // published lists rather than the legacy minimum/perKm fields,
+                // which survive only for the "what it used to cost" row.
+                bands: DEFAULT_FARE.bands,
+                errandBands: DEFAULT_FARE.errandBands,
                 minimumXaf: form.fareMinimumXaf,
                 includedKm: form.fareIncludedKm,
                 perKmXaf: form.farePerKmXaf,
                 tierMultiplier: { GREEN: 1, YELLOW: 1 + form.fareYellowPercent / 100, RED: 1 + form.fareRedPercent / 100 },
+                tierSurchargeXaf: DEFAULT_FARE.tierSurchargeXaf,
                 busyMultiplier: 1,
                 errandXaf: form.fareErrandXaf,
                 lateNightPercent: form.fareLateNightPercent,

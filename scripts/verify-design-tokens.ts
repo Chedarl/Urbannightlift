@@ -243,6 +243,63 @@ console.log("\nNothing in the product is smaller than the 13px floor");
   );
 }
 
+console.log("\nA token is referenced the way this Tailwind understands");
+{
+  /*
+    The most expensive kind of style bug: one that compiles, lints, typechecks,
+    builds, and produces nothing.
+
+    Tailwind v3 read `rounded-[--radius-lg]` as `border-radius: var(--radius-lg)`.
+    Tailwind v4 — which is what this app is on — does not. It reads the brackets
+    literally and emits `border-radius: --radius-lg`, which is not a valid value,
+    so the browser drops the whole declaration. The class is in the HTML, the
+    rule is in the stylesheet, and the corner is square.
+
+    It shipped here on nine elements — every pinned bar, both CTA buttons and the
+    tracking sheet — and on a tenth, `h-[--map-h]`, where the consequence was a
+    **map with zero height**: the live tracking screen rendered a 356×0 box where
+    the bike was supposed to be, and the build was green the whole time.
+
+    Nothing else in the toolchain can see this. `tsc` sees a string. The linter
+    sees a string. Tailwind itself does not warn, because in v4 an arbitrary
+    value is by definition whatever you put in the brackets. Only a reader who
+    knows the v4 spelling — `rounded-(--radius-lg)`, parentheses — can object.
+
+    The rule enforced here is the simpler one: **use the utility, not the
+    variable.** `--radius-lg` lives in `@theme`, so Tailwind already generates
+    `rounded-lg` from it. Reaching past that to name the custom property by hand
+    is how you end up two spellings away from a value you could have had.
+  */
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx?$/.test(entry.name)) {
+        const src = fs
+          .readFileSync(full, "utf8")
+          // Strip comments first. This file is about to explain the bug using
+          // the exact string that is the bug, and so is `LiveTrackMap`. Four
+          // separate checks in this repo have now failed on their own prose.
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/(^|[^:])\/\/.*$/gm, "$1");
+        for (const m of src.matchAll(/\b[a-z][a-z0-9-]*-\[(--[a-z0-9-]+)\]/g)) {
+          offenders.push(`${path.relative(ROOT, full)}: ${m[0]}`);
+        }
+      }
+    }
+  };
+  walk(path.join(ROOT, "src"));
+
+  check(
+    "no utility names a custom property in square brackets",
+    offenders.length === 0,
+    `Tailwind v4 emits these literally and the browser drops them:\n       ${offenders
+      .slice(0, 8)
+      .join("\n       ")}\n       Use the generated utility (rounded-lg), or v4's parenthesis form.`
+  );
+}
+
 console.log("\nAnd the built stylesheet agrees — if one has been built");
 {
   /*

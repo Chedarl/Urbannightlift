@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_TIP_XAF } from "@/lib/orders/tip";
 import { SHOPPING_SERVICES } from "@/lib/orders/goodsMoney";
 
 /** Widened for comparison against the schema's own service enum. */
@@ -88,6 +89,16 @@ export const orderSchema = z.object({
   /// a bill they never agreed to. Optional in the shape so parcel and errand —
   /// where we buy nothing — are untouched.
   goodsCapXaf: z.coerce.number().int().min(0).max(2_000_000).optional().nullable(),
+  /**
+   * What the customer chose to add for the rider.
+   *
+   * Bounded here as well as in the chooser, and bounded at `MAX_TIP_XAF` rather
+   * than at the goods ceiling: a tip is not shopping, and 10,000 XAF is several
+   * times the largest fee on the price list, so anything above it is a stray
+   * digit rather than a decision. The server clamps again on the way in — this
+   * is the rejection, `clampTip` is the repair.
+   */
+  tipXaf: z.coerce.number().int().min(0).max(MAX_TIP_XAF).optional().nullable(),
 
   acceptedTerms: z.literal(true),
 }).superRefine((v, ctx) => {
