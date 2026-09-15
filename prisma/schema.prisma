@@ -1439,10 +1439,37 @@ model OperatingSettings {
   /// After this hour there are fewer riders out and the roads are worse.
   fareLateNightPercent  Int @default(15)
   fareLateNightFromHour Int @default(23)
-  /// Zone tiers, as percentages on top. Deliberately gentle: a RED zone is
-  /// harder to reach, which is worth a fifth, not a doubling.
+  /// Zone tiers, as percentages on top. Retained for the comparison row on the
+  /// settings screen; they no longer price an order — see fareRedXaf.
   fareYellowPercent   Int   @default(8)
   fareRedPercent      Int   @default(20)
+
+  /// ── The published price lists ────────────────────────────────────────────
+  ///
+  /// Two ladders of `{ upToKm, xaf }`, by **road** kilometre: one for carrying
+  /// something the customer already has, one for going in and buying it.
+  ///
+  /// JSON rather than columns, and this is the one place that is right: a band
+  /// list has a variable length, the business will want to add or drop a step,
+  /// and thirty-two columns named fareBand1UpToKm would be a schema change
+  /// every time. `fareRulesFrom` refuses a malformed list outright rather than
+  /// repairing it, so a half-saved row falls back to the published defaults
+  /// instead of quietly pricing an order at something nobody chose.
+  fareBands           Json?
+  fareErrandBands     Json?
+
+  /// What a hard-to-reach zone adds, in francs rather than as a percentage.
+  /// A percentage turned a published 2,000 into 2,150, which is a computed
+  /// decimal again and invites the argument the bands were drawn to end.
+  fareYellowXaf       Int   @default(0)
+  fareRedXaf          Int   @default(500)
+
+  /// ── The launch offer ─────────────────────────────────────────────────────
+  ///
+  /// The delivery fee waived on a customer's **first** order, up to this cap.
+  /// Zero switches it off. The rider is paid in full either way: the waiver is
+  /// the business's cost, which is exactly why it is capped rather than open.
+  firstOrderFreeCapXaf Int  @default(1500)
 
   updatedByUserId            String?
   updatedAt                  DateTime @updatedAt

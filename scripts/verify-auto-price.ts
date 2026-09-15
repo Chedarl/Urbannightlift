@@ -68,24 +68,34 @@ const decide = (
 
   What these checks are actually about is firm-versus-review and the reason
   given. The money comes from the rules so it tracks them.
+
+  They were derived from `minimumXaf`, and that broke again for the same reason
+  one layer down: the minimum stopped being the price when the fare moved to
+  published bands. It is a floor now, not a tariff. So the expectation is the
+  **near band** — the figure a short trip actually costs — and the zone tier is
+  a flat addition rather than a multiplier.
 */
 const round50 = (n: number) => Math.round(n / 50) * 50;
+/** What any trip inside the first published band costs. */
+const NEAR = DEFAULT_FARE.bands[0].xaf;
 
 console.log("\nFirm prices — the system quotes and the customer goes straight to payment");
 check(
   "an unpinned green → green trip is firm at the minimum fare",
   decide(green, green),
-  { firm: true, feeXaf: DEFAULT_FARE.minimumXaf, reason: "FIRM" }
+  { firm: true, feeXaf: NEAR, reason: "FIRM" }
 );
 check(
   "green → yellow is firm, and the yellow tier nudges the fee rather than being it",
   decide(green, yellow),
-  { firm: true, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.YELLOW), reason: "FIRM" }
+  // YELLOW adds nothing now: the spread between bands already absorbs ordinary
+  // variation, and charging for it twice is how the old bill got fat.
+  { firm: true, feeXaf: NEAR + DEFAULT_FARE.tierSurchargeXaf.YELLOW, reason: "FIRM" }
 );
 check(
   "the medicine surcharge is still added on top of the firm fee",
   decide(green, green, { isMedicine: true }),
-  { firm: true, feeXaf: DEFAULT_FARE.minimumXaf + green.medicineFeeXaf, reason: "FIRM" }
+  { firm: true, feeXaf: NEAR + green.medicineFeeXaf, reason: "FIRM" }
 );
 
 console.log("\nDistance decides the firm figure now, not the postcode");
@@ -104,7 +114,7 @@ console.log(`       Bastos → Mvan:        ${crossTown.feeXaf} XAF`);
 
 check("a pinned hop down the street is firm at the minimum", hop, {
   firm: true,
-  feeXaf: DEFAULT_FARE.minimumXaf,
+  feeXaf: NEAR,
   reason: "FIRM",
 });
 checkThat("a pinned cross-town run is firm too", crossTown.firm);
@@ -128,12 +138,16 @@ console.log("\nA human still prices these");
 check(
   "a RED delivery zone goes to review",
   decide(green, red),
-  { firm: false, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.RED), reason: "REVIEW_TIER" }
+  // A short hop in a RED zone is still a short hop — the hard-zone charge is
+  // about the ride out, and there is barely a ride inside the near band.
+  { firm: false, feeXaf: NEAR, reason: "REVIEW_TIER" }
 );
 check(
   "a RED pickup zone goes to review even with a green drop",
   decide(red, green),
-  { firm: false, feeXaf: round50(DEFAULT_FARE.minimumXaf * DEFAULT_FARE.tierMultiplier.RED), reason: "REVIEW_TIER" }
+  // A short hop in a RED zone is still a short hop — the hard-zone charge is
+  // about the ride out, and there is barely a ride inside the near band.
+  { firm: false, feeXaf: NEAR, reason: "REVIEW_TIER" }
 );
 checkThat(
   "a RED end still goes to review however short the ride is",

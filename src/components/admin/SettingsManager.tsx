@@ -13,7 +13,7 @@ import { WatchmanStatus } from "@/components/admin/WatchmanStatus";
 import { Button } from "@/components/shared/Button";
 import type { OperatingMode, ServiceType } from "@prisma/client";
 import { groupXaf } from "@/lib/utils";
-import { quoteFare } from "@/lib/orders/fare";
+import { quoteFare, DEFAULT_FARE } from "@/lib/orders/fare";
 
 /** 0–23, labelled so nobody has to translate 18 into 6 PM in their head. */
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -508,10 +508,16 @@ export function SettingsManager({
             {(() => {
               const km = 8.9;
               const rules = {
+                // The bands are what price an order now; the preview reads the
+                // published lists rather than the legacy minimum/perKm fields,
+                // which survive only for the "what it used to cost" row.
+                bands: DEFAULT_FARE.bands,
+                errandBands: DEFAULT_FARE.errandBands,
                 minimumXaf: form.fareMinimumXaf,
                 includedKm: form.fareIncludedKm,
                 perKmXaf: form.farePerKmXaf,
                 tierMultiplier: { GREEN: 1, YELLOW: 1 + form.fareYellowPercent / 100, RED: 1 + form.fareRedPercent / 100 },
+                tierSurchargeXaf: DEFAULT_FARE.tierSurchargeXaf,
                 busyMultiplier: 1,
                 errandXaf: form.fareErrandXaf,
                 lateNightPercent: form.fareLateNightPercent,

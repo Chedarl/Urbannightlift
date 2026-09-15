@@ -20,6 +20,7 @@ import { resolveCode } from "@/lib/ambassadors/accrual";
 import { creditToApply } from "@/lib/referrals/rules";
 import { DEFAULT_RIDER_SHARE_PERCENT } from "@/lib/orders/earnings";
 import { fareRulesFrom } from "@/lib/orders/fare";
+import { applyLaunchOffer } from "@/lib/orders/launchOffer";
 import {
   ORDER_ACCESS_COOKIE,
   grantOrderAccessValue,
@@ -114,6 +115,21 @@ export async function POST(req: NextRequest) {
     where: { whatsappNumber: whatsapp },
     select: { id: true },
   });
+
+  /*
+    How many deliveries this person has actually received.
+
+    Counted server-side off the Customer row their WhatsApp number resolves to,
+    never off a cookie or a device: a guest ordering from a fresh browser every
+    night is the same person, and the launch offer is once per person. Counting
+    DELIVERED rather than placed is the other half of that — an order that was
+    cancelled before a rider moved did not use anybody's free delivery.
+  */
+  const completedOrders = existingCustomer
+    ? await prisma.order.count({
+        where: { customerId: existingCustomer.id, orderStatus: "DELIVERED" },
+      })
+    : 0;
 
   const [pickupGeo, deliveryGeo] = await Promise.all([
     input.pickupLat == null || input.pickupLng == null
@@ -232,8 +248,23 @@ export async function POST(req: NextRequest) {
    * the cap up front would mean holding money that is not ours and owing a
    * refund, which is exactly what an honest service must never look like.
    */
-  const payableNowXaf =
+  /*
+    The launch offer, applied to the fee and to nothing else.
+
+    It comes off what the customer pays, never off what the rider earns: the
+    earnings split further down still works from `estimatedFee`, the full
+    quoted figure. A promotion funded by the person on the bike is not a
+    promotion.
+  */
+  const offer = applyLaunchOffer({
+    feeXaf: money.deliveryFeeXaf ?? 0,
+    completedOrders,
+    capXaf: settings.firstOrderFreeCapXaf ?? 0,
+  });
+
+  const payableBeforeOffer =
     money.shopping && input.paymentMethod !== "CASH" ? money.deliveryFeeXaf : money.totalXaf;
+  const payableNowXaf = Math.max(0, payableBeforeOffer - offer.waivedXaf);
 
   /**
    * A merchant with a granted float carries the delivery fee themselves and

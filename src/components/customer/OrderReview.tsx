@@ -198,11 +198,21 @@ export function OrderReview() {
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-3 rounded-2xl border border-gold-400/40 bg-gold-400/10 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-400" />
+        /*
+          A caution, and it now looks like one.
+
+          This said "the price may still change" in gold — the colour reserved
+          for money — six lines above the total the customer is about to agree
+          to. The two were indistinguishable at a glance, which is the exact
+          collision `globals.css` changed `--color-caution` away from
+          `--color-gold-400` to end. Colour alone was never enough either, so
+          it carries the shape as well: the left border and the icon.
+        */
+        <div className="flex items-start gap-3 rounded-2xl border border-caution/40 border-l-[3px] border-l-caution bg-caution/[0.08] p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-caution" />
           <div>
-            <p className="text-sm font-semibold text-gold-200">{t("review.pendingBadge")}</p>
-            <p className="mt-1 text-xs leading-relaxed text-gold-200/80">{copy.note}</p>
+            <p className="text-sm font-semibold text-mist-100">{t("review.pendingBadge")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-mist-300">{copy.note}</p>
           </div>
         </div>
       )}
@@ -268,7 +278,9 @@ export function OrderReview() {
 
       <DownloadPdfButton data={pdfData} label={t("review.downloadPdf")} className="w-full" />
 
-      <div className="rounded-2xl border border-gold-400/25 bg-gold-400/5 p-4 text-xs leading-relaxed text-gold-200">
+      {/* Small print, set as small print. It was gold on gold, which made a
+          legal paragraph compete with the total for the same meaning. */}
+      <div className="rounded-2xl border border-ink-700 bg-ink-900/60 p-4 text-xs leading-relaxed text-mist-400">
         {getDisclaimer(locale)}
       </div>
 

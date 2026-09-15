@@ -70,6 +70,13 @@
   --color-mist-300: #cfc6db;
   --color-mist-400: #b4a9c6;
   --color-mist-500: #9a8fb0;
+  /* The dimmest step, and it existed only as a habit until now: five files —
+     QuickIntake, OrderConfirmation, WatchDelivery, FoodForm — already wrote
+     `text-mist-600`, which Tailwind resolved to nothing at all. Placeholder
+     text and disabled captions were rendering in whatever they inherited.
+     Declared rather than removed, because a sixth step is genuinely wanted
+     under mist-500: it is the difference between "quiet" and "off". */
+  --color-mist-600: #6b6280;
 
   /* ── Status colours ───────────────────────────────────────────────────────
      `caution` was #d4af37 — **byte-identical to --color-gold-400**, the brand
@@ -144,6 +151,49 @@
   --text-2xl--line-height: 1.25;
   --text-3xl: 1.875rem; /* 30px */
   --text-3xl--line-height: 1.15;
+  /* The home hero and the quote page both reach for this and were landing on
+     Tailwind's 36px/1 default — off the scale in size and in leading. */
+  --text-4xl: 2.25rem; /* 36px */
+  --text-4xl--line-height: 1.1;
+
+  /* ── Spacing, radius, elevation ───────────────────────────────────────────
+     None of these existed. Every `rounded-2xl`, every `p-4`, every
+     `shadow-[0_0_6px_…]` in the product was picked in the moment, which is why
+     four container widths and three page shells could drift apart without
+     anything looking obviously wrong at any single step.
+
+     The scale is the 8-pt system, because that is what the phone frames these
+     screens are designed against use. It is deliberately short: six spacing
+     steps, five radii, two elevations. A long scale is the same problem as no
+     scale — if there is a value for everything, nothing is a decision.
+
+     Radius carries meaning here rather than taste:
+       sm   a chip, an inline control
+       md   an input, a small button
+       lg   a card, a thumbnail
+       xl   a sheet, a floating bar — the things that sit *above* the page
+       pill anything fully round: steppers, status pills, the primary CTA
+
+     Elevation is two steps and no more. `raise` is a card lifting under a
+     press. `float` is the pinned bar and the bottom sheet — the only things
+     that genuinely hover. Both are high-blur and low-opacity, and both are
+     darkened well past a light-theme shadow because they fall on a #08060e
+     ground, where a 0.08 alpha shadow is invisible. */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 100px;
+
+  --shadow-raise: 0 4px 16px rgb(0 0 0 / 0.18);
+  --shadow-float: 0 12px 32px rgb(0 0 0 / 0.28);
 
   --animate-fade-up: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-shimmer: shimmer 2.5s linear infinite;
@@ -270,11 +320,36 @@ textarea {
 }
 
 /* Reusable glass surface */
+/* ── Glass ──────────────────────────────────────────────────────────────────
+   The one definition of a translucent surface.
+
+   It existed and was used in exactly two places — the header and the bottom
+   nav — while every other surface that wanted the same effect hand-rolled
+   `bg-ink-950/95 … backdrop-blur`: the cart bar, the assistant sheet, the
+   coming-soon sheet, the map overlays. Five near-identical blurs at four
+   different radii, none of which could be changed in one place.
+
+   `.glass` is now what all of them use. The blur is 20px rather than 14 —
+   enough that content genuinely dissolves behind a pinned bar instead of
+   showing through as legible text, which was the complaint. The border is a
+   hairline of the violet the night backdrop is made of, so an edge reads as
+   light catching the panel rather than as a drawn line.
+
+   `.glass-raised` is the same material for something that floats clear of the
+   screen edge — a sheet, an inset bar — and carries the elevation with it. */
 .glass {
   background: linear-gradient(180deg, rgba(26, 17, 48, 0.72), rgba(17, 11, 28, 0.72));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(198, 166, 239, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(198, 166, 239, 0.15);
+}
+
+.glass-raised {
+  background: linear-gradient(180deg, rgba(26, 17, 48, 0.82), rgba(17, 11, 28, 0.86));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(198, 166, 239, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 /* Gold gradient text */

@@ -66,18 +66,61 @@ console.log("\nNo cliffs at a zone border");
     `${inside} → ${over} is a ${(jump * 100).toFixed(0)}% jump; the old rule could double it`
   );
 }
+/*
+  Bands put a cliff back, and pretending otherwise would be the dishonest move.
+
+  The old complaint was not "there is a step" — it was that the step sat on an
+  **invisible, arbitrary** line. Two neighbours either side of a zone border
+  paid double each other and neither could see why, because a zone border is
+  not a thing you can stand and look at.
+
+  A distance band is the opposite kind of step: the boundary is published, it is
+  the same for everybody, and the screen prints "4.2 km by road" directly above
+  "4 to 8 km · 2,000" so the reason is on the same screen as the price. That is
+  a step somebody can check, which is the whole difference.
+
+  What still has to be guarded is the *size* of it. A ladder with a 3x rung in
+  it would be a zone border by another name, so the invariant is that no step
+  more than half-again the one before, and that crossing one is worth less than
+  the near band itself.
+*/
+console.log("\nThe band steps are visible, and bounded");
 {
-  // One more street, same zone.
-  const jump = fee(3.2, "GREEN") - fee(3, "GREEN");
-  check("200 m further costs a few francs", jump <= 100, `it costs ${jump}`);
+  const boundary = DEFAULT_FARE.bands[0].upToKm;
+  // Straight-line distances either side of the first published boundary.
+  const under = fee((boundary - 0.15) / 1.3, "GREEN");
+  const over = fee((boundary + 0.15) / 1.3, "GREEN");
+  check(
+    "crossing a published boundary costs less than the near band itself",
+    over - under < DEFAULT_FARE.bands[0].xaf,
+    `${under} → ${over} at the ${boundary} km line`
+  );
+
+  for (const [label, ladder] of [["carry", DEFAULT_FARE.bands], ["errand", DEFAULT_FARE.errandBands]] as const) {
+    const steps = ladder.slice(1).map((b, i) => b.xaf / ladder[i].xaf);
+    check(
+      `no ${label} step is more than half again the price before it`,
+      steps.every((r) => r <= 1.5),
+      steps.map((r, i) => `${ladder[i].xaf}→${ladder[i + 1].xaf} (${((r - 1) * 100).toFixed(0)}%)`).join(", ")
+    );
+  }
 }
 
-console.log("\nThe minimum actually holds");
-check("a zero-distance trip is the minimum", fee(0) === DEFAULT_FARE.minimumXaf);
-check("so is anything inside the included distance", fee(1.4) === DEFAULT_FARE.minimumXaf);
+console.log("\nThe floor actually holds");
 check(
-  "and nothing can ever come out below it",
+  "a zero-distance trip costs the near band",
+  fee(0) === DEFAULT_FARE.bands[0].xaf,
+  "the published near price is the floor now, not the legacy minimum"
+);
+check("so does anything inside it", fee(1.4) === DEFAULT_FARE.bands[0].xaf);
+check(
+  "and nothing can ever come out below the minimum",
   [0, 0.1, 1, 1.9].every((km) => fee(km) >= DEFAULT_FARE.minimumXaf)
+);
+check(
+  "nor below what makes the trip worth a rider's time",
+  [0, 1, 3, 6, 10].every((km) => !quoteFare({ km, tier: "GREEN" }).belowFloor),
+  "a price a rider will not ride for is not a price"
 );
 
 console.log("\nWith no pins it says so rather than guessing");
