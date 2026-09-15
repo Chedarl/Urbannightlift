@@ -1,0 +1,18 @@
+{
+  "artboards": [
+    { "file": "Research.dc.html", "x": 0, "y": 0, "w": 880, "h": 1020, "title": "What was borrowed, and what was refused" },
+    { "file": "Main.dc.html", "x": 1000, "y": 0, "w": 390, "h": 844, "title": "Food — the menu" },
+    { "file": "Medicine.dc.html", "x": 1490, "y": 0, "w": 390, "h": 844, "title": "Medicine — the shelf" },
+    { "file": "Parcel.dc.html", "x": 1980, "y": 0, "w": 390, "h": 844, "title": "Parcel — the route" }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 1000,
+      "y": -160,
+      "w": 420,
+      "text": "Three order screens rebuilt on Meituan and Ele.me's mechanics: a pinned cart bar carrying the running total AND the delivery fee, a left category rail, dense rows instead of cards, and the note field promoted to a first-class control. One vocabulary across all three services."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

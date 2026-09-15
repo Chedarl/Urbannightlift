@@ -60,5 +60,10 @@ prisma/data/imported-mobile-numbers.csv
 # The seeded design canvas: a 2.5 MB build artifact, not source. It is a copy of
 # the design tool's payload with the artboards beside it injected, regenerated
 # from them on every change. The artboards and canvas.json are the sources.
-design/*.html
-!design/*.dc.html
+#
+# Globbed across `design*/` rather than named once: each round of design work
+# gets its own folder (design/, design2/, …), and a rule that has to be extended
+# by hand every time is a rule that will one day be forgotten — which is how a
+# 2.5 MB generated file ends up in a review.
+design*/*.html
+!design*/*.dc.html
