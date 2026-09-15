@@ -84,6 +84,15 @@ export interface Limit {
  * Each is set at roughly ten times what the most enthusiastic real person could
  * do, for the reason in the module note above.
  */
+/**
+ * How many orders an hour one caller may place.
+ *
+ * Named on its own because two other limits are derived from it rather than
+ * chosen beside it — see `placesResolve`. A limit that has to stay in step with
+ * another one, and is only written down twice, drifts.
+ */
+const LIMITS_ORDER_MAX = 40;
+
 export const LIMITS: Record<string, Limit> = {
   /** Creating accounts. A family sharing a phone might make three. */
   signup: { max: 20, windowMinutes: 60 },
@@ -100,7 +109,7 @@ export const LIMITS: Record<string, Limit> = {
    * student hall ordering separately through one NAT must never be refused,
    * and an order is the one thing here we actively want.
    */
-  order: { max: 40, windowMinutes: 60 },
+  order: { max: LIMITS_ORDER_MAX, windowMinutes: 60 },
   /**
    * Reading a typed sentence into a form. Somebody rephrasing because the first
    * reading was wrong is normal and must not be punished for it.
@@ -139,6 +148,39 @@ export const LIMITS: Record<string, Limit> = {
    * Counted per caller, so one rider's bad night never uses up another's.
    */
   call: { max: 12, windowMinutes: 60 },
+  /**
+   * Typing an address — every debounced keystroke that reaches the search box.
+   *
+   * Generous on purpose, because this is not the expensive call. Google bills a
+   * whole autocomplete *session* at the moment it is closed, so the keystrokes
+   * inside one session token cost nothing; what this guards is the OpenStreetMap
+   * fallback (whose usage policy is strict and whose goodwill we are spending)
+   * and the fact that an unauthenticated proxy onto a third party with no cap on
+   * it is a scraping surface whatever it costs.
+   *
+   * A person filling in two addresses, badly, with corrections, might reach
+   * eighty. Four hundred is a script.
+   */
+  placesSearch: { max: 400, windowMinutes: 60 },
+  /**
+   * Resolving a picked suggestion — **the one call Google actually charges
+   * for.** Closing a session is the billable event, so this is the number on
+   * the invoice.
+   *
+   * An order needs **two** — where to collect, where to deliver — and that
+   * arithmetic is what sets the number. `order` is deliberately the loosest
+   * limit here at forty an hour, for the student hall sharing one carrier
+   * address; forty orders is eighty addresses, so anything below that refuses
+   * people at the address field and never lets them reach the order limit that
+   * was supposed to be the generous one. The first draft of this was sixty,
+   * which is thirty orders' worth, and `verify-rate-limits` caught it.
+   *
+   * So: twice the order limit, plus half again for the customer who changes
+   * their mind. Still an order of magnitude below anything worth scripting,
+   * and still the difference between a bill and a bill nobody noticed until
+   * the end of the month.
+   */
+  placesResolve: { max: 3 * LIMITS_ORDER_MAX, windowMinutes: 60 },
 };
 
 export interface LimitResult {

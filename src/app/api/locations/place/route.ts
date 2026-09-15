@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { placeDetails } from "@/lib/maps/google";
 import { nearestZone } from "@/lib/orders/pricing";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,20 @@ export async function GET(req: NextRequest) {
   const session = req.nextUrl.searchParams.get("session") ?? "";
   if (!placeId || !session) {
     return NextResponse.json({ error: "id and session are required" }, { status: 400 });
+  }
+
+  /*
+   * This one is refused rather than degraded, unlike the search beside it:
+   * there is no local answer to fall back to — a Place ID means nothing without
+   * Google — and this is the call that appears on the bill. Sixty an hour is
+   * beyond any real customer, so reaching it means a script.
+   */
+  const limit = await checkRateLimit(req, "placesResolve");
+  if (!limit.ok) {
+    return NextResponse.json(
+      { found: false, retryInMinutes: limit.retryInMinutes },
+      { status: 429 }
+    );
   }
 
   const point = await placeDetails(placeId, session);

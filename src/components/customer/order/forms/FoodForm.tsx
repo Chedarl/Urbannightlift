@@ -13,6 +13,7 @@ import { MerchantRow } from "@/components/customer/food/MerchantRow";
 import { MerchantMenu } from "@/components/customer/food/MerchantMenu";
 import { CartBar } from "@/components/customer/order/CartBar";
 import { useLiveFare } from "@/lib/orders/useLiveFare";
+import { merchantToLocation } from "@/lib/locations/fromMerchant";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
@@ -186,10 +187,52 @@ export function FoodForm() {
    * priced as one. The pickup end is the restaurant, whose zone we know once a
    * merchant is chosen; until then the delivery end alone gives an estimate.
    */
-  const { quote } = useLiveFare();
+  const { quote, zones } = useLiveFare();
+
+  /*
+   * The restaurant the cart came from, as a pickup point.
+   *
+   * This is the defect this file shipped with. On the catalogue path the draft
+   * set `pickupLat`, `pickupLng` and `pickupZoneId` to null — and
+   * `quoteDeliveryFee` measures road distance from exactly those, so the path
+   * we most want people to use was the one priced from a zone estimate, while
+   * the merchant row it came from had coordinates on it. Worse, it was
+   * invisible: the customer saw a plausible number and the rider got a name.
+   *
+   * `merchantToLocation` is the same converter the merchant picker and the
+   * pharmacy list already use, so a restaurant reached by browsing and the same
+   * restaurant reached by searching cannot be priced differently.
+   *
+   * A merchant with no pin yields null, and the form falls back to asking —
+   * which is the free-text behaviour, and honest.
+   */
+  const cartMerchant = useMemo(
+    () => (merchants ?? []).find((m) => m.id === lines[0]?.merchantId) ?? null,
+    [merchants, lines]
+  );
+  const merchantPickup = useMemo<SelectedLocation | null>(() => {
+    const m = cartMerchant;
+    if (!m || m.latitude == null || m.longitude == null) return null;
+    return merchantToLocation(
+      {
+        merchantName: m.name,
+        neighbourhood: m.neighbourhood,
+        address: m.address,
+        landmark: m.landmark,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        phone: m.phone,
+      },
+      zones
+    );
+  }, [cartMerchant, zones]);
+
+  /** The pin that is actually used, whichever path they took to it. */
+  const effectivePickup = browsing ? merchantPickup : pickup;
+
   const fare = useMemo(
-    () => quote({ pickup, delivery, errand: true }),
-    [quote, pickup, delivery]
+    () => quote({ pickup: effectivePickup, delivery, errand: true }),
+    [quote, effectivePickup, delivery]
   );
 
   const missing: string[] = [];
@@ -226,14 +269,14 @@ export function FoodForm() {
       preferredLanguage: fr ? "FR" : "EN",
       serviceType: "FOOD_PICKUP",
       merchantId: shop?.merchantId ?? "",
-      pickupLocation: browsing ? shop!.merchantName : (pickup?.primaryName ?? vendorName.trim()),
-      pickupLandmark: browsing ? "" : (pickup?.landmark ?? ""),
+      pickupLocation: browsing ? shop!.merchantName : (effectivePickup?.primaryName ?? vendorName.trim()),
+      pickupLandmark: effectivePickup?.landmark ?? "",
       deliveryLocation: delivery?.primaryName ?? "",
       deliveryLandmark: delivery?.landmark ?? "",
-      pickupZoneId: browsing ? "" : (pickup?.zoneId ?? ""),
+      pickupZoneId: effectivePickup?.zoneId ?? "",
       deliveryZoneId: delivery?.zoneId ?? "",
-      pickupLat: browsing ? null : (pickup?.latitude ?? null),
-      pickupLng: browsing ? null : (pickup?.longitude ?? null),
+      pickupLat: effectivePickup?.latitude ?? null,
+      pickupLng: effectivePickup?.longitude ?? null,
       deliveryLat: delivery?.latitude ?? null,
       deliveryLng: delivery?.longitude ?? null,
       itemDescription,
