@@ -57,6 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ rid
       goodsActualXaf: true,
       overCapApprovedXaf: true,
       goodsAdvancedXaf: true,
+      tipXaf: true,
     },
   });
 

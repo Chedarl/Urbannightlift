@@ -14,6 +14,8 @@ import type { OrderPdfData } from "@/components/customer/order/orderPdf";
 import { Button, LinkButton } from "@/components/shared/Button";
 import { CheckoutBar } from "@/components/customer/order/CheckoutBar";
 import { PaymentSelector } from "@/components/customer/order/PaymentSelector";
+import { TipChooser } from "@/components/customer/order/TipChooser";
+import { clampTip } from "@/lib/orders/tip";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 import type { PaymentMethod } from "@/lib/payments/methods";
 import { applyLaunchOffer } from "@/lib/orders/launchOffer";
@@ -147,12 +149,14 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
   const copy = priceCopy(firm, fr, shopping);
   // The money, split the way the customer needs to see it: what they asked us
   // to buy, our fee, and the sum — never one blended number.
+  const tip = clampTip(draft.tipXaf ?? 0);
   const money = orderMoney({
     serviceType: draft.serviceType,
     deliveryFeeXaf: draft.estimatedFeeXaf,
     goodsCapXaf: draft.goodsCapXaf ?? null,
     goodsActualXaf: null,
     overCapApprovedXaf: null,
+    tipXaf: tip,
   });
   const goodsAtDoor = shopping && draft.paymentMethod !== "CASH";
 
@@ -363,6 +367,22 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
         }}
       />
 
+      {/*
+        Offered after the payment method, because the sentence about where the
+        money goes depends on it — "added to your payment" and "hand it over at
+        the door" are different facts and the customer has just chosen which.
+      */}
+      <TipChooser
+        fr={fr}
+        valueXaf={tip}
+        cash={draft.paymentMethod === "CASH"}
+        onChange={(xaf) => {
+          const next = { ...draft, tipXaf: xaf };
+          setDraft(next);
+          saveDraft(next);
+        }}
+      />
+
       <MoneyBreakdown
         money={money}
         items={goodsItems(draft)}
@@ -370,6 +390,7 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
         goodsAtDoor={goodsAtDoor}
         fareLines={draft.fareLines ?? []}
         fareEstimated={draft.fareEstimated === true}
+        waivedXaf={offer.waivedXaf}
         fr={fr}
       />
 

@@ -12,6 +12,7 @@ import { normalizePhone } from "@/lib/utils";
 import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 import { getOperatingSettings, isServiceEnabled } from "@/lib/settings";
 import { isPaymentMethodConfigured } from "@/lib/payments/methods";
+import { clampTip } from "@/lib/orders/tip";
 import { getCustomerId } from "@/lib/auth/customer";
 import { resolveAddress } from "@/lib/locations/resolveAddress";
 import { normalizePreferredTime } from "@/lib/orders/timeSlots";
@@ -256,12 +257,23 @@ export async function POST(req: NextRequest) {
    * the rider has bought anything the only honest figure is the cap, so this is
    * a ceiling — `orderMoney` says as much and every screen reads it from there.
    */
+  /*
+    The tip, re-clamped on the way in.
+
+    The schema already rejects a value out of range; this repairs one that is
+    merely odd — a float, a numeric string, a negative. Belt and braces on the
+    one field a customer types a number into by hand, and the only place in this
+    route where a client-supplied figure becomes money owed to a person.
+  */
+  const tip = clampTip(input.tipXaf ?? 0);
+
   const money = orderMoney({
     serviceType: input.serviceType,
     deliveryFeeXaf: estimatedFee,
     goodsCapXaf: input.goodsCapXaf ?? null,
     goodsActualXaf: null,
     overCapApprovedXaf: null,
+    tipXaf: tip,
   });
 
   /**
@@ -287,8 +299,23 @@ export async function POST(req: NextRequest) {
     capXaf: settings.firstOrderFreeCapXaf ?? 0,
   });
 
+  /*
+    The tip rides with whatever is paid now.
+
+    On a shopping order paid by mobile money only the fee is taken up front, so
+    the tip joins it there — the customer means to give it tonight, not to be
+    asked for it again at the door. Everywhere else `money.totalXaf` already
+    carries it.
+
+    The launch waiver deliberately does not touch it. The free delivery is ours
+    to give away; the tip is the customer's, and quietly cancelling somebody's
+    gift to the rider because the fee happened to be waived would be the
+    company taking credit with the rider's money.
+  */
   const payableBeforeOffer =
-    money.shopping && input.paymentMethod !== "CASH" ? money.deliveryFeeXaf : money.totalXaf;
+    money.shopping && input.paymentMethod !== "CASH"
+      ? money.deliveryFeeXaf + money.tipXaf
+      : money.totalXaf;
   const payableNowXaf = Math.max(0, payableBeforeOffer - offer.waivedXaf);
 
   /**
@@ -445,6 +472,24 @@ export async function POST(req: NextRequest) {
         estimatedDeliveryFeeXaf: estimatedFee,
         // The ceiling the customer agreed to. Required on shopping services.
         goodsCapXaf: input.goodsCapXaf ?? null,
+        /*
+          Null and zero mean different things here and the distinction is kept.
+          Null is an order placed before tipping existed; zero is a customer who
+          was offered one and declined. Collapsing them would make take-up
+          unknowable from the first day, which is the only number that says
+          whether this was worth building.
+        */
+        tipXaf: input.tipXaf == null ? null : tip,
+        /*
+          What the offer took off, written down rather than only applied.
+
+          Every screen after this one recomputes the total from the fee, so a
+          waiver that lives only on the `Payment` row produces a confirmation
+          that disagrees with the payment card by exactly the size of the gift.
+          Null when nothing was waived, so "no offer" and "a zero offer" stay
+          distinguishable.
+        */
+        launchWaiverXaf: offer.waivedXaf > 0 ? offer.waivedXaf : null,
         paymentMethod: input.paymentMethod,
         paymentStatus: "PENDING",
         // A firm price is quoted and agreed at checkout, so the order opens on

@@ -116,6 +116,8 @@ export default async function ConfirmationPage({
           goodsCapXaf: order.goodsCapXaf,
           goodsActualXaf: order.goodsActualXaf,
           overCapApprovedXaf: order.overCapApprovedXaf,
+          tipXaf: order.tipXaf,
+          launchWaiverXaf: order.launchWaiverXaf,
             amountPaidXaf: order.finalDeliveryFeeXaf ?? order.quotedFeeXaf ?? order.estimatedDeliveryFeeXaf ?? null,
             paymentReference: redact(payment?.transactionReference ?? null),
             paymentVerifiedAt: payment?.verifiedAt?.toISOString() ?? null,

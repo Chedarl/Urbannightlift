@@ -926,6 +926,34 @@ model Order {
   riderPayoutXaf    Int?
   companyEarningXaf Int?
 
+  /// What the customer added for the rider, chosen at checkout.
+  ///
+  /// Deliberately not folded into the fee. The fee is the published price and
+  /// the thing `riderSharePercent` splits; a tip inside it would be quietly
+  /// taken 40% of. The rider receives the whole of this, in both payment
+  /// mechanics — on mobile money we owe it onward at settlement, on cash they
+  /// are handed it at the door and it is not owed back.
+  ///
+  /// Not part of `companyEarningXaf` either: a tip is never revenue.
+  tipXaf Int?
+
+  /// What the launch offer took off this order's delivery fee.
+  ///
+  /// The waiver was computed at checkout and applied to the `Payment` row, and
+  /// recorded nowhere else — so every screen after checkout recomputed the
+  /// total *without* it and showed a figure the customer was not being charged.
+  /// The confirmation said 8,000 while the payment card asked for 6,500, and
+  /// nothing on either explained the gap.
+  ///
+  /// Stored here, frozen, for the same reason `riderSharePercent` is: the offer
+  /// terms will change, and an order placed under today's cap must still read
+  /// as today's cap in next year's accounts.
+  ///
+  /// It comes off what the customer pays and never off what the rider earns —
+  /// `riderPayoutXaf` is computed from the full fee. A promotion funded by the
+  /// person on the bike is not a promotion.
+  launchWaiverXaf Int?
+
   /// ── Cash reconciliation ──
   /// On cash on delivery the rider physically holds our money. Recording what
   /// they collected, and when it was settled, is the difference between a

@@ -49,6 +49,10 @@ export interface RiderOrderData {
   /** What the rider earns on this delivery, once it is known. */
   riderPayoutXaf: number | null;
   estimatedPayoutXaf: number | null;
+  /** What the customer added. All of it is the rider's. */
+  tipXaf: number | null;
+  /** Whether they are handed it at the door or we owe it on. */
+  tipCustody: "none" | "rider_holds_cash" | "we_owe_rider";
   /** We buy on the customer's behalf on this service. */
   isShopping: boolean;
   /** The most the customer agreed we may spend. */
@@ -250,6 +254,26 @@ export function RiderOrderView({ order }: { order: RiderOrderData }) {
           <span className="text-mist-500">Your earnings on this delivery: </span>
           <span className="font-semibold text-gold-300">{formatXaf(payout)}</span>
           {order.riderPayoutXaf == null && <span className="text-xs text-mist-500"> (estimated)</span>}
+        </p>
+      )}
+
+      {/*
+        The tip, on the job rather than as a surprise at settlement.
+
+        The cash wording is the part that matters operationally: the tip is
+        inside the figure collected at the door, so a rider who does not know it
+        is there hands the whole lot back and is short by exactly the amount
+        somebody meant them to have. Saying "keep it" is not a nicety, it is the
+        instruction that makes the money arrive.
+      */}
+      {order.tipCustody !== "none" && order.tipXaf != null && order.tipXaf > 0 && (
+        <p className="rounded-xl border border-safe/30 bg-safe/[0.08] px-3 py-2 text-sm">
+          <span className="font-semibold text-safe">{formatXaf(order.tipXaf)} tip</span>
+          <span className="text-mist-300">
+            {order.tipCustody === "rider_holds_cash"
+              ? " from the customer — it is inside what you collect at the door. Keep it; it is not part of what you settle."
+              : " from the customer — already paid to us, and it is on your balance. Yours in full."}
+          </span>
         </p>
       )}
 

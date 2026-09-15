@@ -60,6 +60,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
       goodsCapXaf: true,
       goodsActualXaf: true,
       overCapApprovedXaf: true,
+      tipXaf: true,
       paymentMethod: true,
     },
   });
@@ -140,6 +141,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orderId: s
     goodsCapXaf: order.goodsCapXaf,
     goodsActualXaf: amountXaf,
     overCapApprovedXaf: order.overCapApprovedXaf,
+    tipXaf: order.tipXaf,
   });
 
   await prisma.$transaction(async (tx) => {

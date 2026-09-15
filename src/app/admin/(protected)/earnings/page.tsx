@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { riderTipShareXaf } from "@/lib/orders/tip";
 import { redirect } from "next/navigation";
 import { getSessionUser, ADMIN_ROLES } from "@/lib/auth/session";
 import { visibilityWhere } from "@/lib/orders/filters";
@@ -58,6 +59,7 @@ export default async function EarningsPage({
       goodsActualXaf: true,
       overCapApprovedXaf: true,
       goodsAdvancedXaf: true,
+      tipXaf: true,
       assignedRiderId: true,
       assignedRider: { select: { fullName: true } },
     },
@@ -73,8 +75,19 @@ export default async function EarningsPage({
   for (const o of delivered) {
     const payout = o.riderPayoutXaf ?? 0;
     const company = o.companyEarningXaf ?? 0;
+    /*
+      A tip counts toward what the rider took home and toward nothing else.
+
+      It is deliberately absent from `totalRevenue` and `totalCompany`: revenue
+      is what the business earned, and a gift passing through our account on its
+      way to a rider was never ours. Counting it would flatter every figure on
+      this page and make the company's margin look better in exactly the months
+      customers were most generous — which is the sort of number that gets
+      believed and then acted on.
+    */
+    const tip = riderTipShareXaf(o.tipXaf ?? 0);
     totalRevenue += payout + company;
-    totalRiderPayout += payout;
+    totalRiderPayout += payout + tip;
     totalCompany += company;
 
     const key = o.assignedRiderId ?? "unassigned";
@@ -91,7 +104,7 @@ export default async function EarningsPage({
       } satisfies RiderLine);
 
     line.deliveries += 1;
-    line.earnedXaf += payout;
+    line.earnedXaf += payout + tip;
     line.companyXaf += company;
 
     if (!o.cashSettledAt) {

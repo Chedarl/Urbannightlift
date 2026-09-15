@@ -78,6 +78,10 @@ export interface ReceiptPdfData {
   goodsCapXaf?: number | null;
   /** Our fee — the only thing we earn on. */
   deliveryFeeXaf: number | null;
+  /** The rider's tip, if the customer added one. Its own line; never the fee. */
+  tipXaf?: number | null;
+  /** What the launch offer took off. Its own line, so the total reconciles. */
+  launchWaiverXaf?: number | null;
   /** Goods + fee. */
   totalXaf: number | null;
   /** What has actually been paid so far. */
@@ -183,7 +187,17 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
   const delivered = data.stage === "DELIVERED";
   const goods = data.goodsXaf ?? 0;
   const fee = data.deliveryFeeXaf ?? 0;
-  const total = data.totalXaf ?? goods + fee;
+  const tip = Math.max(0, data.tipXaf ?? 0);
+  const waived = Math.max(0, data.launchWaiverXaf ?? 0);
+  /*
+    The receipt must show the figure that was actually charged.
+
+    `totalXaf` arrives before the waiver, because the waiver was applied to the
+    payment and nowhere else — so a first-order receipt read 8,000 while the
+    customer had paid 6,500. A receipt is a document people keep and produce
+    later; one that disagrees with the transaction is worse than none.
+  */
+  const total = Math.max(0, (data.totalXaf ?? goods + fee + tip) - waived);
   const saved = data.shopping && data.goodsCapXaf != null && data.goodsCapXaf > goods ? data.goodsCapXaf - goods : 0;
 
   const doc = h(
@@ -249,6 +263,11 @@ export async function generateReceiptPdfBlob(data: ReceiptPdfData): Promise<Blob
 
       data.shopping ? money(fr ? "Articles (prix du commerçant)" : "Items (the shop's price)", xaf(goods)) : null,
       money(fr ? "Frais de livraison" : "Delivery fee", xaf(fee)),
+      // The tip is the rider's, so it says so — on a document they may be shown.
+      tip > 0 ? money(fr ? "Pourboire livreur" : "Rider tip", xaf(tip)) : null,
+      waived > 0
+        ? money(fr ? "Première livraison offerte" : "First delivery on us", `-${xaf(waived)}`)
+        : null,
 
       h(View, { style: s.ruleStrong }),
       h(

@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
       goodsCapXaf: true,
       goodsActualXaf: true,
       overCapApprovedXaf: true,
+      tipXaf: true,
       overCapApprovedAt: true,
       customer: { select: { whatsappNumber: true } },
     },
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
     goodsCapXaf: order.goodsCapXaf,
     goodsActualXaf: order.goodsActualXaf,
     overCapApprovedXaf: null,
+    tipXaf: order.tipXaf,
   });
   if (!before.needsCustomerApproval) {
     return NextResponse.json({ ok: true, nothingToApprove: true });
@@ -92,6 +94,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
         goodsCapXaf: order.goodsCapXaf,
         goodsActualXaf: order.goodsActualXaf,
         overCapApprovedXaf: order.goodsActualXaf,
+        tipXaf: order.tipXaf,
       });
       await tx.payment.updateMany({
         where: { orderId: order.id, status: { in: ["PENDING", "SUBMITTED_UNVERIFIED"] } },

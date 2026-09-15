@@ -30,6 +30,7 @@ export function GoodsMoneyPanel({
   goodsReceiptReadXaf,
   deliveryFeeXaf,
   overCapApprovedXaf,
+  tipXaf,
 }: {
   serviceType: ServiceType;
   goodsCapXaf: number | null;
@@ -38,6 +39,8 @@ export function GoodsMoneyPanel({
   goodsReceiptReadXaf: number | null;
   deliveryFeeXaf: number | null;
   overCapApprovedXaf: number | null;
+  /** What the customer added for the rider. Never ours; shown, never split. */
+  tipXaf: number | null;
 }) {
   // Parcels and errands have no shopping money, and an empty money panel on
   // them would be noise on every order that is not a shop run.
@@ -49,6 +52,7 @@ export function GoodsMoneyPanel({
     goodsCapXaf,
     goodsActualXaf,
     overCapApprovedXaf,
+    tipXaf,
   });
   const check = checkReceipt(goodsActualXaf, goodsReceiptReadXaf);
 
