@@ -21,7 +21,6 @@ import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { quoteDeliveryFee, TIER_META, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { getExperience } from "@/lib/services/experiences";
-import { Stepper } from "@/components/customer/order/Stepper";
 import { ServiceSection } from "@/components/customer/order/ServiceSection";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
@@ -314,18 +313,29 @@ function OrderFormInner({ merchants }: { merchants: MerchantOption[] }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-lg pb-28" noValidate>
-      <Stepper current={1} />
-      {/* Themed hero */}
-      <div className={cn("relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b px-5 pb-8 pt-10", exp.gradient)}>
-        <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full blur-3xl" style={{ backgroundColor: `${exp.accent}33` }} />
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: `${exp.accent}22`, color: exp.accent }}>
-          <Icon className="h-6 w-6" />
-        </span>
-        <h1 className="mt-3 font-display text-2xl font-bold">{t(exp.titleKey)}</h1>
-        <p className="mt-1 text-sm text-mist-300">{t(exp.taglineKey)}</p>
+      {/*
+        A title, matching the five bespoke forms.
+
+        This is the last gradient hero in the customer journey. It only reaches
+        `URGENT_ITEM` and `MERCHANT_DELIVERY` now — every other service has its
+        own screen — but leaving it meant two of seven services looked like a
+        different product from the other five.
+
+        The stepper went with it. It was the only place `current={1}` was ever
+        rendered, and with the pinned bars carrying the context a customer on
+        one service saw a graphical stepper while a customer on another saw
+        nothing, then both saw one appear at step 2. Half a progress indicator
+        is worse than none.
+      */}
+      <div className="px-5 pb-3 pt-4">
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold">
+          <Icon className="h-5 w-5 shrink-0" style={{ color: exp.accent }} />
+          {t(exp.titleKey)}
+        </h1>
+        <p className="mt-1 text-sm text-mist-400">{t(exp.taglineKey)}</p>
       </div>
 
-      <div className="flex flex-col gap-6 px-5 pt-6">
+      <div className="flex flex-col gap-6 px-5">
         <WelcomeBack accent={exp.accent} fr={locale === "fr"} />
 
         <VoiceNoteField

@@ -8,7 +8,7 @@
  *
  * Run: npx tsx scripts/verify-order-redesign.ts
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { quoteDeliveryFee } from "../src/lib/orders/pricing";
@@ -43,6 +43,10 @@ const MEDICINE = "src/components/customer/order/forms/MedicineForm.tsx";
 const PARCEL = "src/components/customer/order/forms/ParcelForm.tsx";
 const MENU = "src/components/customer/food/MerchantMenu.tsx";
 const BAR = "src/components/customer/order/CartBar.tsx";
+const ERRAND = "src/components/customer/order/forms/ErrandForm.tsx";
+const GROCERY = "src/components/customer/order/forms/GroceryForm.tsx";
+const REVIEW = "src/components/customer/OrderReview.tsx";
+const CHECKOUT = "src/components/customer/order/CheckoutBar.tsx";
 
 console.log("\nThe catalogue still cannot be filled in by the interface");
 {
@@ -131,9 +135,19 @@ console.log("\nThe bar never invents a price");
     "a zone-only figure must read 'about 1,500', never '1,500'"
   );
   check(
-    "all three services use the one bar",
-    [FOOD, MEDICINE, PARCEL].every((f) => /<CartBar\b/.test(code(f))),
-    "three hand-rolled footers is how customers learn the services are priced differently"
+    "all five services use the one bar",
+    [FOOD, MEDICINE, PARCEL, ERRAND, GROCERY].every((f) => /<CartBar\b/.test(code(f))),
+    "five hand-rolled footers is how customers learn the services are priced differently"
+  );
+  check(
+    "and the checkout screen has one too",
+    /<CheckoutBar\b/.test(code(REVIEW)),
+    "the screen whose whole job is confirming a price had the total below the fold"
+  );
+  check(
+    "which never calls a ceiling a total",
+    /totalIsCeiling/.test(code(CHECKOUT)),
+    "a shopping order's figure is a cap until the rider is at the counter"
   );
 }
 
@@ -304,6 +318,76 @@ console.log("\nA dish tile shows the dish's letter, not the restaurant's");
   }
 }
 
+console.log("\nThe journey is one product, not two");
+{
+  /*
+    The v49 redesign reached three of the five order forms and stopped. What
+    made that visible was not the forms themselves but the seams: a customer on
+    parcel saw one visual language, a customer on errand saw the one it
+    replaced, and nobody comparing two screens of the same app should have to
+    wonder which is the real one.
+  */
+  const JOURNEY = [
+    FOOD, MEDICINE, PARCEL, ERRAND, GROCERY, REVIEW,
+    "src/components/customer/OrderForm.tsx",
+    "src/components/customer/OrderConfirmation.tsx",
+  ];
+
+  for (const path of JOURNEY) {
+    check(
+      `${path.split("/").pop()} has no gradient hero left`,
+      !/rounded-b-\[2rem\]/.test(code(path)),
+      "the 2rem-radius gradient block is the pattern being replaced"
+    );
+  }
+
+  /*
+    `code()`, not `read()`.
+
+    The first version of this used `read()` and failed on three files whose
+    *comments* explain that the badge was removed. That is the fourth time a
+    check in this repo has matched its own prose rather than any shipped code —
+    it is a cheap mistake and it is always the same one, so: strip comments
+    first, every time.
+  */
+  check(
+    "no screen prints a hardcoded step number",
+    !JOURNEY.some((p) => /Step \d of \d|Étape \d sur \d/.test(code(p))),
+    "a text badge on two screens plus a graphical stepper on a third is worse than neither"
+  );
+  check(
+    "and the stepper component is gone entirely",
+    !existsSync(join(ROOT, "src/components/customer/order/Stepper.tsx")),
+    "it rendered at step 1 on two of seven services, step 2 on review, and never step 3"
+  );
+
+  // One width, so the bars and the content they belong to line up.
+  for (const path of [FOOD, MEDICINE, PARCEL, ERRAND, GROCERY, BAR, CHECKOUT]) {
+    check(
+      `${path.split("/").pop()} is max-w-lg like every other customer screen`,
+      !/max-w-(xl|3xl|md|6xl)\b/.test(code(path)),
+      "four container widths across one journey is how the seams become visible"
+    );
+  }
+}
+
+console.log("\nDead weight stays dead");
+{
+  check(
+    "the unused night-scene hero is deleted",
+    !existsSync(join(ROOT, "src/components/customer/NightSceneHero.tsx")),
+    "160 lines with zero importers, and the canonical example of the old hero"
+  );
+  const svc = code("src/components/customer/order/ServiceSection.tsx");
+  for (const dead of ["FOOD_PICKUP", "MEDICINE_PICKUP", "GROCERY_PICKUP", "SMALL_PARCEL", "CUSTOM_ERRAND"]) {
+    check(
+      `ServiceSection no longer carries a dead ${dead} branch`,
+      !new RegExp(`case "${dead}"`).test(svc),
+      "these five have their own screens; the bodies here were unreachable and answered searches with the wrong file"
+    );
+  }
+}
+
 console.log("\nEvery touched file is still text");
 {
   /*
@@ -318,6 +402,9 @@ console.log("\nEvery touched file is still text");
     PARCEL,
     MENU,
     BAR,
+    CHECKOUT,
+    ERRAND,
+    GROCERY,
     "src/components/customer/food/MerchantRow.tsx",
     "src/lib/orders/useLiveFare.ts",
   ]) {

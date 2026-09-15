@@ -8,7 +8,6 @@ import { getDisclaimer, getLegalNotice } from "@/lib/i18n/legal";
 import { loadDraft, clearDraft, type OrderDraft } from "@/lib/orders/draft";
 import { priceCopy } from "@/lib/orders/priceCopy";
 import { isShoppingService, orderMoney } from "@/lib/orders/goodsMoney";
-import { Stepper } from "@/components/customer/order/Stepper";
 import { MoneyBreakdown } from "@/components/customer/order/MoneyBreakdown";
 import { DownloadPdfButton } from "@/components/customer/order/DownloadPdfButton";
 import type { OrderPdfData } from "@/components/customer/order/orderPdf";
@@ -213,7 +212,15 @@ export function OrderReview({ signedIn, accountRequired, firstOrderFreeCapXaf }:
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pb-32">
-      <Stepper current={2} />
+      {/*
+        The stepper is gone from the whole journey.
+
+        It rendered at step 1 on two of seven services and step 2 here, and
+        never at step 3 because no screen showed it — so a parcel customer saw
+        nothing, then a "2 of 3" appearing from nowhere, then nothing again.
+        The pinned bars carry the context instead: what this costs and what
+        happens when you press the button, on the screen you are on.
+      */}
       <div>
         <h1 className="font-display text-2xl font-bold">{t("review.title")}</h1>
         <p className="mt-1 text-sm text-mist-500">{t("review.subtitle")}</p>

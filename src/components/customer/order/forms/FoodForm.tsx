@@ -325,7 +325,7 @@ export function FoodForm() {
      the thread is never lost, and the basket line is editable in one tap. */
   if (stage === "details") {
     return (
-      <div className="mx-auto max-w-3xl px-4 pb-32 pt-4">
+      <div className="mx-auto max-w-lg px-4 pb-32 pt-4">
         <header className="mb-4">
           <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-amber-300">
             <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
@@ -452,7 +452,7 @@ export function FoodForm() {
 
   /* ─── The list ──────────────────────────────────────────────────────────── */
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-32 pt-4">
+    <div className="mx-auto max-w-lg px-4 pb-32 pt-4">
       <header className="mb-4">
         <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-amber-300">
           <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
