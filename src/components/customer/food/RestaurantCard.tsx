@@ -6,7 +6,7 @@ import { MapPin, Clock, Plus, Minus, Radio, ChevronDown } from "lucide-react";
 import { formatXaf } from "@/lib/utils";
 import { freshLabel } from "@/lib/merchants/freshness";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
-import { artworkFor, artworkStyle } from "@/lib/food/artwork";
+import { artworkFor, artworkStyle, initialsOf } from "@/lib/food/artwork";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 
 /**
@@ -254,7 +254,7 @@ export function RestaurantCard({
                             aria-hidden
                             className="absolute -bottom-3 right-1 select-none font-display text-5xl font-bold leading-none text-white/[0.13]"
                           >
-                            {dishArt.initials}
+                            {initialsOf(item.name)}
                           </span>
                         )}
                         {item.soldOut && (

@@ -56,9 +56,20 @@ const OPENERS = [
   "Is anything failing?",
 ];
 
-export function StaffAssistant() {
+/**
+ * Where it is standing.
+ *
+ * `panel` is the card inside Customer service — dense, capped, sharing a screen
+ * with the queue it is talking about. `page` is the same thing with a room of
+ * its own: full height, normal text, and the conversation is what the screen is
+ * for. One component either way, because two implementations of one idea is
+ * exactly how the customer and staff chats drifted into behaving differently,
+ * which is what got reported.
+ */
+export function StaffAssistant({ variant = "panel" }: { variant?: "panel" | "page" } = {}) {
   const [pending, setPending] = useState<Offer | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const page = variant === "page";
 
   /**
    * Runs the endpoint the button describes, from this browser, with this staff
@@ -92,8 +103,14 @@ export function StaffAssistant() {
   }
 
   return (
-    <div className="rounded-xl border border-violet-700/40 bg-violet-900/10 p-3">
-      <p className="flex items-center gap-2 text-sm font-semibold text-violet-300">
+    <div
+      className={
+        page
+          ? "flex h-[calc(100dvh-9rem)] flex-col rounded-2xl border border-violet-700/40 bg-violet-900/10 p-4"
+          : "rounded-xl border border-violet-700/40 bg-violet-900/10 p-3"
+      }
+    >
+      <p className={`flex items-center gap-2 font-semibold text-violet-300 ${page ? "text-base" : "text-sm"}`}>
         <Sparkles className="h-4 w-4" /> Ask the console
       </p>
       <p className="mt-1 text-xs leading-relaxed text-mist-500">
@@ -102,11 +119,12 @@ export function StaffAssistant() {
         and your name goes on what they do.
       </p>
 
-      <div className="mt-3">
+      <div className={page ? "mt-3 flex min-h-0 flex-1 flex-col" : "mt-3"}>
         <ChatPanel
           endpoint="/api/admin/assistant"
           openers={OPENERS}
-          dense
+          dense={!page}
+          className={page ? "flex min-h-0 flex-1 flex-col gap-3" : undefined}
           copy={{
             placeholder: "Ask about tonight…",
             intro: "Ask what needs you, who is waiting, or why something is failing.",

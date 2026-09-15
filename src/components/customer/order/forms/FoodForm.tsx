@@ -2,46 +2,57 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, Search, Store } from "lucide-react";
+import { UtensilsCrossed, Search, Store, ShoppingBag, Pencil } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
 import { useIntakePrefill, keepTyped } from "@/lib/orders/intakePrefill";
-import { formatXaf } from "@/lib/utils";
 import type { SelectedLocation } from "@/lib/locations/types";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
-import { RestaurantCard } from "@/components/customer/food/RestaurantCard";
+import { MerchantRow } from "@/components/customer/food/MerchantRow";
+import { MerchantMenu } from "@/components/customer/food/MerchantMenu";
+import { CartBar } from "@/components/customer/order/CartBar";
+import { useLiveFare } from "@/lib/orders/useLiveFare";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
 /**
- * Browsing food, from the businesses we have actually confirmed exist.
+ * Ordering food, rebuilt around how this is actually done at scale.
  *
- * ## What this replaced, and why it had to go
+ * ## The shape, and why it changed
  *
- * The previous version of this screen shipped **three invented restaurants** —
- * names, street addresses, ratings, delivery times, menus and prices, all
- * fabricated, illustrated with hot-linked stock photography. It was live: every
- * food order went through it. A customer could order a named dish at a named
- * price from a business that may not exist, and a rider would be sent to an
- * invented street to collect it.
+ * This was one long page: a stack of tall restaurant cards, one of which
+ * unrolled a grid of dishes, and beneath all of it the delivery fields. Every
+ * decision — which restaurant, which dishes, where to, who are you — lived on
+ * the same scroll, so nothing ever felt finished and the menu was permanently
+ * half-buried.
  *
- * That is the failure the OpenStreetMap import caused, which the owner caught
- * by checking the places themselves and which v12 deleted an entire catalogue
- * to undo — except worse, because that import contained real businesses that
- * had closed, while this invented the businesses.
+ * Meituan and Ele.me, between them roughly ninety per cent of a market of a
+ * billion people, both split it in two: **a list of places, then one place's
+ * menu, full screen.** Choosing where to eat and choosing what to eat are
+ * different decisions and they get different screens. That is this file's three
+ * stages — `list`, `menu`, `details` — and it is the only structural change,
+ * but it is the one that makes the rest possible.
  *
- * It also passed `subtotal + 1500` as `estimatedFeeXaf` and marked it firm, so
- * a 6,500 XAF meal was shown as an 8,000 XAF *delivery fee*. And it pre-filled
- * the customer's name and phone with placeholder values that submitted as-is,
- * creating orders against a contact number nobody owns.
+ * The specific borrowings, and the three things deliberately refused from the
+ * same study, are documented on `MerchantMenu`.
  *
- * ## The rule this screen runs on
+ * ## What did not change, because it is why this screen is trustworthy
  *
- * **Nothing appears here unless a human confirmed the business exists.** When
- * nobody has been confirmed yet, the honest thing is to say so and take the
- * order anyway by asking where to go — which is what the second half of this
- * screen does. An empty catalogue must never be filled in by the interface.
+ * The previous version of this screen once shipped **three invented
+ * restaurants** — names, street addresses, ratings, menus and prices, all
+ * fabricated, illustrated with hot-linked stock photography — and it was live.
+ * A customer could order a named dish at a named price from a business that may
+ * not exist, and a rider would be sent to an invented street to collect it.
+ *
+ * So: **nothing appears here unless a human confirmed the business exists.**
+ * When nobody has been confirmed yet, the honest thing is to say so and take
+ * the order anyway by asking where to go — which is what the free-text path
+ * does. An empty catalogue is never filled in by the interface.
+ *
+ * And the goods estimate is **never** passed as the delivery fee. They are
+ * different numbers with different owners; conflating them once put an 8,000
+ * XAF "delivery fee" on a 6,500 XAF meal.
  */
 
 const ACCENT = "#f59e0b";
@@ -55,6 +66,8 @@ interface CartLine {
   quantity: number;
 }
 
+type Stage = "list" | "menu" | "details";
+
 export function FoodForm() {
   const { locale } = useTranslation();
   // Never offer a way to pay that has no merchant code behind it.
@@ -62,6 +75,7 @@ export function FoodForm() {
   const fr = locale === "fr";
   const router = useRouter();
 
+  const [stage, setStage] = useState<Stage>("list");
   const [merchants, setMerchants] = useState<FoodMerchant[] | null>(null);
   const [query, setQuery] = useState("");
   /**
@@ -108,7 +122,6 @@ export function FoodForm() {
       .then((d) => {
         if (!live) return;
         setMerchants(d.merchants ?? []);
-        if (d.merchants?.length) setOpenMerchantId(d.merchants[0].id);
       })
       .catch(() => live && setMerchants([]));
     return () => {
@@ -153,13 +166,31 @@ export function FoodForm() {
   }, [cart, merchants, fr]);
 
   // What the shop will charge, as far as we know it. Deliberately never called
-  // a total and never passed as the delivery fee — those are different numbers
-  // and conflating them is what put an 8,000 XAF "fee" on a 6,500 XAF meal.
+  // a total and never passed as the delivery fee.
   const goodsEstimateXaf = lines.reduce((sum, l) => sum + (l.priceXaf ?? 0) * l.quantity, 0);
   const anyPriceUnknown = lines.some((l) => l.priceXaf == null);
+  const cartCount = lines.reduce((n, l) => n + l.quantity, 0);
 
   const browsing = lines.length > 0;
   const usingFreeText = !browsing && (vendorName.trim().length > 0 || freeItems.trim().length > 0);
+
+  const openMerchant = useMemo(
+    () => (merchants ?? []).find((m) => m.id === openMerchantId) ?? null,
+    [merchants, openMerchantId]
+  );
+
+  /*
+   * The fee, quoted while they are still choosing rather than after.
+   *
+   * Food is an errand — the rider goes in, waits, pays, comes out — so it is
+   * priced as one. The pickup end is the restaurant, whose zone we know once a
+   * merchant is chosen; until then the delivery end alone gives an estimate.
+   */
+  const { quote } = useLiveFare();
+  const fare = useMemo(
+    () => quote({ pickup, delivery, errand: true }),
+    [quote, pickup, delivery]
+  );
 
   const missing: string[] = [];
   if (!browsing && !usingFreeText) missing.push(fr ? "ce que vous voulez" : "what you want");
@@ -213,7 +244,7 @@ export function FoodForm() {
           : [{ name: itemDescription, qty: 1, notes: "" }],
         notes,
       },
-      quantity: browsing ? lines.reduce((s, l) => s + l.quantity, 0) : 1,
+      quantity: browsing ? cartCount : 1,
       declaredValueXaf: 0,
       preferredDeliveryTime: "ASAP",
       specialInstructions: notes,
@@ -230,8 +261,8 @@ export function FoodForm() {
       // It is NOT the delivery fee and must never be handed over as one.
       goodsCapXaf: goodsEstimateXaf > 0 ? goodsEstimateXaf : 0,
       acceptedTerms: true,
-      // Left for the server to decide from the delivery zone. The old screen
-      // passed the cart total here and called it firm.
+      // Left for the server to decide. The screen's live quote is the same
+      // function with the same rules, but the server prices the order of record.
       estimatedFeeXaf: null,
       merchantName: browsing ? shop!.merchantName : vendorName.trim(),
       deliveryZoneName: delivery?.zoneName ?? "",
@@ -242,13 +273,191 @@ export function FoodForm() {
     router.push("/order/review");
   }
 
+  /* ─── The menu, full screen ─────────────────────────────────────────────
+     Its own stage rather than an accordion: picking a restaurant and picking
+     dishes are different decisions, and a menu that shares a scroll with the
+     delivery form is a menu nobody finishes. */
+  if (stage === "menu" && openMerchant) {
+    return (
+      <div className="flex h-[100dvh] flex-col pb-[5.5rem]">
+        <MerchantMenu
+          merchant={openMerchant}
+          fr={fr}
+          quantities={cart}
+          onBump={bump}
+          onBack={() => setStage("list")}
+          onAskFor={(name) => {
+            // Carry the restaurant back to the free-text box rather than
+            // leaving them on an empty menu with nothing to press.
+            setVendorName(name);
+            setStage("list");
+            requestAnimationFrame(() =>
+              document.getElementById("food-free-text")?.scrollIntoView({ behavior: "smooth", block: "center" })
+            );
+          }}
+        />
+        <CartBar
+          fr={fr}
+          accent="amber"
+          glyph={<CartGlyph count={cartCount} />}
+          goodsXaf={goodsEstimateXaf}
+          goodsPartial={anyPriceUnknown}
+          fare={fare}
+          hint={
+            cartCount === 0
+              ? fr
+                ? "Choisissez vos plats"
+                : "Pick your dishes"
+              : fr
+                ? "Posez l'épingle de livraison pour voir le prix"
+                : "Drop the delivery pin to see the fee"
+          }
+          cta={fr ? "Suivant" : "Next"}
+          onCta={() => setStage("details")}
+          disabled={cartCount === 0}
+        />
+      </div>
+    );
+  }
+
+  /* ─── Where to, and who ─────────────────────────────────────────────────
+     Reached once there is something to deliver. The cart stays on the bar so
+     the thread is never lost, and the basket line is editable in one tap. */
+  if (stage === "details") {
+    return (
+      <div className="mx-auto max-w-3xl px-4 pb-32 pt-4">
+        <header className="mb-4">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-amber-300">
+            <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-mist-100">
+            {fr ? "On livre où ?" : "Where are we taking it?"}
+          </h1>
+        </header>
+
+        {browsing && (
+          <button
+            type="button"
+            onClick={() => setStage(openMerchant ? "menu" : "list")}
+            className="mb-4 flex w-full items-start gap-3 rounded-2xl border border-ink-700 bg-ink-900 px-3 py-2.5 text-left"
+          >
+            <ShoppingBag className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-sm font-bold text-mist-100">
+                {lines[0].merchantName}
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-mist-400">
+                {lines.map((l) => `${l.quantity}× ${l.name}`).join(" · ")}
+              </span>
+            </span>
+            <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mist-500" />
+          </button>
+        )}
+
+        <section className="flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
+          <LocationField
+            label={fr ? "Livrer à" : "Deliver to"}
+            value={delivery}
+            onChange={setDelivery}
+            accent={ACCENT}
+            mode="delivery"
+            suggestion={intake?.deliverySuggestion}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-mist-500">
+              {fr ? "Votre nom" : "Your name"}
+              <input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-amber-400 focus:outline-none"
+              />
+            </label>
+            <label className="text-xs text-mist-500">
+              {fr ? "Votre WhatsApp" : "Your WhatsApp"}
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                placeholder="6 90 00 00 00"
+                className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 placeholder:text-mist-500 focus:border-amber-400 focus:outline-none"
+              />
+            </label>
+          </div>
+        </section>
+
+        {/*
+          The note, promoted.
+
+          On Meituan the checkout note is the most-used control in the whole
+          flow — it is where "no chilli" and "call at the gate" live. Ours was a
+          single-line afterthought at the bottom of a stack of fields. In a city
+          navigated by landmarks rather than street numbers, this field is half
+          the delivery, so it gets its own block and room to write in.
+        */}
+        <section className="mt-3 rounded-2xl border border-dashed border-ink-600 bg-ink-900/60 p-4">
+          <label className="text-xs font-semibold uppercase tracking-wide text-mist-400">
+            {fr ? "Une note pour le livreur" : "A note for the rider"}
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              maxLength={250}
+              placeholder={
+                fr
+                  ? "Portail bleu, appeler en arrivant, pas de piment…"
+                  : "Blue gate, call when you arrive, no chilli…"
+              }
+              className="mt-1.5 w-full resize-none rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-normal normal-case tracking-normal text-mist-100 placeholder:text-mist-500 focus:border-amber-400 focus:outline-none"
+            />
+          </label>
+        </section>
+
+        <section className="mt-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-mist-400">
+            {fr ? "Paiement" : "Payment"}
+          </p>
+          <div className="mt-2 flex gap-2">
+            {(payMethods as PaymentMethod[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setPaymentMethod(m)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                  paymentMethod === m
+                    ? "border-amber-400 bg-amber-500/15 text-amber-200"
+                    : "border-ink-700 text-mist-400"
+                }`}
+              >
+                {m === "CASH" ? (fr ? "Espèces" : "Cash") : m === "MTN_MOMO" ? "MTN" : "Orange"}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <CartBar
+          fr={fr}
+          accent="amber"
+          glyph={<CartGlyph count={cartCount} />}
+          goodsXaf={goodsEstimateXaf}
+          goodsPartial={anyPriceUnknown}
+          fare={fare}
+          missing={attempted ? missing : undefined}
+          cta={fr ? "Continuer" : "Continue"}
+          onCta={submitOrder}
+          disabled={attempted && !ready}
+        />
+      </div>
+    );
+  }
+
+  /* ─── The list ──────────────────────────────────────────────────────────── */
   return (
     <div className="mx-auto max-w-3xl px-4 pb-32 pt-4">
-      <header className="mb-5">
+      <header className="mb-4">
         <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-amber-300">
           <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-mist-100">
+        <h1 className="mt-1 font-display text-2xl font-bold text-mist-100">
           {fr ? "Qu'est-ce qu'on vous apporte ?" : "What are we bringing you?"}
         </h1>
       </header>
@@ -257,17 +466,17 @@ export function FoodForm() {
         /* Shaped like what is coming rather than a spinner. On Cameroonian
            mobile data this is on screen for a couple of seconds, and a page
            that already has the right silhouette feels loaded before it is. */
-        <div className="flex flex-col gap-3" aria-busy="true">
+        <div className="flex flex-col gap-2" aria-busy="true">
           <span className="sr-only">{fr ? "Chargement…" : "Loading…"}</span>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="overflow-hidden rounded-3xl border border-ink-700 bg-ink-900">
-              <div className="h-36 w-full animate-pulse bg-ink-800/70" />
-              <div className="flex items-start gap-3 px-4 pb-4 pt-0">
-                <div className="-mt-8 h-16 w-16 shrink-0 animate-pulse rounded-2xl border-2 border-ink-900 bg-ink-800" />
-                <div className="flex-1 pt-2">
-                  <div className="h-4 w-2/5 animate-pulse rounded bg-ink-800" />
-                  <div className="mt-2 h-3 w-3/5 animate-pulse rounded bg-ink-800/70" />
-                </div>
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-2xl border border-ink-700 bg-ink-900 px-3 py-2.5"
+            >
+              <div className="h-14 w-14 shrink-0 animate-pulse rounded-2xl bg-ink-800" />
+              <div className="flex-1">
+                <div className="h-3.5 w-2/5 animate-pulse rounded bg-ink-800" />
+                <div className="mt-2 h-3 w-3/5 animate-pulse rounded bg-ink-800/70" />
               </div>
             </div>
           ))}
@@ -322,16 +531,17 @@ export function FoodForm() {
                 : "Nothing matches that. Tell us what you want below anyway — we will go and get it."}
             </p>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {shown.map((m) => (
-                <RestaurantCard
+                <MerchantRow
                   key={m.id}
                   merchant={m}
                   fr={fr}
-                  open={openMerchantId === m.id}
-                  onToggle={() => setOpenMerchantId(openMerchantId === m.id ? null : m.id)}
-                  quantities={cart}
-                  onBump={bump}
+                  inCart={m.items.reduce((n, i) => n + (cart[i.id] ?? 0), 0)}
+                  onOpen={() => {
+                    setOpenMerchantId(m.id);
+                    setStage("menu");
+                  }}
                 />
               ))}
             </div>
@@ -343,7 +553,10 @@ export function FoodForm() {
           have the place they want. A customer must never be unable to order
           food because we have not finished calling restaurants. */}
       {!browsing && (
-        <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
+        <section
+          id="food-free-text"
+          className="mt-5 flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4"
+        >
           <p className="text-sm font-semibold text-mist-100">
             {fr ? "Ou dites-nous simplement" : "Or just tell us"}
           </p>
@@ -377,110 +590,37 @@ export function FoodForm() {
         </section>
       )}
 
-      <section className="mt-5 flex flex-col gap-3 rounded-2xl border border-ink-700 bg-ink-900 p-4">
-        <LocationField
-          label={fr ? "Livrer à" : "Deliver to"}
-          value={delivery}
-          onChange={setDelivery}
-          accent={ACCENT}
-          mode="delivery"
-          suggestion={intake?.deliverySuggestion}
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-xs text-mist-500">
-            {fr ? "Votre nom" : "Your name"}
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-amber-400 focus:outline-none"
-            />
-          </label>
-          <label className="text-xs text-mist-500">
-            {fr ? "Votre WhatsApp" : "Your WhatsApp"}
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              inputMode="tel"
-              placeholder="6 90 00 00 00"
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 placeholder:text-mist-500 focus:border-amber-400 focus:outline-none"
-            />
-          </label>
-        </div>
-        <label className="text-xs text-mist-500">
-          {fr ? "Autre chose ?" : "Anything else?"}
-          <input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            maxLength={250}
-            className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 focus:border-amber-400 focus:outline-none"
-          />
-        </label>
-        <div className="flex gap-2">
-          {(payMethods as PaymentMethod[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setPaymentMethod(m)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold ${
-                paymentMethod === m
-                  ? "border-amber-400 bg-amber-500/15 text-amber-200"
-                  : "border-ink-700 text-mist-400"
-              }`}
-            >
-              {m === "CASH" ? (fr ? "Espèces" : "Cash") : m === "MTN_MOMO" ? "MTN" : "Orange"}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/*
-        z-30 and a safe-area inset, matching the other order forms.
-
-        Without a z-index this footer sat *under* the bottom nav (z-40), so the
-        two collided at the bottom of the screen on a phone — the price and the
-        continue button half-hidden behind the tab bar. Without the inset it also
-        ran into the home indicator on an iPhone.
-      */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center gap-3">
-          <div className="min-w-0 flex-1 text-xs">
-            {goodsEstimateXaf > 0 ? (
-              <>
-                <p className="font-semibold text-mist-100">
-                  {fr ? "Nourriture ≈ " : "Food ≈ "}
-                  {formatXaf(goodsEstimateXaf)}
-                  {anyPriceUnknown && (fr ? " + articles sans prix" : " + unpriced items")}
-                </p>
-                {/* Said here because it is the sentence that stops this reading
-                    as a hidden markup: we charge the shop's price, and our
-                    earning is the delivery, quoted separately on the next screen. */}
-                <p className="text-mist-500">
-                  {fr
-                    ? "Prix du restaurant, sans marge. La livraison est calculée à l'écran suivant."
-                    : "The restaurant's price, no markup. Delivery is worked out on the next screen."}
-                </p>
-              </>
-            ) : (
-              <p className="text-mist-500">
-                {attempted && missing.length
-                  ? `${fr ? "Il manque : " : "Still needed: "}${missing.join(", ")}`
-                  : fr
-                    ? "La livraison est calculée à l'écran suivant."
-                    : "Delivery is worked out on the next screen."}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={submitOrder}
-            className="shrink-0 rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black disabled:opacity-50"
-            disabled={attempted && !ready}
-          >
-            {fr ? "Continuer" : "Continue"}
-          </button>
-        </div>
-      </div>
+      <CartBar
+        fr={fr}
+        accent="amber"
+        glyph={<CartGlyph count={cartCount} />}
+        goodsXaf={goodsEstimateXaf}
+        goodsPartial={anyPriceUnknown}
+        fare={fare}
+        hint={
+          fr
+            ? "Choisissez un restaurant, ou dites-nous où aller"
+            : "Pick a restaurant, or tell us where to go"
+        }
+        cta={fr ? "Suivant" : "Next"}
+        onCta={() => setStage("details")}
+        disabled={!browsing && !usingFreeText}
+      />
     </div>
+  );
+}
+
+/** The basket, with what is in it. The thread, never lost. */
+function CartGlyph({ count }: { count: number }) {
+  return (
+    <span className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10">
+      <ShoppingBag className="h-5 w-5 text-amber-300" />
+      {count > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 font-display text-xs font-bold tabular-nums text-ink-950">
+          {count}
+        </span>
+      )}
+    </span>
   );
 }
 

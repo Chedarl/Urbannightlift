@@ -24,8 +24,6 @@ import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
-import { Logo } from "@/components/shared/Logo";
-import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn, groupXaf } from "@/lib/utils";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
@@ -172,9 +170,11 @@ export function ErrandForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
-      <div className="flex items-center justify-between px-4 py-3">
-        <button type="button" onClick={() => router.back()} className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
-        <Logo height={30} /><LanguageSwitch />
+      {/* Just a way back. This row used to repeat the logo and the language
+          switch that `CustomerHeader` has already drawn immediately above it —
+          two brand bars stacked before the form begins. */}
+      <div className="px-4 pt-3">
+        <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
       </div>
       <div className="relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b from-violet-500/25 via-fuchsia-600/10 to-transparent px-5 pb-7 pt-4">
         <div className="flex items-start gap-4">
