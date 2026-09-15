@@ -63,7 +63,18 @@ interface Props {
   endpoint: string;
   /** Extra fields this grounding needs — `fr` for a customer, nothing for staff. */
   extraBody?: Record<string, unknown>;
-  openers: string[];
+  /** Pills shown before anything is asked. Ignored when `emptyState` is given. */
+  openers?: string[];
+  /**
+   * Draws the whole before-anything-is-asked block instead of the opener pills.
+   *
+   * A blank box with a cursor tells nobody what is behind it, so a surface that
+   * wants to *say* what it can do needs the room where the pills were — and it
+   * needs that block to disappear the moment a conversation starts, which only
+   * this component knows. It is handed `ask` so whatever it draws can send a
+   * question itself rather than reaching back through a ref.
+   */
+  emptyState?: (ask: (text: string) => void) => React.ReactNode;
   copy: ChatCopy;
   renderActions?: (actions: unknown[]) => React.ReactNode;
   /** Restores a stored conversation. Absent where nothing is stored. */
@@ -77,7 +88,8 @@ interface Props {
 export function ChatPanel({
   endpoint,
   extraBody,
-  openers,
+  openers = [],
+  emptyState,
   copy,
   renderActions,
   loadHistory,
@@ -227,18 +239,22 @@ export function ChatPanel({
         {turns.length === 0 && (
           <div>
             <p className={`leading-relaxed text-mist-300 ${bubble}`}>{copy.intro}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {openers.map((o) => (
-                <button
-                  key={o}
-                  type="button"
-                  onClick={() => ask(o)}
-                  className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1.5 text-xs text-mist-300 hover:border-violet-500"
-                >
-                  {o}
-                </button>
-              ))}
-            </div>
+            {emptyState ? (
+              <div className="mt-3">{emptyState(ask)}</div>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {openers.map((o) => (
+                  <button
+                    key={o}
+                    type="button"
+                    onClick={() => ask(o)}
+                    className="rounded-full border border-ink-700 bg-ink-900 px-3 py-1.5 text-xs text-mist-300 hover:border-violet-500"
+                  >
+                    {o}
+                  </button>
+                ))}
+              </div>
+            )}
             {copy.caveat && (
               <p className="mt-4 text-xs leading-relaxed text-mist-600">{copy.caveat}</p>
             )}

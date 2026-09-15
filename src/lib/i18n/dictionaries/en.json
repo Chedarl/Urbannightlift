@@ -3,6 +3,7 @@
     "home": "Home",
     "order": "Order",
     "track": "Track",
+    "ask": "Ask",
     "help": "Help",
     "account": "Account"
   },
@@ -302,6 +303,7 @@
       "dashboard": "Dashboard",
       "orders": "Orders",
       "serviceDesk": "Customer service",
+      "assistant": "Ask the console",
       "customers": "Customers",
       "zones": "Zones & pricing",
       "locations": "Places",

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth/session";
 import { configuredPaymentMethods } from "@/lib/payments/methods";
 import { getOperatingSettings, resolveEnabledServices } from "@/lib/settings";
+import { fareRulesFrom } from "@/lib/orders/fare";
 import { recordAudit, diffFields } from "@/lib/audit";
 import type { ServiceType } from "@prisma/client";
 
@@ -41,6 +42,23 @@ export async function GET() {
         have no business in a public settings response.
       */
       paymentMethods: configuredPaymentMethods(settings),
+      /*
+        The tariff, published.
+
+        Every order screen used to say "delivery is worked out on the next
+        screen" and then show a number the customer had no way to have
+        predicted. That is the complaint the owner relayed: not that the fee is
+        high, but that it arrives without warning. A premium you can work out
+        from the clock and the map is forgiven; one that appears at the till is
+        resented.
+
+        These are rules, not secrets — the same figures the Settings screen
+        prints and the same ones a rider could read off a printed card. Sending
+        them lets the order form quote with `quoteDeliveryFee`, the *same*
+        function the server prices with, rather than a second implementation
+        that drifts away from it.
+      */
+      fareRules: fareRulesFrom(settings),
     },
     {
       // These are live operational switches — whether we are open, which

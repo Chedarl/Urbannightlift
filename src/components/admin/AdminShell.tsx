@@ -16,6 +16,7 @@ import {
   Wallet,
   LogOut, Bike,
   Headphones,
+  Sparkles,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { Logo } from "@/components/shared/Logo";
@@ -30,6 +31,10 @@ const NAV = [
   { href: "/admin/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/admin/orders", key: "orders", icon: ClipboardList },
   { href: "/admin/live", key: "serviceDesk", icon: Headphones },
+  // It was a card two thirds down Customer service — the one thing that answers
+  // "what needs me right now" was reachable only from a screen you open to do
+  // something else. The card stays; this is a way in.
+  { href: "/admin/assistant", key: "assistant", icon: Sparkles },
   { href: "/admin/customers", key: "customers", icon: Users2 },
   { href: "/admin/earnings", key: "earnings", icon: Wallet },
   { href: "/admin/zones", key: "zones", icon: MapPin, ownerOnly: true },

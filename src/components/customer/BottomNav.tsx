@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingBag, MapPin, LifeBuoy, UserCircle } from "lucide-react";
+import { Home, ShoppingBag, MapPin, Sparkles, UserCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -29,9 +29,16 @@ export function BottomNav({ signedIn = false }: { signedIn?: boolean }) {
     { href: homeHref, icon: Home, label: t("nav.home"), active: homeActive },
     { href: "/order", icon: ShoppingBag, label: t("nav.order"), active: pathname.startsWith("/order") },
     { href: "/track", icon: MapPin, label: t("nav.track"), active: pathname === "/track" },
-    // Help now stays in-app rather than handing off to WhatsApp — the same
-    // move as removing the WhatsApp hand-off from the order screen.
-    { href: "/help", icon: LifeBuoy, label: t("nav.help"), active: pathname.startsWith("/help") },
+    // Ask took the slot Help held, rather than becoming a sixth tab: six labels
+    // on a 390px screen truncates "Commander", and two separate tabs both
+    // meaning "I need something explained" is a split, not a choice.
+    //
+    // It is not a demotion of Help. What is behind this tab answers everything
+    // the Help page answers *and* knows tonight's real state — which pharmacies
+    // are on duty, what this route costs, where the asker's own order is — and
+    // its first row is a link to the Help page and a person. `/help` is
+    // unchanged and one tap away; the FAQ is simply no longer the front door.
+    { href: "/assistant", icon: Sparkles, label: t("nav.ask"), active: pathname.startsWith("/assistant") },
     { href: accountHref, icon: UserCircle, label: t("nav.account"), active: accountActive },
   ];
 

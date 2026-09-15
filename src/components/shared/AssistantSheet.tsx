@@ -40,6 +40,16 @@ import { actionHref, type Action } from "@/lib/ai/assistant/actions";
 const STAFF_PREFIXES = ["/admin", "/rider", "/merchant"];
 
 /**
+ * Where it is already the whole page.
+ *
+ * `/assistant` is this same conversation given a room of its own. A button whose
+ * only job is to open the assistant, floating on top of the assistant, is one
+ * affordance too many — and worse, tapping it would cover the conversation it
+ * was opened from with an identical, empty one.
+ */
+const IS_THE_PAGE = "/assistant";
+
+/**
  * Where the button has to move rather than disappear.
  *
  * I hid this on `/order` in #119 on the grounds that the sticky price bar and
@@ -62,6 +72,7 @@ export function AssistantSheet() {
 
   const path = pathname ?? "";
   if (STAFF_PREFIXES.some((p) => path.startsWith(p))) return null;
+  if (path === IS_THE_PAGE || path.startsWith(`${IS_THE_PAGE}/`)) return null;
 
   // On the order form the sticky price-and-continue bar owns the bottom of the
   // screen, so the button sits above it rather than under it.

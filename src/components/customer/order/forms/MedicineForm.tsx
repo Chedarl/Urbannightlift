@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft, Pill, ShieldCheck, FileText, Stethoscope, User, Phone, Trash2,
-  Plus, Minus, Upload, UserCheck, Repeat, Snowflake, MapPin, Banknote, ClipboardList, ChevronRight,
+  ArrowLeft, Pill, ShieldCheck, FileText, User, Phone, Trash2,
+  Plus, Minus, Upload, UserCheck, Repeat, Snowflake, MapPin, Banknote, ClipboardList,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
-import { priceCopy } from "@/lib/orders/priceCopy";
 import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
@@ -27,12 +26,11 @@ import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
-import { Logo } from "@/components/shared/Logo";
-import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
-import { cn, groupXaf } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { MerchantResult } from "@/app/api/merchants/search/route";
 import type { BrowsePharmacy, ShelfItem } from "@/app/api/pharmacy/browse/route";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
+import { CartBar } from "@/components/customer/order/CartBar";
 
 /**
  * The dropped pin, when there is one.
@@ -73,6 +71,9 @@ export function MedicineForm() {
   const [missing, setMissing] = useState<string[]>([]);
   const [merchant, setMerchant] = useState<MerchantResult | null>(null);
   const [pharmacyName, setPharmacyName] = useState("");
+  // The bar is outside the field stack, so it asks the form to submit itself
+  // rather than being a submit button that has to live inside it.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const { register, handleSubmit, watch, setValue, getValues, control } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -316,55 +317,113 @@ export function MedicineForm() {
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <button type="button" onClick={() => router.back()} className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
-        <Logo height={30} />
-        <LanguageSwitch />
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
+      {/* Just a way back.
+
+          This row used to repeat the logo and the language switch that
+          `CustomerHeader` has already drawn immediately above it — two brand
+          bars stacked, about 120px of a 844px screen spent saying the same
+          thing twice before the form begins. The food screen never had it,
+          which is why that one always looked less cramped. */}
+      <div className="px-4 pt-3">
+        <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
       </div>
 
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b from-teal-500/25 via-emerald-600/10 to-transparent px-5 pb-7 pt-4">
-        <div className="flex items-start gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-500/15 text-teal-300"><Pill className="h-8 w-8" /></span>
-          <div>
-            <h1 className="font-display text-2xl font-bold leading-tight">{fr ? "Médicaments / pharmacie" : "Medicine / pharmacy pickup"}</h1>
-            <p className="mt-1 text-sm font-medium text-teal-300">{fr ? "Étape 1 sur 3" : "Step 1 of 3"} <span className="text-mist-400">· {fr ? "Vérification & détails" : "Verification & order details"}</span></p>
-          </div>
-        </div>
+      {/* Hero, cut down to a line.
+          It was a 16-line gradient block with a 64px icon and a "Step 1 of 3"
+          badge, on a screen whose real first question is one the customer can
+          answer in a second. A title is a title; the fork below is the page. */}
+      <div className="px-4 pb-3 pt-2">
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold leading-tight">
+          <Pill className="h-5 w-5 text-teal-300" />
+          {fr ? "Pharmacie" : "Pharmacy"}
+        </h1>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-5">
+      <div className="flex flex-col gap-4 px-4">
         <WelcomeBack accent={ACCENT} fr={fr} />
 
+        {/*
+          ══ The fork ══
 
-        {/* Confidentiality banner */}
-        <div className="flex items-start gap-3 rounded-2xl border border-teal-500/30 bg-teal-950/30 p-4">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-teal-300" />
-          <p className="text-xs leading-relaxed text-teal-100">
-            <span className="font-semibold">{fr ? "Les articles sur ordonnance peuvent nécessiter une vérification." : "Prescription-sensitive items may require verification."}</span>{" "}
-            {fr ? "Nous traitons toutes les commandes avec une stricte confidentialité et soin." : "We handle all orders with strict confidentiality and care."}
-          </p>
+          This was two 12px buttons inside a card called "Prescription type",
+          sitting between a confidentiality banner and a name field. It is in
+          fact the **first and largest** decision on the screen: it decides
+          whether a prescription has to be photographed, whether a holder has to
+          be named, and whether a pharmacist has to see anything at all. Half
+          this form is irrelevant on one branch and mandatory on the other.
+
+          So it is asked first, asked large, and it now actually *does*
+          something: the prescription-only blocks below appear on one branch and
+          are out of the way on the other. A customer buying paracetamol at
+          1 a.m. should not scroll past an upload box and a "prescription
+          holder" field to get there.
+        */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              v: "OTC",
+              icon: Pill,
+              title: fr ? "Sans ordonnance" : "No prescription",
+              sub: fr ? "Paracétamol, pansements…" : "Paracetamol, plasters…",
+            },
+            {
+              v: "PRESCRIPTION",
+              icon: FileText,
+              title: fr ? "Sur ordonnance" : "On prescription",
+              sub: fr ? "Photo de l'ordonnance" : "A photo of the script",
+            },
+          ].map((o) => {
+            const on = prescriptionType === o.v;
+            return (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setValue("serviceDetails.prescriptionType" as never, o.v as never)}
+                aria-pressed={on}
+                className={cn(
+                  "flex flex-col items-start gap-1.5 rounded-2xl border p-4 text-left transition-colors",
+                  on
+                    ? "border-teal-400 bg-teal-500/12"
+                    : "border-ink-700 bg-ink-900/50 hover:border-ink-600"
+                )}
+              >
+                <o.icon className={cn("h-6 w-6", on ? "text-teal-300" : "text-mist-500")} />
+                <span
+                  className={cn(
+                    "font-display text-sm font-bold leading-tight",
+                    on ? "text-teal-100" : "text-mist-200"
+                  )}
+                >
+                  {o.title}
+                </span>
+                <span className="text-xs leading-snug text-mist-500">{o.sub}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Prescription type + patient name */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className={card}>
-            <p className={label}><Stethoscope className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Type d'ordonnance" : "Prescription type"}</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {[{ v: "PRESCRIPTION", icon: FileText, en: "Prescription", fr: "Ordonnance" }, { v: "OTC", icon: Pill, en: "Over-the-counter", fr: "Sans ordonnance" }].map((o) => (
-                <button key={o.v} type="button" onClick={() => setValue("serviceDetails.prescriptionType" as never, o.v as never)}
-                  className={cn("flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-xs font-medium", prescriptionType === o.v ? "border-teal-400 bg-teal-500/15 text-teal-200" : "border-ink-700 bg-ink-800 text-mist-400")}>
-                  <o.icon className="h-4 w-4" /> {fr ? o.fr : o.en}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className={card}>
-            <p className={label}><User className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Nom complet du patient" : "Patient full name"}</p>
-            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Jean Claude" : "e.g. Jean Claude"} data-error={missing.includes(fr ? "Nom du patient" : "Patient full name") ? "true" : undefined} {...register("fullName")} />
-          </div>
+        {/*
+          The confidentiality line, moved and shrunk.
+
+          It used to be a full banner at the top of every visit, including for
+          somebody buying plasters. It belongs to the prescription branch — that
+          is when a photograph of a medical document is about to be uploaded —
+          and it says the one thing that actually reassures: where the photo does
+          not go.
+        */}
+        {prescriptionType === "PRESCRIPTION" && (
+          <p className="flex items-start gap-2 rounded-xl border border-teal-500/25 bg-teal-950/25 px-3 py-2.5 text-xs leading-relaxed text-teal-100">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-300" />
+            {fr
+              ? "Votre ordonnance reste privée : elle ne figure jamais dans le PDF partagé ni dans un lien public. Seuls le pharmacien et notre équipe la voient."
+              : "Your prescription stays private: it never appears in the shared PDF or in any public link. Only the pharmacist and our team see it."}
+          </p>
+        )}
+
+        <div className={card}>
+          <p className={label}><User className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Nom complet du patient" : "Patient full name"}</p>
+          <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Jean Claude" : "e.g. Jean Claude"} data-error={missing.includes(fr ? "Nom du patient" : "Patient full name") ? "true" : undefined} {...register("fullName")} />
         </div>
 
         {/* Who is actually open, before we ask anyone to type a name. Renders
@@ -446,8 +505,17 @@ export function MedicineForm() {
           {missing.includes(fr ? "Liste des médicaments" : "Medicine list") && <p data-error="true" className="mt-2 text-xs text-restricted">{fr ? "Ajoutez au moins un médicament." : "Add at least one medicine."}</p>}
         </div>
 
-        {/* Upload prescription + holder */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        {/*
+          Prescription-only, and now genuinely only.
+
+          Both of these were shown to everybody. On the over-the-counter branch
+          an upload box and a "prescription holder" field are not merely
+          irrelevant — they read as a requirement, and a customer who thinks
+          they need a doctor's note to buy plasters at 1 a.m. closes the tab.
+          `hidden` rather than unmounted, so a customer who fills them in and
+          then changes the branch by mistake does not silently lose the file.
+        */}
+        <div className={cn("grid gap-4 sm:grid-cols-2", prescriptionType !== "PRESCRIPTION" && "hidden")}>
           <div className={card}>
             <p className={label}><Upload className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Joindre l'ordonnance" : "Upload prescription"}</p>
             <p className="mb-2 text-xs text-mist-500">JPG, PNG {fr ? "ou" : "or"} PDF (Max 10MB)</p>
@@ -571,21 +639,37 @@ export function MedicineForm() {
         />
       </div>
 
-      {/* Sticky footer */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-teal-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        {estimatedFee != null && (
-          <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, true).label}</span>
-            <span className="font-display text-base font-bold text-mist-100">{groupXaf(estimatedFee)} XAF</span>
-          </div>
-        )}
-        <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 font-display text-base font-bold text-ink-950">
-          <ClipboardList className="h-5 w-5" />
-          <span>{fr ? "Vérifier la commande" : "Review order summary"}</span>
-          <ChevronRight className="h-5 w-5" />
-        </button>
-        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-teal-400" />{fr ? "Votre commande est protégée. Traitée avec soin et confidentialité." : "Your order is protected. We handle it with care and confidentiality."}</p>
-      </div>
+      {/*
+        The same bar as food and parcel.
+
+        This screen had its own footer: a price row, a full-width button, and a
+        reassurance line — three stacked elements about 110px tall, phrased
+        differently from the other two services. Three hand-rolled footers is
+        how a customer comes to believe food and medicine are priced by
+        different rules. One bar, and the fee reads the same everywhere.
+      */}
+      <CartBar
+        fr={fr}
+        accent="emerald"
+        glyph={
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-teal-400/30 bg-teal-500/10">
+            <Pill className="h-5 w-5 text-teal-300" />
+          </span>
+        }
+        fare={
+          estimatedFee == null
+            ? null
+            : { totalXaf: estimatedFee, estimated: fare?.estimated ?? true, lines: fare?.lines ?? [] }
+        }
+        missing={missing.length > 0 ? missing : undefined}
+        hint={
+          fr
+            ? "Choisissez la pharmacie et l'adresse pour voir le prix"
+            : "Pick the pharmacy and the address to see the fee"
+        }
+        cta={fr ? "Vérifier" : "Review"}
+        onCta={() => formRef.current?.requestSubmit()}
+      />
     </form>
   );
 }

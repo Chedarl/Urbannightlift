@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft, Package, User, Phone, MapPin, FileText, Smartphone, Shirt, MoreHorizontal, Scale, DollarSign,
-  Wine, Lock, Camera, ClipboardList, Banknote, ChevronRight, ShieldCheck, Signature, ShieldCheck as ShieldIcon,
+  ArrowLeft, Package, User, FileText, Smartphone, Shirt, MoreHorizontal, Scale, DollarSign,
+  Wine, Lock, Camera, ClipboardList, Banknote, ShieldCheck, Signature, ShieldCheck as ShieldIcon,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
-import { priceCopy } from "@/lib/orders/priceCopy";
-import { quoteDeliveryFee, type ZoneTier } from "@/lib/orders/pricing";
+import { quoteDeliveryFee, distanceKm, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { useIntakePrefill, blank, asSentence } from "@/lib/orders/intakePrefill";
@@ -24,10 +23,10 @@ import { WelcomeBack } from "@/components/customer/order/fields/WelcomeBack";
 import { VoiceNoteField } from "@/components/customer/order/fields/VoiceNoteField";
 import { isRealName, localPhone, useProfilePrefill, useDeliverToAddress } from "@/lib/account/profile";
 import { SERVICE_STATUS_META, type SelectedLocation } from "@/lib/locations/types";
-import { Logo } from "@/components/shared/Logo";
-import { LanguageSwitch } from "@/components/shared/LanguageSwitch";
 import { cn, groupXaf } from "@/lib/utils";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
+import { CartBar } from "@/components/customer/order/CartBar";
+import { INSURED_VALUE_CAP_XAF } from "@/lib/i18n/legal";
 
 /**
  * The dropped pin, when there is one.
@@ -65,6 +64,9 @@ export function ParcelForm() {
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
+  // The bar lives outside the field stack, so it asks the form to submit
+  // itself rather than being a submit button that has to live inside it.
+  const formRef = useRef<HTMLFormElement>(null);
 
   const { register, handleSubmit, watch, setValue, getValues } = useForm<OrderInput>({
     resolver: zodResolver(orderSchema) as Resolver<OrderInput>,
@@ -109,6 +111,26 @@ export function ParcelForm() {
   const effZone = (sel: SelectedLocation | null) => sel?.zoneId ? { id: sel.zoneId, feeXaf: sel.feeXaf ?? 0, medicineFeeXaf: 0, nightUrgencyFeeXaf: 0, tier: (sel.tier ?? "GREEN") as ZoneTier } : null;
   const fare = useMemo(() => quoteDeliveryFee(effZone(pickupSel), effZone(deliverySel), { pickup: pin(pickupSel), delivery: pin(deliverySel) }), [pickupSel, deliverySel]);
   const estimatedFee = fare?.totalXaf ?? null;
+
+  /**
+   * The ride, in kilometres, once both ends are pinned.
+   *
+   * Road-adjusted by the same 1.3 factor `quoteFare` applies, so the figure on
+   * screen is the one the price was worked out from rather than a straight line
+   * that makes the fee look arbitrary.
+   */
+  const routeKm = useMemo(() => {
+    const a = pin(pickupSel);
+    const b = pin(deliverySel);
+    if (!a || !b) return null;
+    return distanceKm(a.lat, a.lng, b.lat, b.lng) * 1.3;
+  }, [pickupSel, deliverySel]);
+
+  // What they said the parcel is worth, and whether that is beyond what we
+  // would actually pay out. Both drive the cover line, which must never claim
+  // more than the approved limit.
+  const declaredValue = Number(watch("declaredValueXaf")) || 0;
+  const overCap = declaredValue > INSURED_VALUE_CAP_XAF;
   /**
    * Whether that fee is the final zone tariff, using the same rule the server
    * applies on submit. Wording only — the server re-decides authoritatively.
@@ -178,94 +200,184 @@ export function ParcelForm() {
   const PhonePrefix = () => <span className="flex shrink-0 items-center gap-1 rounded-l-xl border border-r-0 border-ink-700 bg-ink-800 px-2.5 text-sm text-mist-300">🇨🇲 +237</span>;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
-      <div className="flex items-center justify-between px-4 py-3">
-        <button type="button" onClick={() => router.back()} className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
-        <Logo height={30} /><LanguageSwitch />
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit, onInvalid)} className="mx-auto max-w-xl pb-28">
+      {/* Just a way back.
+
+          This row used to repeat the logo and the language switch that
+          `CustomerHeader` has already drawn immediately above it — two brand
+          bars stacked, about 120px of a 844px screen spent saying the same
+          thing twice before the form begins. The food screen never had it,
+          which is why that one always looked less cramped. */}
+      <div className="px-4 pt-3">
+        <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
       </div>
-      <div className="relative overflow-hidden rounded-b-[2rem] bg-gradient-to-b from-blue-500/25 via-indigo-600/10 to-transparent px-5 pb-7 pt-4">
-        <div className="flex items-start gap-4">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-300"><Package className="h-8 w-8" /></span>
-          <div>
-            <h1 className="font-display text-2xl font-bold leading-tight">{fr ? "Livraison de colis" : "Small parcel delivery"}</h1>
-            <p className="mt-1 text-sm font-medium text-blue-300">{fr ? "Étape 1 sur 3" : "Step 1 of 3"} <span className="text-mist-400">· {fr ? "Détails de l'envoi" : "Shipment details"}</span></p>
-          </div>
-        </div>
+      <div className="px-4 pb-3 pt-2">
+        <h1 className="flex items-center gap-2 font-display text-2xl font-bold leading-tight">
+          <Package className="h-5 w-5 text-blue-300" />
+          {fr ? "Petit colis" : "Small parcel"}
+        </h1>
       </div>
 
-      <div className="flex flex-col gap-4 px-4 pt-5">
+      <div className="flex flex-col gap-4 px-4">
         <WelcomeBack accent={ACCENT} fr={fr} />
 
+        {/*
+          ══ The route, first ══
 
-        {/* Sender */}
+          A food screen leads with a menu because that is the decision. A parcel
+          has no menu: the decision is *where*, and the price follows entirely
+          from it. So both ends go at the top, joined, with the distance visible
+          **while you are still choosing** rather than revealed at checkout.
+
+          They used to be buried — pickup at the bottom of a "Sender details"
+          card, drop-off at the bottom of a "Receiver details" card, four fields
+          apart — so the one thing that decides the fee was the last thing you
+          saw. The names and numbers still matter and are asked below; they are
+          simply not the first question.
+        */}
         <div className={card}>
-          <p className={cn(section, "mb-3 flex items-center gap-1.5")}><User className="h-4 w-4" /> {fr ? "Expéditeur" : "Sender details"}</p>
+          <div className="flex gap-3">
+            {/* The spine: violet at the pickup, gold at the drop, joined by the
+                gradient between them. It is the same pairing the tracking map
+                draws the route with, so the two screens read as one journey. */}
+            <div aria-hidden className="flex shrink-0 flex-col items-center pt-2.5">
+              <span className="h-2 w-2 rounded-full bg-violet-400" />
+              <span className="my-1 w-0.5 flex-1 bg-gradient-to-b from-violet-400 to-gold-400" />
+              <span className="h-2 w-2 rounded-full bg-gold-400" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className={cn(section, "mb-1.5")}>{fr ? "Ramassage" : "Pickup"}</p>
+              <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
+
+              <p className={cn(section, "mb-1.5 mt-4")}>{fr ? "Livraison" : "Drop-off"}</p>
+              <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
+              <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
+            </div>
+          </div>
+
+          {/*
+            The distance, the moment both pins exist.
+
+            This is the line that turns the fee from a rule into a reason. "You
+            are 6.4 km away" can be argued with in a way "you are in the yellow
+            zone" never could, and it is the same road-adjusted figure the fee
+            is actually computed from.
+          */}
+          {routeKm != null && (
+            <p className="mt-3 flex flex-wrap items-center gap-2 border-t border-ink-800 pt-3 text-xs tabular-nums text-mist-400">
+              <span className="rounded-full border border-ink-700 bg-ink-800 px-2.5 py-1">
+                {routeKm.toFixed(1)} km {fr ? "par la route" : "by road"}
+              </span>
+              <span className="rounded-full border border-ink-700 bg-ink-800 px-2.5 py-1">
+                ≈ {Math.max(8, Math.round(routeKm * 3.4))} min
+              </span>
+              <span className="flex items-center gap-1 text-safe">
+                <ShieldCheck className="h-3 w-3" />
+                {fr ? "Épingles posées — suivi disponible" : "Both pins dropped — tracking works"}
+              </span>
+            </p>
+          )}
+        </div>
+
+        {/* Who is sending, and who is receiving. Still asked, no longer first:
+            the route decides the price and the tracking; the names decide who
+            hands it over and who signs for it. */}
+        <div className={card}>
+          <p className={cn(section, "mb-3 flex items-center gap-1.5")}><User className="h-4 w-4" /> {fr ? "Expéditeur" : "Sender"}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <p className={label}>{fr ? "Nom complet" : "Sender full name"}</p>
+              <p className={label}>{fr ? "Nom complet" : "Full name"}</p>
               <input className={cn(input, "mt-1")} placeholder={fr ? "ex. Jean Michel" : "e.g. Jean Michel"} {...register("serviceDetails.senderName" as never)} />
             </div>
             <div>
-              <p className={label}>{fr ? "Téléphone" : "Sender phone number"}</p>
+              <p className={label}>{fr ? "Téléphone" : "Phone number"}</p>
               <div className="mt-1 flex"><PhonePrefix /><input className={cn(input, "rounded-l-none")} inputMode="tel" placeholder="6 90 12 34 56" data-error={missing.includes(fr ? "Téléphone de l'expéditeur" : "Sender phone number") ? "true" : undefined} {...register("whatsappNumber")} /></div>
             </div>
           </div>
-          <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de ramassage" : "Pickup address"}</p>
-          <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
-        </div>
 
-        {/* Receiver */}
-        <div className={card}>
-          <p className={cn(section, "mb-3 flex items-center gap-1.5")}><User className="h-4 w-4" /> {fr ? "Destinataire" : "Receiver details"}</p>
+          <p className={cn(section, "mb-3 mt-5 flex items-center gap-1.5")}><User className="h-4 w-4" /> {fr ? "Destinataire" : "Receiver"}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <p className={label}>{fr ? "Nom complet" : "Receiver full name"}</p>
+              <p className={label}>{fr ? "Nom complet" : "Full name"}</p>
               <input className={cn(input, "mt-1")} placeholder={fr ? "ex. Marie Claire" : "e.g. Marie Claire"} {...register("serviceDetails.receiverName" as never)} />
             </div>
             <div>
-              <p className={label}>{fr ? "Téléphone" : "Receiver phone number"}</p>
+              <p className={label}>{fr ? "Téléphone" : "Phone number"}</p>
               <div className="mt-1 flex"><PhonePrefix /><input className={cn(input, "rounded-l-none")} inputMode="tel" placeholder="6 90 12 34 56" {...register("serviceDetails.receiverPhone" as never)} /></div>
             </div>
           </div>
-          <p className={cn(label, "mb-1 mt-3")}><MapPin className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Adresse de dépôt" : "Drop-off address"}</p>
-          <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-          <LocationField label={fr ? "Adresse de dépôt" : "Drop-off address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de dépôt" : "Drop-off address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
         </div>
 
-        {/* Category + size */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className={card}>
-            <p className={cn(label, "mb-2")}><Package className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Catégorie du colis" : "Parcel category"}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {CATS.map((c) => (
-                <button key={c.v} type="button" onClick={() => setValue("serviceDetails.category" as never, c.v as never)} className={cn("flex items-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-medium", category === c.v ? "border-blue-400 bg-blue-500/10 text-blue-200" : "border-ink-700 bg-ink-800 text-mist-300")}>
-                  <c.icon className="h-4 w-4" /> {fr ? c.fr : c.en}
-                </button>
-              ))}
-            </div>
+        {/*
+          What is inside, and how big, as chips.
+
+          Typing is the enemy at 1 a.m. on a phone — and these were already
+          taps, but wrapped in two bordered cards with their own headings: three
+          rows of chrome for seven words. Chips say the same thing in two rows
+          and read as a choice rather than a form.
+        */}
+        <div>
+          <p className={cn(section, "mb-2")}>{fr ? "Ce qu'il y a dedans" : "What's inside"}</p>
+          <div className="flex flex-wrap gap-2">
+            {CATS.map((c) => (
+              <button key={c.v} type="button" onClick={() => setValue("serviceDetails.category" as never, c.v as never)} className={cn("flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors", category === c.v ? "border-blue-400 bg-blue-500/15 text-blue-200" : "border-ink-700 bg-ink-900 text-mist-400 hover:text-mist-200")}>
+                <c.icon className="h-4 w-4" /> {fr ? c.fr : c.en}
+              </button>
+            ))}
           </div>
-          <div className={card}>
-            <p className={cn(label, "mb-2")}><Package className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Taille du paquet" : "Package size"}</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[{ v: "S", t: fr ? "Petit" : "Small" }, { v: "M", t: fr ? "Moyen" : "Medium" }, { v: "L", t: fr ? "Grand" : "Large" }].map((o) => (
-                <button key={o.v} type="button" onClick={() => setValue("serviceDetails.size" as never, o.v as never)} className={cn("rounded-xl border px-2 py-2.5 text-sm font-semibold", size === o.v ? "border-blue-400 bg-blue-500/10 text-blue-200" : "border-ink-700 bg-ink-800 text-mist-300")}>{o.t}</button>
-              ))}
-            </div>
+
+          <p className={cn(section, "mb-2 mt-4")}>{fr ? "Taille" : "Size"}</p>
+          <div className="flex flex-wrap gap-2">
+            {[{ v: "S", t: fr ? "Petit" : "Small" }, { v: "M", t: fr ? "Moyen" : "Medium" }, { v: "L", t: fr ? "Grand" : "Large" }].map((o) => (
+              <button key={o.v} type="button" onClick={() => setValue("serviceDetails.size" as never, o.v as never)} className={cn("rounded-full border px-4 py-2 text-sm font-semibold transition-colors", size === o.v ? "border-blue-400 bg-blue-500/15 text-blue-200" : "border-ink-700 bg-ink-900 text-mist-400 hover:text-mist-200")}>{o.t}</button>
+            ))}
           </div>
         </div>
 
-        {/* Weight + declared value */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className={card}>
-            <p className={label}><Scale className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Poids" : "Weight"}</p>
-            <div className="mt-2 flex">
-              <input className={cn(input, "rounded-r-none")} type="number" min={0} step={0.1} inputMode="decimal" placeholder="0.5" {...register("serviceDetails.weight" as never)} />
-              <span className="flex items-center rounded-r-xl border border-l-0 border-ink-700 bg-ink-800 px-3 text-sm text-mist-400">kg</span>
-            </div>
+        {/*
+          ══ Declared value, and the cover it actually buys ══
+
+          The field used to sit alone under the heading "Declared value (XAF)"
+          and nothing on the screen said what declaring a value *gets* you. A
+          customer typing 120,000 had every reason to believe they had just
+          insured 120,000 XAF of phone. They had not: cover stops at
+          `INSURED_VALUE_CAP_XAF`, and above it the order stops being auto-priced
+          and goes to a person.
+
+          So the cap is stated beside the figure rather than discovered in the
+          terms, and the bar fills only as far as the cover reaches. This screen
+          must never show an order as insured beyond what we would actually pay.
+        */}
+        <div className={card}>
+          <p className={label}><DollarSign className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Valeur déclarée (XAF)" : "Declared value (XAF)"}</p>
+          <input className={cn(input, "mt-2 tabular-nums")} type="number" min={0} step={500} inputMode="numeric" placeholder={fr ? "ex. 10 000" : "e.g. 10,000"} {...register("declaredValueXaf")} />
+
+          <div className="mt-3 h-1 overflow-hidden rounded-full bg-ink-800">
+            <div
+              className={cn("h-full rounded-full transition-all", overCap ? "bg-caution" : "bg-safe")}
+              style={{ width: `${Math.min(100, (declaredValue / INSURED_VALUE_CAP_XAF) * 100)}%` }}
+            />
           </div>
-          <div className={card}>
-            <p className={label}><DollarSign className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Valeur déclarée (XAF)" : "Declared value (XAF)"}</p>
-            <input className={cn(input, "mt-2")} type="number" min={0} step={500} inputMode="numeric" placeholder={fr ? "ex. 10 000" : "e.g. 10,000"} {...register("declaredValueXaf")} />
+          <p className={cn("mt-2 flex items-start gap-1.5 text-xs leading-snug", overCap ? "text-caution" : "text-mist-400")}>
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            {overCap
+              ? fr
+                ? `Au-dessus de notre plafond de ${groupXaf(INSURED_VALUE_CAP_XAF)} XAF. Nous prenons quand même l'envoi — une personne confirme le prix et ce qui est couvert avant le départ.`
+                : `Above our ${groupXaf(INSURED_VALUE_CAP_XAF)} XAF cover limit. We will still carry it — a person confirms the price and what is covered before the rider sets off.`
+              : fr
+                ? `Couvert jusqu'à ${groupXaf(INSURED_VALUE_CAP_XAF)} XAF — notre plafond.`
+                : `Covered up to ${groupXaf(INSURED_VALUE_CAP_XAF)} XAF — our limit.`}
+          </p>
+        </div>
+
+        {/* Weight, on its own. It changes nothing about the price today and is
+            asked so the rider knows what they are going to collect. */}
+        <div className={card}>
+          <p className={label}><Scale className="h-3.5 w-3.5 text-blue-300" /> {fr ? "Poids approximatif" : "Rough weight"}</p>
+          <div className="mt-2 flex">
+            <input className={cn(input, "rounded-r-none tabular-nums")} type="number" min={0} step={0.1} inputMode="decimal" placeholder="0.5" {...register("serviceDetails.weight" as never)} />
+            <span className="flex items-center rounded-r-xl border border-l-0 border-ink-700 bg-ink-800 px-3 text-sm text-mist-400">kg</span>
           </div>
         </div>
 
@@ -370,18 +482,30 @@ export function ParcelForm() {
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-500/30 bg-ink-950/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
-        {estimatedFee != null && (
-          <div className="mx-auto mb-2 flex max-w-xl items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-2">
-            <span className="text-xs text-mist-400">{priceCopy(priceFirm, fr, false).label}</span>
-            <span className="font-display text-base font-bold text-mist-100">{groupXaf(estimatedFee)} XAF</span>
-          </div>
-        )}
-        <button type="submit" className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-blue-500 py-3.5 font-display text-base font-bold text-white">
-          <Package className="h-5 w-5" /><span>{fr ? "Vérifier la commande" : "Review order summary"}</span><ChevronRight className="h-5 w-5" />
-        </button>
-        <p className="mt-1.5 text-center text-xs text-mist-500"><ShieldCheck className="mr-1 inline h-3 w-3 text-blue-400" />{fr ? "Votre commande est protégée. Traitée avec soin." : "Your order is protected. We handle it with care."}</p>
-      </div>
+      {/* The same bar as food and medicine — see `CartBar` for why all three
+          services share one, and what it refuses to print. */}
+      <CartBar
+        fr={fr}
+        accent="sky"
+        glyph={
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10">
+            <Package className="h-5 w-5 text-blue-300" />
+          </span>
+        }
+        fare={
+          estimatedFee == null
+            ? null
+            : { totalXaf: estimatedFee, estimated: fare?.estimated ?? true, lines: fare?.lines ?? [] }
+        }
+        missing={missing.length > 0 ? missing : undefined}
+        hint={
+          fr
+            ? "Posez les deux épingles pour voir le prix"
+            : "Drop both pins to see the fee"
+        }
+        cta={fr ? "Vérifier" : "Review"}
+        onCta={() => formRef.current?.requestSubmit()}
+      />
     </form>
   );
 }

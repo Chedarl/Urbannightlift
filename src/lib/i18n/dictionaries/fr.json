@@ -3,6 +3,7 @@
     "home": "Accueil",
     "order": "Commander",
     "track": "Suivre",
+    "ask": "Demander",
     "help": "Aide",
     "account": "Compte"
   },
@@ -302,6 +303,7 @@
       "dashboard": "Tableau de bord",
       "orders": "Commandes",
       "serviceDesk": "Service client",
+      "assistant": "Demander à la console",
       "customers": "Clients",
       "zones": "Zones & tarifs",
       "locations": "Lieux",
