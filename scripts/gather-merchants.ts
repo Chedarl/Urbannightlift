@@ -29,13 +29,15 @@
  *
  * ## Cost
  *
- * Places text search is billable per request, priced by the field mask. One run
- * over the default queries is a few dozen searches. Run `--dry` first to see
- * exactly how many it would make, and `--queries` to narrow it, before pointing
- * it at a live key.
+ * Places text search is billable per request, priced by the field mask. The
+ * default sweep is 56 searches — twenty-nine quartiers against two subjects —
+ * and `--deep` is 216, one per landmark. Run `--dry` first to see exactly how
+ * many it would make, and `--queries` to narrow it, before pointing it at a
+ * live key.
  *
  * Run:
  *   npx tsx scripts/gather-merchants.ts --dry
+ *   npx tsx scripts/gather-merchants.ts --dry --deep
  *   npx tsx scripts/gather-merchants.ts --queries "pharmacie Bastos"
  *   npx tsx scripts/gather-merchants.ts
  */
@@ -44,6 +46,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { searchBusinesses, hasPlacesKey, type PlaceBusiness } from "../src/lib/maps/places";
+import { quartierNames, landmarkSeeds } from "../src/lib/geo/quartiers";
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT_DIR = path.join(ROOT, "prisma/data");
@@ -53,10 +56,15 @@ const OUT_DIR = path.join(ROOT, "prisma/data");
  *
  * Quartier by quartier rather than one city-wide search, because Places caps a
  * text search at 20 results and "restaurant Yaoundé" would return twenty places
- * in the centre and nothing in Essos. The quartiers here are the ones the zone
- * table already serves.
+ * in the centre and nothing in Essos.
+ *
+ * The eight names that used to be hardcoded here are now twenty-nine, from
+ * `src/lib/geo/quartiers.ts` — the same table the address field suggests
+ * landmarks from, so the places we search and the places we can describe stay
+ * the same set. `--deep` searches by landmark instead, which is roughly four
+ * times the searches and finds the bar on the junction rather than whatever
+ * ranks highest across a whole quartier.
  */
-const QUARTIERS = ["Bastos", "Essos", "Mvan", "Odza", "Nlongkak", "Mvog-Mbi", "Biyem-Assi", "Centre-ville"];
 
 const SUBJECTS: { term: string; category: "FOOD" | "PHARMACY" }[] = [
   { term: "restaurant", category: "FOOD" },
@@ -72,12 +80,13 @@ interface GatheredMerchant extends PlaceBusiness {
 function parseArgs() {
   const args = process.argv.slice(2);
   const dry = args.includes("--dry");
+  const deep = args.includes("--deep");
   const qIndex = args.indexOf("--queries");
   const explicit = qIndex >= 0 ? args[qIndex + 1]?.split(",").map((s) => s.trim()).filter(Boolean) : null;
-  return { dry, explicit };
+  return { dry, deep, explicit };
 }
 
-function plannedQueries(explicit: string[] | null): { query: string; category: "FOOD" | "PHARMACY" }[] {
+function plannedQueries(explicit: string[] | null, deep = false): { query: string; category: "FOOD" | "PHARMACY" }[] {
   if (explicit?.length) {
     // An explicit query is filed by which subject word it contains; anything
     // unrecognised is FOOD, which is the one a person will notice is wrong.
@@ -86,14 +95,15 @@ function plannedQueries(explicit: string[] | null): { query: string; category: "
       category: /pharmac/i.test(query) ? ("PHARMACY" as const) : ("FOOD" as const),
     }));
   }
-  return QUARTIERS.flatMap((q) =>
+  const places = deep ? landmarkSeeds() : quartierNames();
+  return places.flatMap((q) =>
     SUBJECTS.map((s) => ({ query: `${s.term} ${q} Yaoundé`, category: s.category }))
   );
 }
 
 async function main() {
-  const { dry, explicit } = parseArgs();
-  const queries = plannedQueries(explicit);
+  const { dry, deep, explicit } = parseArgs();
+  const queries = plannedQueries(explicit, deep);
 
   console.log(`${queries.length} search(es) planned:\n`);
   for (const q of queries) console.log(`  ${q.category.padEnd(8)} ${q.query}`);
