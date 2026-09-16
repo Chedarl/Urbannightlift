@@ -6,6 +6,18 @@ import { artworkFor, artworkStyle } from "@/lib/food/artwork";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 import type { PlaceBusiness } from "@/lib/maps/places";
+/*
+  Imported rather than defined here, and deliberately not re-exported.
+
+  These used to live in this file, which is `"use client"` — so the hub's
+  server-side shelf query called `tagsFromProducts` across the boundary, Next
+  replaced it with a client reference, and `/order` returned 500 on every
+  request while typecheck, lint, the build and seventy suites all passed.
+
+  Re-exporting them from here would rebuild the same trap for the next caller,
+  so anything that needs them imports `@/lib/merchants/tags` directly.
+*/
+import { tagsFromProducts } from "@/lib/merchants/tags";
 
 /**
  * One business, the same shape whichever service it belongs to.
@@ -281,59 +293,6 @@ export function fromMerchant(
   };
 }
 
-/**
- * Three things a business is known for, from what it actually sells.
- *
- * Categories first, because a category is how the merchant themselves group
- * their board — "Brochettes", "Poulet" — and it stays true as individual dishes
- * come and go. Product names fill in for a merchant who never categorised
- * anything, which is most of them early on.
- *
- * Title-cased because the column holds them shouted (`BROCHETTES`), and a row
- * of capitals reads as an error message.
- */
-export function tagsFromProducts(
-  items: { name: string; category?: string | null }[]
-): string[] {
-  /*
-    Categories *or* names, never a mixture.
-
-    The first version fell through from one to the other to fill three slots,
-    which on a merchant with one category and five dishes produced
-    "Brochettes · Poisson braisé · Coca-Cola" — two kinds of label in one row,
-    where the reader cannot tell which is which. A place that has grouped its
-    board is described by its groups; a place that has not is described by what
-    it sells.
-  */
-  const hasCategories = items.some((i) => (i.category ?? "").trim());
-  const source = hasCategories ? items.map((i) => i.category) : items.map((i) => i.name);
-
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const raw of source) {
-    const t = titleCase((raw ?? "").trim());
-    // Anything long enough to wrap is a dish description, not a label.
-    if (!t || t.length > 18) continue;
-    const key = t.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(t);
-    if (out.length >= 3) break;
-  }
-  return out;
-}
-
-export function titleCase(s: string): string {
-  if (!s) return s;
-  // Only shouted words are recased; "Poisson braisé" is left as the merchant
-  // typed it, because they know their own board better than this function does.
-  if (s !== s.toUpperCase()) return s;
-  return s
-    .toLowerCase()
-    .split(/(\s|-)/)
-    .map((w) => (/^[a-zà-ÿ]/.test(w) ? w[0].toUpperCase() + w.slice(1) : w))
-    .join("");
-}
 
 /**
  * A business found on the map as this card reads it.

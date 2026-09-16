@@ -15,7 +15,7 @@ import { CartBar } from "@/components/customer/order/CartBar";
 import { useLiveFare } from "@/lib/orders/useLiveFare";
 import { merchantToLocation } from "@/lib/locations/fromMerchant";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
-import { titleCase } from "@/components/customer/business/BusinessCard";
+import { titleCase } from "@/lib/merchants/tags";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 

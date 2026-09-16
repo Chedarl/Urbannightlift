@@ -25,7 +25,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { placeToLocation, merchantToLocation, type ZoneData } from "../src/lib/locations/fromMerchant";
-import { tagsFromProducts, titleCase } from "../src/components/customer/business/BusinessCard";
+import { tagsFromProducts, titleCase } from "../src/lib/merchants/tags";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {

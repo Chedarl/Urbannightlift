@@ -5,7 +5,8 @@ import type { MerchantCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
 import { yaoundeHour } from "@/lib/orders/tonight";
-import { tagsFromProducts, type BusinessCardData } from "@/components/customer/business/BusinessCard";
+import type { BusinessCardData } from "@/components/customer/business/BusinessCard";
+import { tagsFromProducts } from "@/lib/merchants/tags";
 
 /**
  * A featured business, with the freshness left as a timestamp.
