@@ -15,6 +15,7 @@ import { CartBar } from "@/components/customer/order/CartBar";
 import { useLiveFare } from "@/lib/orders/useLiveFare";
 import { merchantToLocation } from "@/lib/locations/fromMerchant";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
+import { titleCase } from "@/lib/merchants/tags";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
@@ -89,6 +90,15 @@ export function FoodForm() {
    * the morning is still worth seeing.
    */
   const [openOnly, setOpenOnly] = useState(false);
+  /**
+   * "Brochettes", "Poisson", "Poulet" — what the restaurants here actually
+   * cook, as a way into the list.
+   *
+   * Null is "everything". The categories are the merchants' own
+   * `MerchantProduct.category` values, so this filter cannot offer a kind of
+   * food nobody on the list sells.
+   */
+  const [dishCategory, setDishCategory] = useState<string | null>(null);
   const [openMerchantId, setOpenMerchantId] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
 
@@ -150,6 +160,7 @@ export function FoodForm() {
     const q = query.trim().toLowerCase();
     return merchants.filter((m) => {
       if (openOnly && !m.openNow) return false;
+      if (dishCategory && !m.items.some((i) => titleCase((i.category ?? "").trim()) === dishCategory)) return false;
       if (!q) return true;
       return (
         m.name.toLowerCase().includes(q) ||
@@ -157,7 +168,30 @@ export function FoodForm() {
         m.items.some((i) => i.name.toLowerCase().includes(q))
       );
     });
-  }, [merchants, query, openOnly]);
+  }, [merchants, query, openOnly, dishCategory]);
+
+  /**
+   * The kinds of food on offer tonight, commonest first.
+   *
+   * Counted over restaurants rather than dishes: a place with thirty
+   * brochettes and one fish should not make the list look like a brochette
+   * street. Capped at six, because a chip row that wraps to three lines is a
+   * menu of its own.
+   */
+  const dishCategories = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const m of merchants ?? []) {
+      const here = new Set<string>();
+      for (const i of m.items) {
+        const c = titleCase((i.category ?? "").trim());
+        if (c && c.length <= 18) here.add(c);
+      }
+      for (const c of here) count.set(c, (count.get(c) ?? 0) + 1);
+    }
+    return [...count.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 6);
+  }, [merchants]);
 
   const openCount = useMemo(() => (merchants ?? []).filter((m) => m.openNow).length, [merchants]);
 
@@ -587,6 +621,28 @@ export function FoodForm() {
             </div>
           )}
 
+          {/*
+            A way in by what you feel like eating, not by which restaurant you
+            already know the name of — which is the question somebody actually
+            arrives with at 1 AM.
+
+            Held to the same rule as the open/closed chips above: offered only
+            when there is more than one kind of food to choose between, because
+            a filter with one option teaches people not to press filters.
+          */}
+          {dishCategories.length > 1 && (
+            <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <FilterChip active={dishCategory === null} onClick={() => setDishCategory(null)}>
+                {fr ? "Tous les plats" : "All dishes"}
+              </FilterChip>
+              {dishCategories.map(([c, n]) => (
+                <FilterChip key={c} active={dishCategory === c} onClick={() => setDishCategory(dishCategory === c ? null : c)}>
+                  {c} <span className="tabular-nums opacity-60">{n}</span>
+                </FilterChip>
+              ))}
+            </div>
+          )}
+
           {shown.length === 0 ? (
             /* Searching for something nobody has is normal, and the page used
                to answer it with nothing at all — which reads as broken rather
@@ -739,7 +795,10 @@ function FilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+      /* `shrink-0` and `whitespace-nowrap` because the dish-category row
+         scrolls horizontally; without them the chips squeeze into each other
+         rather than running off the edge. */
+      className={`shrink-0 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
         active
           ? "border-amber-400 bg-amber-400/15 text-amber-200"
           : "border-ink-700 text-mist-400 hover:text-mist-200"

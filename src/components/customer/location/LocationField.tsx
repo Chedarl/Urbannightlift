@@ -67,6 +67,7 @@ export function LocationField({
   error,
   mode = "delivery",
   suggestion,
+  hideLabel = false,
 }: {
   label: string;
   value: SelectedLocation | null;
@@ -87,6 +88,15 @@ export function LocationField({
    * the confirming — which is theirs — exactly where it was.
    */
   suggestion?: string | null;
+  /**
+   * The parent already draws this field's heading.
+   *
+   * The pharmacy card printed "Pharmacy location" as its own title and then
+   * this field printed it again one line below. The full-screen sheet still
+   * needs the label for its header, so the answer is to hide the inline copy
+   * rather than to pass an empty string.
+   */
+  hideLabel?: boolean;
 }) {
   const { locale } = useTranslation();
   const fr = locale === "fr";
@@ -268,7 +278,7 @@ export function LocationField({
   if (!open) {
     return (
       <div>
-        <label className="mb-1 block text-sm font-medium text-mist-300">{label}</label>
+        {!hideLabel && <label className="mb-1 block text-sm font-medium text-mist-300">{label}</label>}
         {value ? (
           <div className="rounded-2xl border p-3" style={{ borderColor: `${accent}55` }} data-error={error ? "true" : undefined}>
             <div className="flex items-start gap-2">
