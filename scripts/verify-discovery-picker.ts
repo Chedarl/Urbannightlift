@@ -25,6 +25,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { placeToLocation, merchantToLocation, type ZoneData } from "../src/lib/locations/fromMerchant";
+import { tagsFromProducts, titleCase } from "../src/components/customer/business/BusinessCard";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -230,6 +231,58 @@ console.log("\nA find is never mistaken for a merchant of ours");
     "but it still reaches the rider",
     /pickupLandmark:\s*\n?\s*pickupBusiness/.test(parcel),
     "a name that sits on the screen and goes nowhere is the kind of field that looks like it works"
+  );
+}
+
+console.log("\nThe card says what a place is known for, from what it sells");
+{
+  check(
+    "categories become tags, shouted ones recased",
+    tagsFromProducts([{ name: "Brochette de boeuf", category: "BROCHETTES" }]).includes("Brochettes"),
+    "a row of capitals reads as an error message"
+  );
+  check(
+    "a merchant's own casing is left alone",
+    titleCase("Poisson braisé") === "Poisson braisé",
+    "they know their own board better than this function does"
+  );
+  check(
+    "product names fill in for a merchant who categorised nothing",
+    tagsFromProducts([{ name: "Ndolé", category: null }]).includes("Ndolé"),
+    "most merchants have no categories early on"
+  );
+  check("no more than three", tagsFromProducts(Array.from({ length: 9 }, (_, i) => ({ name: `P${i}`, category: `C${i}` }))).length === 3);
+  check(
+    "nothing long enough to wrap",
+    tagsFromProducts([{ name: "x", category: "Poisson braisé au feu de bois du village" }]).length === 0,
+    "that is a dish description, not a label"
+  );
+  check(
+    "categories and names are never mixed in one row",
+    tagsFromProducts([
+      { name: "Poulet DG", category: "POULET" },
+      { name: "Coca-Cola", category: null },
+    ]).join() === "Poulet",
+    "two kinds of label in one row, and the reader cannot tell which is which"
+  );
+  check(
+    "and none repeated",
+    (() => {
+      const t = tagsFromProducts([{ name: "a", category: "POULET" }, { name: "b", category: "Poulet" }]);
+      return new Set(t).size === t.length;
+    })()
+  );
+
+  const card = code(CARD);
+  check(
+    "a business found on the map carries no tags at all",
+    /tags: \[\]/.test(card),
+    "Google's primaryType is a taxonomy code, and we hold no products for a business nobody here has spoken to"
+  );
+  check(
+    "the one badge slot is a single slot, not a row",
+    /badge: \{ label: string; labelFr: string \} \| null/.test(card),
+    "a row of badges is a row nobody reads; the point of this one is that it is the only one"
   );
 }
 

@@ -69,6 +69,27 @@ export interface BusinessCardData {
   logoUrl: string | null;
   /** How many dishes or products we hold. Null for a business we have no menu for. */
   itemCount: number | null;
+  /**
+   * What this business is known for — "Brochettes", "Poisson", "Poulet".
+   *
+   * The single biggest visual difference between a card that reads as a real
+   * place and one that reads as a database row, and it costs nothing: these are
+   * the merchant's *own* product categories, which `MerchantProduct.category`
+   * already holds because it is what turns their price list into something
+   * browsable. Nothing here is guessed at, and a business with no products
+   * shows none.
+   */
+  tags: string[];
+  /**
+   * One thing that is true tonight and matters more than anything else on the
+   * card — the pharmacie de garde, in practice.
+   *
+   * Deliberately a single slot rather than a list. A row of badges is a row
+   * nobody reads; the point of this one is that it is the only one.
+   */
+  badge: { label: string; labelFr: string } | null;
+  /** How far, when both ends are known. Null rather than estimated. */
+  distanceKm: number | null;
   /** When they last told us what they actually have, already worded. */
   freshness: { fresh: boolean; text: string } | null;
 }
@@ -147,6 +168,15 @@ export function BusinessCard({
           <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-mist-100">
             {business.name}
           </span>
+          {/*
+            The one thing that is true tonight, ahead of the open/closed pill:
+            a pharmacy on duty is the reason somebody opened this screen at all.
+          */}
+          {business.badge && (
+            <span className="shrink-0 rounded-full bg-teal-400/15 px-2 py-0.5 text-xs font-semibold text-teal-300">
+              {fr ? business.badge.labelFr : business.badge.label}
+            </span>
+          )}
           {business.openNow !== null && (
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
@@ -163,6 +193,10 @@ export function BusinessCard({
             <span className="flex items-center gap-1 truncate text-mist-400">
               <MapPin className="h-3 w-3 shrink-0" /> {business.where}
             </span>
+          )}
+
+          {business.distanceKm != null && (
+            <span className="tabular-nums text-mist-500">{business.distanceKm.toFixed(1)} km</span>
           )}
 
           {business.verified ? (
@@ -196,6 +230,25 @@ export function BusinessCard({
             </span>
           )}
         </span>
+        {/*
+          What they are known for, in their own words.
+
+          Placed under the meta line rather than beside the name, because at
+          390px a name and three chips on one row means a truncated name — and
+          the name is the thing somebody is scanning for.
+        */}
+        {business.tags.length > 0 && (
+          <span className="mt-1.5 flex flex-wrap gap-1">
+            {business.tags.slice(0, 3).map((t) => (
+              <span
+                key={t}
+                className="rounded-md bg-ink-800 px-1.5 py-0.5 text-xs text-mist-400"
+              >
+                {t}
+              </span>
+            ))}
+          </span>
+        )}
       </span>
 
       <span className="flex shrink-0 items-center gap-1">
@@ -221,8 +274,65 @@ export function fromMerchant(
     openNow: m.openNow,
     logoUrl: m.logoUrl,
     itemCount: m.items.length,
+    tags: tagsFromProducts(m.items),
+    badge: null,
+    distanceKm: null,
     freshness,
   };
+}
+
+/**
+ * Three things a business is known for, from what it actually sells.
+ *
+ * Categories first, because a category is how the merchant themselves group
+ * their board — "Brochettes", "Poulet" — and it stays true as individual dishes
+ * come and go. Product names fill in for a merchant who never categorised
+ * anything, which is most of them early on.
+ *
+ * Title-cased because the column holds them shouted (`BROCHETTES`), and a row
+ * of capitals reads as an error message.
+ */
+export function tagsFromProducts(
+  items: { name: string; category?: string | null }[]
+): string[] {
+  /*
+    Categories *or* names, never a mixture.
+
+    The first version fell through from one to the other to fill three slots,
+    which on a merchant with one category and five dishes produced
+    "Brochettes · Poisson braisé · Coca-Cola" — two kinds of label in one row,
+    where the reader cannot tell which is which. A place that has grouped its
+    board is described by its groups; a place that has not is described by what
+    it sells.
+  */
+  const hasCategories = items.some((i) => (i.category ?? "").trim());
+  const source = hasCategories ? items.map((i) => i.category) : items.map((i) => i.name);
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of source) {
+    const t = titleCase((raw ?? "").trim());
+    // Anything long enough to wrap is a dish description, not a label.
+    if (!t || t.length > 18) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
+export function titleCase(s: string): string {
+  if (!s) return s;
+  // Only shouted words are recased; "Poisson braisé" is left as the merchant
+  // typed it, because they know their own board better than this function does.
+  if (s !== s.toUpperCase()) return s;
+  return s
+    .toLowerCase()
+    .split(/(\s|-)/)
+    .map((w) => (/^[a-zà-ÿ]/.test(w) ? w[0].toUpperCase() + w.slice(1) : w))
+    .join("");
 }
 
 /**
@@ -247,6 +357,15 @@ export function fromPlace(p: PlaceBusiness): BusinessCardData {
     openNow: null,
     logoUrl: null,
     itemCount: null,
+    /*
+      Google's `primaryType` is a taxonomy code — `meal_takeaway` — not
+      something a customer recognises, and we hold no products for a business
+      nobody here has spoken to. So a find shows no tags rather than a
+      machine-readable one.
+    */
+    tags: [],
+    badge: null,
+    distanceKm: null,
     freshness: null,
   };
 }

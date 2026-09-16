@@ -17,6 +17,8 @@ import { LocationField } from "@/components/customer/location/LocationField";
 import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { PharmacyTonight } from "@/components/customer/pharmacy/PharmacyTonight";
+import { CommonMedicines } from "@/components/customer/pharmacy/CommonMedicines";
+import type { PharmacyItem } from "@/lib/pharmacy/commonItems";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -224,6 +226,26 @@ export function MedicineForm() {
       setValue(`serviceDetails.meds.${blank}.dosage` as never, (it.unit ?? "") as never);
     } else {
       append({ name, dosage: it.unit ?? "", qty: 1 } as never);
+    }
+  }
+
+  /**
+   * One of the common night items tapped.
+   *
+   * Lands in exactly the same place a shelf item does — a row in the list the
+   * customer already has, no cart and no price — because these are the same
+   * kind of thing: a name for the pharmacist, not a purchase.
+   */
+  function addCommonItem(it: PharmacyItem) {
+    const rows = meds;
+    if (rows.some((m) => m?.name?.trim().toLowerCase() === it.name.trim().toLowerCase())) return;
+
+    const blank = rows.findIndex((m) => !m?.name?.trim());
+    if (blank >= 0) {
+      setValue(`serviceDetails.meds.${blank}.name` as never, it.name as never, { shouldValidate: true });
+      setValue(`serviceDetails.meds.${blank}.dosage` as never, it.strength as never);
+    } else {
+      append({ name: it.name, dosage: it.strength, qty: 1 } as never);
     }
   }
 
@@ -490,8 +512,10 @@ export function MedicineForm() {
             chosen, since a chosen one already carries its own pin. */}
         {!merchant && (
           <div className={card}>
+            {/* The card's heading is the field's heading. Both were drawn, so
+                the screen said "Pharmacy location" twice, one line apart. */}
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Lieu de la pharmacie" : "Pharmacy location"}</p>
-            <LocationField mode="pickup" label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
+            <LocationField mode="pickup" hideLabel label={fr ? "Lieu de la pharmacie" : "Pharmacy location"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Lieu de la pharmacie" : "Pharmacy location")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
             <p className="mt-2 text-xs text-mist-500">
               {fr
                 ? "Vous ne savez pas laquelle est ouverte ? Laissez vide — nous trouvons la pharmacie de garde la plus proche."
@@ -499,6 +523,32 @@ export function MedicineForm() {
             </p>
           </div>
         )}
+
+        {/*
+          The vocabulary, above the blank boxes.
+
+          The medicine list has always been a row of empty fields, and the shelf
+          that fills them reads one merchant's products — which, with no
+          verified pharmacy in the catalogue, means it never appears. So the
+          screen asked somebody with a sick child to spell a drug name from
+          memory. These twenty are merchant-independent and claim no stock.
+        */}
+        <CommonMedicines
+          fr={fr}
+          accent={ACCENT}
+          onPrescriptionBranch={prescriptionType === "PRESCRIPTION"}
+          chosen={meds.map((m) => m?.name ?? "")}
+          onPick={addCommonItem}
+          onNeedsPrescription={() => {
+            /*
+              Tapping a prescription-only molecule on the over-the-counter
+              branch moves them across, rather than letting a rider discover it
+              at the counter. Nothing they typed is lost: the branch is a
+              `hidden` toggle, not an unmount.
+            */
+            setValue("serviceDetails.prescriptionType" as never, "PRESCRIPTION" as never);
+          }}
+        />
 
         {/* Medicine list */}
         <div className={card}>
