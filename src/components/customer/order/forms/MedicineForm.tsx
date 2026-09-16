@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, Pill, ShieldCheck, FileText, User, Phone, Trash2,
   Plus, Minus, Upload, UserCheck, Repeat, Snowflake, MapPin, Banknote, ClipboardList,
+  Store, Pencil,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
@@ -75,6 +76,31 @@ export function MedicineForm() {
   const [missing, setMissing] = useState<string[]>([]);
   const [merchant, setMerchant] = useState<MerchantResult | null>(null);
   const [pharmacyName, setPharmacyName] = useState("");
+  /**
+   * Which of the three questions this screen is currently asking.
+   *
+   * ## Why this exists
+   *
+   * Rendered at 390px, this form was **3,430 pixels tall** — about nine phone
+   * screens of seventeen stacked cards, every one of them mandatory-looking,
+   * before the button that submits it. The food screen stopped looking like
+   * that in v51, when it was split into list → menu → details, and the reason
+   * given then applies here word for word: choosing *where* and choosing *what*
+   * are different decisions and they deserve different screens.
+   *
+   * It is worse here than it was on food, because this is the screen somebody
+   * reaches at 2 AM with a sick child. Nine screens of scrolling is the cost of
+   * finding out we also want their emergency contact.
+   *
+   * ## Why `hidden` rather than unmounting
+   *
+   * The same reason the prescription branch already gives two hundred lines
+   * down: everything stays mounted, so react-hook-form keeps every value, the
+   * field array keeps its rows, and an uploaded file cannot be lost by stepping
+   * back and forth. `display: none` contributes no height, so the scroll is one
+   * stage long even though the form is whole.
+   */
+  const [stage, setStage] = useState<"pharmacy" | "medicines" | "details">("pharmacy");
   // The bar is outside the field stack, so it asks the form to submit itself
   // rather than being a submit button that has to live inside it.
   const formRef = useRef<HTMLFormElement>(null);
@@ -103,6 +129,24 @@ export function MedicineForm() {
   const meds = (sd?.meds as Med[] | undefined) ?? [];
   const payment = watch("paymentMethod");
   const prescriptionType = (sd?.prescriptionType as string) ?? "PRESCRIPTION";
+
+  /**
+   * Enough of an answer to move on — not a validation pass.
+   *
+   * The real rules live in `orderSchema` and run on submit, where they can say
+   * precisely what is wrong. These two only stop somebody walking forward from
+   * a stage they have not answered at all, which is the one case where "Next"
+   * would be a lie. A pharmacy counts whether it came from our catalogue, the
+   * map, or their own typing; the medicine list counts as soon as one row has
+   * a name in it.
+   */
+  const havePharmacy = Boolean(merchant || pharmacyName.trim() || pickupSel);
+  const haveMedicines = meds.some((m) => m?.name?.trim());
+
+  /** Every stage starts at the top, the way arriving on a new screen does. */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [stage]);
 
   useProfilePrefill((p) => {
     if (isRealName(p.fullName)) setValue("fullName", p.fullName);
@@ -409,7 +453,33 @@ export function MedicineForm() {
       itemDescription: fr ? "Liste des médicaments" : "Medicine list",
     };
     setMissing(Object.keys(errs).map((k) => labels[k]).filter(Boolean) as string[]);
-    document.querySelector("[data-error='true']")?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    /*
+      Send them to the stage that holds the problem.
+
+      Splitting the form introduced a way to fail silently that did not exist
+      when everything was on one scroll: a missing pharmacy location is on the
+      first stage, and submitting happens on the third. Without this the
+      customer reads "Please complete: Pharmacy location" next to a screen that
+      does not contain it, and `scrollIntoView` finds a field inside a `hidden`
+      container, which scrolls nowhere.
+
+      Only the first error is worth routing to — that is the one they will fix.
+    */
+    const stageOf: Record<string, "pharmacy" | "medicines" | "details"> = {
+      pickupLocation: "pharmacy",
+      itemDescription: "medicines",
+      goodsCapXaf: "medicines",
+    };
+    const firstElsewhere = Object.keys(errs).map((k) => stageOf[k]).find(Boolean);
+    const target = firstElsewhere ?? "details";
+    setStage(target);
+
+    // After the stage has actually been painted, or the field is still inside a
+    // `display: none` container and scrolling to it does nothing.
+    requestAnimationFrame(() =>
+      document.querySelector("[data-error='true']")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    );
   }
 
   const PhonePrefix = () => (
@@ -426,21 +496,52 @@ export function MedicineForm() {
           thing twice before the form begins. The food screen never had it,
           which is why that one always looked less cramped. */}
       <div className="px-4 pt-3">
-        <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"><ArrowLeft className="h-5 w-5" /></button>
+        {/* One back control, not two. Inside the form it walks back a stage;
+            only from the first one does it leave the screen — which is what a
+            back arrow means to everybody who is not holding the source. */}
+        <button
+          type="button"
+          onClick={() =>
+            stage === "details"
+              ? setStage("medicines")
+              : stage === "medicines"
+                ? setStage("pharmacy")
+                : router.back()
+          }
+          aria-label={fr ? "Retour" : "Back"}
+          className="rounded-xl border border-ink-700 bg-ink-900/60 p-2 text-mist-300"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Hero, cut down to a line.
           It was a 16-line gradient block with a 64px icon and a "Step 1 of 3"
           badge, on a screen whose real first question is one the customer can
-          answer in a second. A title is a title; the fork below is the page. */}
+          answer in a second. A title is a title; the fork below is the page.
+
+          Still no step counter. The heading is the question this stage is
+          actually asking, which tells somebody where they are without turning
+          the screen into a progress bar to be endured — the same thing the
+          food screen does, and this repo deliberately tore "Step 1 of 3"
+          badges out of these very forms. */}
       <div className="px-4 pb-3 pt-2">
-        <h1 className="flex items-center gap-2 font-display text-2xl font-bold leading-tight">
-          <Pill className="h-5 w-5 text-teal-300" />
-          {fr ? "Pharmacie" : "Pharmacy"}
+        <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-teal-300">
+          <Pill className="h-4 w-4" /> {fr ? "Pharmacie" : "Pharmacy"}
+        </p>
+        <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-mist-100">
+          {stage === "pharmacy"
+            ? fr ? "Quelle pharmacie ?" : "Which pharmacy?"
+            : stage === "medicines"
+              ? fr ? "Que faut-il ?" : "What do you need?"
+              : fr ? "On livre où ?" : "Where are we taking it?"}
         </h1>
       </div>
 
       <div className="flex flex-col gap-4 px-4">
+
+        {/* ══════════ 1 · Which pharmacy ══════════ */}
+        <div className={cn("flex flex-col gap-4", stage !== "pharmacy" && "hidden")}>
         <WelcomeBack accent={ACCENT} fr={fr} />
 
         {/*
@@ -521,11 +622,6 @@ export function MedicineForm() {
           </p>
         )}
 
-        <div className={card}>
-          <p className={label}><User className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Nom complet du patient" : "Patient full name"}</p>
-          <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Jean Claude" : "e.g. Jean Claude"} data-error={missing.includes(fr ? "Nom du patient" : "Patient full name") ? "true" : undefined} {...register("fullName")} />
-        </div>
-
         {/* Who is actually open, before we ask anyone to type a name. Renders
             nothing until pharmacies are verified, which is what an empty
             catalogue should look like. */}
@@ -537,15 +633,11 @@ export function MedicineForm() {
           onAddItem={addShelfItem}
         />
 
-        {/* Patient phone + pharmacy name */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className={card}>
-            <p className={label}><Phone className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Téléphone du patient" : "Patient phone number"}</p>
-            <div className="mt-2 flex">
-              <PhonePrefix />
-              <input className={cn(input, "rounded-l-none")} inputMode="tel" placeholder="6 90 12 34 56" {...register("whatsappNumber")} />
-            </div>
-          </div>
+        {/* The pharmacy by name, for the one they already have in mind.
+            The patient's phone number used to share this row; it is a question
+            about the person, not the pharmacy, and it now sits with the rest of
+            them on the last stage. */}
+        <div>
           <div className={card}>
             <MerchantField
               category="PHARMACY"
@@ -578,6 +670,32 @@ export function MedicineForm() {
             </p>
           </div>
         )}
+
+        </div>
+
+        {/* ══════════ 2 · What do you need ══════════ */}
+        <div className={cn("flex flex-col gap-4", stage !== "medicines" && "hidden")}>
+
+        {/* What they settled on one screen ago, and the way back to change it.
+            Food does the same with the cart: a decision you have made should
+            stay visible, and the thing that shows it should be the thing that
+            edits it. */}
+        <button
+          type="button"
+          onClick={() => setStage("pharmacy")}
+          className="flex w-full items-start gap-3 rounded-2xl border border-ink-700 bg-ink-900 px-3 py-2.5 text-left"
+        >
+          <Store className="mt-0.5 h-4 w-4 shrink-0 text-teal-300" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-sm font-bold text-mist-100">
+              {merchant?.merchantName || pharmacyName.trim() || (fr ? "Pharmacie de garde la plus proche" : "Nearest pharmacy on duty")}
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-mist-400">
+              {pickupSel?.primaryName ?? (fr ? "Nous trouvons celle qui est ouverte" : "We find the one that's open")}
+            </span>
+          </span>
+          <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mist-500" />
+        </button>
 
         {/*
           The vocabulary, above the blank boxes.
@@ -691,36 +809,47 @@ export function MedicineForm() {
           suggestion={fr ? "ex. 10 000" : "e.g. 10,000"}
         />
 
-        <MoreDetails accent={ACCENT} fr={fr}>
-        <VoiceNoteField
-          accent={ACCENT}
-          fr={fr}
-          onChange={(n) => {
-            setValue("voiceNoteUrl", n?.url ?? "");
-            setValue("voiceNoteSeconds", n?.seconds ?? null);
-            // Whatever the phone managed to hear. Empty on a browser with no
-            // recogniser, which is fine: the server fills it in later if a key
-            // is ever configured, and a person can always play the recording.
-            setValue("voiceTranscript", n?.transcript ?? "");
-          }}
-        />
-
-        {/* Toggles */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <button type="button" onClick={() => setValue("serviceDetails.substituteOk" as never, (!sd?.substituteOk) as never)} className={cn(card, "flex items-center justify-between text-left")}>
-            {/* The sentence people actually mean. "Alternate brand allowed" is
-                a policy phrase; what a customer is answering is whether the
-                rider may come back with something other than what is written,
-                and it is now printed on the sheet the rider reads. */}
-            <span className="flex items-center gap-2 text-sm text-mist-200"><Repeat className="h-4 w-4 text-teal-300" /> {fr ? "Générique accepté si la marque manque" : "Generic is fine if the brand is out"}</span>
-            <ToggleDot on={Boolean(sd?.substituteOk)} />
-          </button>
-          <button type="button" onClick={() => setValue("needsTemperatureCare", !watch("needsTemperatureCare"))} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2 text-sm text-mist-200"><Snowflake className="h-4 w-4 text-teal-300" /> {fr ? "Chaîne du froid / fragile" : "Cold storage / fragile medicine"}</span>
-            <ToggleDot on={Boolean(watch("needsTemperatureCare"))} />
-          </button>
         </div>
-        </MoreDetails>
+
+        {/* ══════════ 3 · Where are we taking it ══════════ */}
+        <div className={cn("flex flex-col gap-4", stage !== "details" && "hidden")}>
+
+        {/* The list they just built, and the way back into it. */}
+        <button
+          type="button"
+          onClick={() => setStage("medicines")}
+          className="flex w-full items-start gap-3 rounded-2xl border border-ink-700 bg-ink-900 px-3 py-2.5 text-left"
+        >
+          <Pill className="mt-0.5 h-4 w-4 shrink-0 text-teal-300" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-sm font-bold text-mist-100">
+              {merchant?.merchantName || pharmacyName.trim() || (fr ? "Pharmacie de garde" : "Pharmacy on duty")}
+            </span>
+            <span className="mt-0.5 block text-xs leading-snug text-mist-400">
+              {meds.filter((m) => m?.name?.trim()).map((m) => `${m.qty || 1}× ${m.name}`).join(" · ") ||
+                (fr ? "Aucun médicament ajouté" : "No medicines added")}
+            </span>
+          </span>
+          <Pencil className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mist-500" />
+        </button>
+
+        {/* Who the medicine is for and how to reach them. Both used to sit at
+            the top of the screen, before the customer had decided anything —
+            the most abstract question on the form asked first. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className={card}>
+            <p className={label}><User className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Nom complet du patient" : "Patient full name"}</p>
+            <input className={cn(input, "mt-2")} placeholder={fr ? "ex. Jean Claude" : "e.g. Jean Claude"} data-error={missing.includes(fr ? "Nom du patient" : "Patient full name") ? "true" : undefined} {...register("fullName")} />
+          </div>
+          <div className={card}>
+            <p className={label}><Phone className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Téléphone du patient" : "Patient phone number"}</p>
+            <div className="mt-2 flex">
+              <PhonePrefix />
+              <input className={cn(input, "rounded-l-none")} inputMode="tel" placeholder="6 90 12 34 56" {...register("whatsappNumber")} />
+            </div>
+          </div>
+        </div>
+
 
         {/* Preferred pickup time + delivery address */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -736,7 +865,11 @@ export function MedicineForm() {
           <div className={card}>
             <p className={cn(label, "mb-2")}><MapPin className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Adresse de livraison" : "Delivery address"}</p>
             <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />
-            <LocationField label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
+            {/* Same duplicate v53 fixed one field up: the card draws the
+                heading and the field drew it again a line below. The sheet
+                still needs its own header, so `hideLabel` suppresses the
+                inline copy rather than passing an empty string. */}
+            <LocationField hideLabel label={fr ? "Adresse de livraison" : "Delivery address"} accent={ACCENT} value={deliverySel} error={missing.includes(fr ? "Adresse de livraison" : "Delivery address")} onChange={(l) => applySel("delivery", l)} suggestion={intake?.deliverySuggestion} />
           </div>
         </div>
 
@@ -774,6 +907,41 @@ export function MedicineForm() {
           <p className="mt-1 text-right text-xs text-mist-500">{(watch("specialInstructions")?.length ?? 0)}/250</p>
         </div>
 
+        {/* Optional, and now after the questions that are not.
+            Splitting the form left this disclosure at the top of the last
+            stage, so the first thing on a screen asking where to deliver was
+            a fold marked "optional". It belongs under the required fields. */}
+        <MoreDetails accent={ACCENT} fr={fr}>
+        <VoiceNoteField
+          accent={ACCENT}
+          fr={fr}
+          onChange={(n) => {
+            setValue("voiceNoteUrl", n?.url ?? "");
+            setValue("voiceNoteSeconds", n?.seconds ?? null);
+            // Whatever the phone managed to hear. Empty on a browser with no
+            // recogniser, which is fine: the server fills it in later if a key
+            // is ever configured, and a person can always play the recording.
+            setValue("voiceTranscript", n?.transcript ?? "");
+          }}
+        />
+
+        {/* Toggles */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <button type="button" onClick={() => setValue("serviceDetails.substituteOk" as never, (!sd?.substituteOk) as never)} className={cn(card, "flex items-center justify-between text-left")}>
+            {/* The sentence people actually mean. "Alternate brand allowed" is
+                a policy phrase; what a customer is answering is whether the
+                rider may come back with something other than what is written,
+                and it is now printed on the sheet the rider reads. */}
+            <span className="flex items-center gap-2 text-sm text-mist-200"><Repeat className="h-4 w-4 text-teal-300" /> {fr ? "Générique accepté si la marque manque" : "Generic is fine if the brand is out"}</span>
+            <ToggleDot on={Boolean(sd?.substituteOk)} />
+          </button>
+          <button type="button" onClick={() => setValue("needsTemperatureCare", !watch("needsTemperatureCare"))} className={cn(card, "flex items-center justify-between text-left")}>
+            <span className="flex items-center gap-2 text-sm text-mist-200"><Snowflake className="h-4 w-4 text-teal-300" /> {fr ? "Chaîne du froid / fragile" : "Cold storage / fragile medicine"}</span>
+            <ToggleDot on={Boolean(watch("needsTemperatureCare"))} />
+          </button>
+        </div>
+        </MoreDetails>
+
         {missing.length > 0 && (
           <div data-error="true" className="rounded-2xl border border-restricted/40 bg-restricted/10 p-3 text-sm text-restricted">
             <p className="mb-1 font-semibold">{fr ? "À compléter :" : "Please complete:"}</p>
@@ -787,6 +955,7 @@ export function MedicineForm() {
           error={missing.includes(fr ? "Accepter les conditions" : "Accept the terms")}
           fr={fr}
         />
+        </div>
       </div>
 
       {/*
@@ -813,12 +982,36 @@ export function MedicineForm() {
         }
         missing={missing.length > 0 ? missing : undefined}
         hint={
-          fr
-            ? "Choisissez la pharmacie et l'adresse pour voir le prix"
-            : "Pick the pharmacy and the address to see the fee"
+          stage === "pharmacy"
+            ? fr
+              ? "Choisissez une pharmacie, ou laissez-nous trouver celle de garde"
+              : "Pick a pharmacy, or let us find the one on duty"
+            : stage === "medicines"
+              ? fr
+                ? "Ajoutez ce qu'il faut aller chercher"
+                : "Add what needs collecting"
+              : fr
+                ? "Choisissez la pharmacie et l'adresse pour voir le prix"
+                : "Pick the pharmacy and the address to see the fee"
         }
-        cta={fr ? "Vérifier" : "Review"}
-        onCta={() => formRef.current?.requestSubmit()}
+        /*
+          The last stage submits; the first two walk forward. `disabled` is the
+          only gate before the schema runs, and it only catches a stage nobody
+          has answered at all — walking on from an empty one would make "Next"
+          a lie, but anything finer belongs to validation, which can say what
+          is actually wrong.
+        */
+        cta={stage === "details" ? (fr ? "Vérifier" : "Review") : fr ? "Suivant" : "Next"}
+        disabled={
+          (stage === "pharmacy" && !havePharmacy) || (stage === "medicines" && !haveMedicines)
+        }
+        onCta={() =>
+          stage === "pharmacy"
+            ? setStage("medicines")
+            : stage === "medicines"
+              ? setStage("details")
+              : formRef.current?.requestSubmit()
+        }
       />
     </form>
   );
