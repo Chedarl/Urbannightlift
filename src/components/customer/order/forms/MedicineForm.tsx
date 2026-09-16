@@ -18,7 +18,9 @@ import { useIntakePrefill, blank } from "@/lib/orders/intakePrefill";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { PharmacyTonight } from "@/components/customer/pharmacy/PharmacyTonight";
 import { CommonMedicines } from "@/components/customer/pharmacy/CommonMedicines";
+import { PrescriptionReader } from "@/components/customer/pharmacy/PrescriptionReader";
 import type { PharmacyItem } from "@/lib/pharmacy/commonItems";
+import type { DraftMedicine } from "@/lib/ai/prescriptionPhoto";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
 import { SavedAddresses } from "@/components/customer/order/fields/SavedAddresses";
@@ -96,7 +98,7 @@ export function MedicineForm() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "serviceDetails.meds" as never });
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "serviceDetails.meds" as never });
   const sd = watch("serviceDetails") as Record<string, unknown> | undefined;
   const meds = (sd?.meds as Med[] | undefined) ?? [];
   const payment = watch("paymentMethod");
@@ -247,6 +249,59 @@ export function MedicineForm() {
     } else {
       append({ name: it.name, dosage: it.strength, qty: 1 } as never);
     }
+  }
+
+  /**
+   * The rows read off a photographed prescription, once the customer has said
+   * they checked them.
+   *
+   * ## Why this lands in the same list as everything else
+   *
+   * A read row is not a different kind of thing from a tapped shelf item or a
+   * typed one — it is a name for the pharmacist. So it goes through the same
+   * three columns, and the order that leaves this screen carries no trace of
+   * where the name came from. That matters for one specific reason: the shared
+   * order PDF already prints `serviceDetails.meds`. Filling the existing list
+   * adds nothing to that PDF that was not already in it; stashing the raw
+   * transcription in a new field would put a medical document into a file we
+   * hand to a rider. The reader deliberately has nowhere else to write.
+   *
+   * ## What is carried and what is dropped
+   *
+   * Strength and form join the dosage column, where a hand-typed "500mg"
+   * already goes. A leading number in the quantity becomes the quantity.
+   *
+   * The **directions** — "2 fois par jour pendant 5 jours" — are shown on the
+   * reader for the customer to recognise the row by, and then dropped. They are
+   * a clinical instruction from a doctor to a patient; the pharmacist reads
+   * them off the photograph, which they have. We do not relay them.
+   */
+  function addReadMedicines(rows: DraftMedicine[]) {
+    // Blank placeholder rows are dropped rather than pushed down the list; a
+    // row somebody half-typed has a name and survives.
+    const existing = meds.filter((m) => m?.name?.trim());
+    const seen = new Set(existing.map((m) => m.name.trim().toLowerCase()));
+    const added: Med[] = [];
+
+    for (const r of rows) {
+      const name = r.name?.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const digits = r.quantity?.match(/\d{1,2}/)?.[0];
+      const qty = digits ? Number(digits) : 0;
+      const detail = [r.strength, r.form, qty > 0 ? null : r.quantity]
+        .map((s) => s?.trim())
+        .filter(Boolean)
+        .join(" · ");
+
+      added.push({ name, dosage: detail, qty: qty > 0 ? qty : 1 });
+    }
+
+    if (added.length === 0) return;
+    replace([...existing, ...added] as never);
   }
 
   /** Not catalogued — keep the name and ask where it is. */
@@ -600,6 +655,22 @@ export function MedicineForm() {
               <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFile} />
             </label>
             <p className="mt-1 flex items-center gap-1 text-xs text-mist-500"><ShieldCheck className="h-3 w-3" /> {fr ? "Privé — jamais dans le PDF partagé." : "Private — never in the shared PDF."}</p>
+            {/*
+              Offered only once a file is actually stored, which is why it sits
+              inside this card rather than beside it: the thing it reads is the
+              upload directly above, and it renders nothing until there is one.
+
+              It fills the medicine list further up the page. The customer has
+              to tick a box saying they checked the names first, and a failed
+              reading leaves the list exactly as it was — the photograph still
+              reaches the pharmacist either way, which is what happens today.
+            */}
+            <PrescriptionReader
+              photoPath={watch("screenshotUrl") || null}
+              fr={fr}
+              accent={ACCENT}
+              onAdd={addReadMedicines}
+            />
           </div>
           <div className={card}>
             <p className={label}><UserCheck className="h-3.5 w-3.5 text-teal-300" /> {fr ? "Titulaire / récepteur autorisé" : "Prescription holder / authorized receiver"}</p>
@@ -637,7 +708,11 @@ export function MedicineForm() {
         {/* Toggles */}
         <div className="grid gap-4 sm:grid-cols-2">
           <button type="button" onClick={() => setValue("serviceDetails.substituteOk" as never, (!sd?.substituteOk) as never)} className={cn(card, "flex items-center justify-between text-left")}>
-            <span className="flex items-center gap-2 text-sm text-mist-200"><Repeat className="h-4 w-4 text-teal-300" /> {fr ? "Marque alternative autorisée" : "Alternate brand allowed"}</span>
+            {/* The sentence people actually mean. "Alternate brand allowed" is
+                a policy phrase; what a customer is answering is whether the
+                rider may come back with something other than what is written,
+                and it is now printed on the sheet the rider reads. */}
+            <span className="flex items-center gap-2 text-sm text-mist-200"><Repeat className="h-4 w-4 text-teal-300" /> {fr ? "Générique accepté si la marque manque" : "Generic is fine if the brand is out"}</span>
             <ToggleDot on={Boolean(sd?.substituteOk)} />
           </button>
           <button type="button" onClick={() => setValue("needsTemperatureCare", !watch("needsTemperatureCare"))} className={cn(card, "flex items-center justify-between text-left")}>

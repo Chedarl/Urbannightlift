@@ -15,6 +15,7 @@ import { CartBar } from "@/components/customer/order/CartBar";
 import { useLiveFare } from "@/lib/orders/useLiveFare";
 import { merchantToLocation } from "@/lib/locations/fromMerchant";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
+import { BoardPhoto } from "@/components/customer/food/BoardPhoto";
 import { titleCase } from "@/lib/merchants/tags";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
@@ -120,6 +121,19 @@ export function FoodForm() {
    */
   const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null);
   const [freeItems, setFreeItems] = useState("");
+  /**
+   * What the food on the free-text path is expected to cost.
+   *
+   * `goodsEstimateXaf` below sums the *catalogue* cart, so on this path it is
+   * always zero and the order went out with no goods estimate at all — the
+   * spending cap had nothing to work from. A board photograph carries prices,
+   * so when one is read this is what they fill.
+   *
+   * It is the goods estimate and only ever that. It is not a quote to the
+   * customer and it is not the delivery fee; v49 conflated those two and it
+   * took two versions to unpick.
+   */
+  const [freeEstimateXaf, setFreeEstimateXaf] = useState(0);
   const [pickup, setPickup] = useState<SelectedLocation | null>(null);
 
   const [delivery, setDelivery] = useState<SelectedLocation | null>(null);
@@ -359,7 +373,7 @@ export function FoodForm() {
       referralCode: "",
       // What the food is expected to cost, which is what a spending cap is for.
       // It is NOT the delivery fee and must never be handed over as one.
-      goodsCapXaf: goodsEstimateXaf > 0 ? goodsEstimateXaf : 0,
+      goodsCapXaf: goodsEstimateXaf > 0 ? goodsEstimateXaf : freeEstimateXaf,
       acceptedTerms: true,
       // Left for the server to decide. The screen's live quote is the same
       // function with the same rules, but the server prices the order of record.
@@ -734,6 +748,25 @@ export function FoodForm() {
             accent={ACCENT}
             mode="pickup"
             suggestion={intake?.pickupSuggestion}
+          />
+          {/*
+            The camera, before the keyboard.
+
+            Everything the textarea below asks them to type is written on a
+            board they are standing in front of. The reader that turns that
+            board into rows has existed since v34 and was wired only to the
+            admin importer, because that screen publishes prices to strangers.
+            Nothing here is published: the rows go into this one order.
+          */}
+          <BoardPhoto
+            fr={fr}
+            accent={ACCENT}
+            onAdd={(text, estimateXaf) => {
+              setFreeItems((v) => (v.trim() ? `${v.trim()}, ${text}` : text));
+              // Added rather than replaced: two boards, or a board and a
+              // catalogue-free second stop, are one order and one estimate.
+              setFreeEstimateXaf((v) => v + estimateXaf);
+            }}
           />
           <label className="text-xs text-mist-500">
             {fr ? "Ce que vous voulez" : "What you want"}
