@@ -51,6 +51,20 @@ export interface FoodMerchant {
   openNow: boolean;
   open24h: boolean;
   /**
+   * Where the rider is actually going.
+   *
+   * These were not sent, and the food form quietly nulled the pickup pin on the
+   * catalogue path because of it — `pricing.ts` measures road distance from
+   * exactly these two numbers, so the path we most want people to use was the
+   * one priced from a zone guess. The merchant picker on the medicine page has
+   * always sent them; this is the same data, on the other screen.
+   */
+  latitude: number | null;
+  longitude: number | null;
+  landmark: string | null;
+  /** So `merchantToLocation` can set a contact at the pickup end. */
+  phone: string | null;
+  /**
    * When this restaurant last told us what they actually have.
    *
    * The differentiator, rendered as "confirmed 12 minutes ago". Everywhere else
@@ -87,6 +101,11 @@ export async function GET() {
       address: true,
       logoUrl: true,
       photoUrl: true,
+      latitude: true,
+      longitude: true,
+      landmark: true,
+      phone: true,
+      whatsappNumber: true,
       nightOpen: true,
       open24h: true,
       availabilityCheckedAt: true,
@@ -117,6 +136,10 @@ export async function GET() {
     address: m.address,
     logoUrl: m.logoUrl,
     photoUrl: m.photoUrl,
+    latitude: m.latitude,
+    longitude: m.longitude,
+    landmark: m.landmark,
+    phone: m.phone ?? m.whatsappNumber,
     openNow: m.open24h || (isNight && m.nightOpen),
     open24h: m.open24h,
     checkedAt: m.availabilityCheckedAt?.toISOString() ?? null,

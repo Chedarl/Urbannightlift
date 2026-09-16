@@ -108,6 +108,42 @@ export async function notifyRiderAssigned(riderId: string, orderCode: string, or
   ).catch(() => 0);
 }
 
+/**
+ * A customer wants a word, and the rider is mid-ride.
+ *
+ * ## Why this returns a number
+ *
+ * Every other trigger in this file swallows its result — a notification is
+ * never allowed to fail the thing it is announcing, and nobody is told whether
+ * the dispatcher's phone actually buzzed.
+ *
+ * This one is different, because the customer is about to be told what
+ * happened. v50 shipped a call sheet that said *"they have been told, and will
+ * call you back as soon as they stop"* while `/api/calls/invite` sent nothing
+ * at all — a sentence that was simply untrue. Returning the device count lets
+ * the screen say the true thing either way, which matters most right now:
+ * `sendPush` returns 0 whenever VAPID keys are unset, and they are.
+ *
+ * Still never throws. A failed notification must not fail the call.
+ */
+export async function notifyCallbackRequest(
+  riderId: string,
+  orderCode: string,
+  orderId: string
+): Promise<number> {
+  return sendPush(
+    { userIds: [riderId] },
+    {
+      title: `Your customer would like a word — ${orderCode}`,
+      body: "They tried to call. Give them a ring when you have stopped.",
+      url: `/rider/orders/${orderId}`,
+      // One per order: a customer tapping call three times should replace the
+      // notification, not stack three of them on a rider's lock screen.
+      tag: `callback-${orderId}`,
+    }
+  ).catch(() => 0);
+}
+
 export async function notifyRiderAnswered(
   orderCode: string,
   orderId: string,

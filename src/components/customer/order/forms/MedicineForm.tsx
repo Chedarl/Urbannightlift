@@ -165,6 +165,7 @@ export function MedicineForm() {
     setMerchant(m);
     setPharmacyName(m.merchantName);
     setValue("merchantId", m.id);
+    setValue("placeId", "");
     setValue("serviceDetails.pharmacy" as never, m.merchantName as never);
     applySel("pickup", loc);
   }
@@ -227,10 +228,32 @@ export function MedicineForm() {
   }
 
   /** Not catalogued — keep the name and ask where it is. */
+  /**
+   * A pharmacy found on the map rather than in our catalogue.
+   *
+   * It lands in the *typed* state deliberately — no `merchantId`, because it is
+   * not one of ours — but with its pin, so the rider is routed to a point and
+   * the fee is measured rather than estimated. That is the difference between
+   * this and somebody typing "Pharmacie du Stade" into a box, and it is the
+   * whole of what discovery buys at this stage.
+   */
+  function pickFoundPharmacy(b: { name: string; placeId: string }, loc: SelectedLocation) {
+    setMerchant(null);
+    setPharmacyName(b.name);
+    setValue("merchantId", "");
+    // The one thing about it the order carries. Everything else is looked up
+    // server-side, because a catalogue row is a claim about somebody else's
+    // pharmacy and a browser must not be able to write one.
+    setValue("placeId", b.placeId);
+    setValue("serviceDetails.pharmacy" as never, b.name as never);
+    applySel("pickup", loc);
+  }
+
   function useTypedPharmacy(name: string) {
     setMerchant(null);
     setPharmacyName(name);
     setValue("merchantId", "");
+    setValue("placeId", "");
     setValue("serviceDetails.pharmacy" as never, name as never);
   }
 
@@ -455,7 +478,9 @@ export function MedicineForm() {
               placeholder={fr ? "ex. Pharmacie du Stade" : "e.g. Pharmacie du Stade"}
               value={pharmacyName}
               merchantId={merchant?.id ?? null}
+              cardAccent="emerald"
               onPick={pickMerchant}
+              onDiscovered={pickFoundPharmacy}
               onFreeText={useTypedPharmacy}
             />
           </div>

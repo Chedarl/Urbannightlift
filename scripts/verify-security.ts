@@ -83,8 +83,18 @@ check("an empty field does not", !trippedHoneypot({ companyWebsite: "   " }));
 
 console.log("\nLimits are set where a person cannot reach them");
 check(
-  "ordering is the most generous of all",
-  LIMITS.order.max >= Math.max(...Object.values(LIMITS).map((l) => l.max)),
+  "ordering is the most generous of all the doors that refuse a submission",
+  LIMITS.order.max >=
+    Math.max(
+      ...Object.entries(LIMITS)
+        // The `places*` limits count keystrokes and address picks, not
+        // submissions, so a raw maximum compares two different units. That they
+        // leave enough room for every order the order limit allows is checked
+        // as arithmetic in `verify-rate-limits`, which is the question that
+        // actually matters for them.
+        .filter(([purpose]) => !purpose.startsWith("places"))
+        .map(([, l]) => l.max)
+    ),
   "a shared mobile NAT in Yaoundé must never stop somebody placing a real order"
 );
 check("every limit is per hour or longer", Object.values(LIMITS).every((l) => l.windowMinutes >= 60));

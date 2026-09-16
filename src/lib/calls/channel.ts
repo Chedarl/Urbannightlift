@@ -51,18 +51,36 @@ export function callChannelName(orderId: string, secret: string): string {
 }
 
 /**
- * 32 random bytes, for one call.
+ * The secret both sides of one call authenticate their messages with.
  *
- * Goes to the two authorised browsers and is never written down in the clear —
- * `CallSession.secretHash` stores `secretHash()` of it, which is enough to
- * prove after the fact that a given secret belonged to a given call and useless
- * for producing one.
+ * ## Why it is derived rather than minted
+ *
+ * The first version minted 32 random bytes at `invite` and stored only a hash.
+ * That made a working two-party call **impossible**: only the caller calls
+ * `invite`, so the answerer had no way to ever learn the value — and a
+ * `verify-calls` assertion was actively enforcing that, on the reasoning that
+ * "two ways to obtain it is one too many". The reasoning was wrong. Both ways
+ * sit behind the same `authoriseCall`, and the answerer has no other path.
+ *
+ * Deriving it fixes that without storing a secret at rest at all. Both routes
+ * compute the same value on demand from the server-held channel secret and the
+ * call id — exactly the construction `callChannelName` already uses, and as
+ * unguessable for the same reason.
+ *
+ * Rotating `CALL_CHANNEL_SECRET` invalidates calls in flight. For a value whose
+ * useful life is one conversation, that is the right trade.
  */
-export function mintCallSecret(): string {
-  return crypto.randomBytes(32).toString("base64url");
+export function callSecret(callId: string, channelSecret: string): string {
+  return crypto.createHmac("sha256", channelSecret).update(`secret:${callId}`).digest("base64url");
 }
 
-/** What is safe to store: enough to check, not enough to impersonate. */
+/**
+ * A fingerprint safe to store beside a call row.
+ *
+ * Kept for the audit trail — it proves after the fact that a given secret
+ * belonged to a given call, and is useless for producing one. Nothing
+ * authenticates against it; `acceptSignal` compares the derived value directly.
+ */
 export function secretHash(secret: string): string {
   return crypto.createHash("sha256").update(secret).digest("base64url");
 }

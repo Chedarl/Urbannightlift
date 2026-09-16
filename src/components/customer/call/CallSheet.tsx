@@ -36,7 +36,12 @@ import { DISPATCH_TEL, DISPATCH_DISPLAY } from "@/lib/contact";
  *   we say that *before* they dial, rather than letting them watch twenty
  *   seconds of "connecting" and conclude the product is broken.
  * - **Notified instead of rung** — the rider is moving. This is the one that
- *   would otherwise look like a failure and is not.
+ *   would otherwise look like a failure and is not. It has **two** versions,
+ *   and the split is the point: v50 shipped only the reassuring one, claiming
+ *   the rider "has been told" while `/api/calls/invite` sent nothing at all.
+ *   The server now reports whether a device was actually reached, and when
+ *   none was — which is every call until VAPID keys exist — this says so and
+ *   points at dispatch instead of inventing a rider who is about to ring back.
  */
 
 const ENDED_COPY: Record<CallEndReason, { en: string; fr: string }> = {
@@ -167,12 +172,24 @@ export function CallSheet({ orderCode, peerName, fr, onClose }: CallSheetProps) 
           failure. A rider mid-ride is not ignoring anybody.
         */}
         {call.askedForCallback && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs leading-relaxed text-violet-100">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
+          <p
+            className={`mt-4 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs leading-relaxed ${
+              call.callbackNotified
+                ? "border-violet-400/30 bg-violet-500/10 text-violet-100"
+                : "border-caution/30 border-l-[3px] border-l-caution bg-caution/[0.06] text-mist-200"
+            }`}
+          >
+            <Clock
+              className={`mt-0.5 h-4 w-4 shrink-0 ${call.callbackNotified ? "text-violet-300" : "text-caution"}`}
+            />
             <span>
-              {fr
-                ? `${peerName} conduit en ce moment, donc nous ne le faisons pas sonner — il a été prévenu et vous rappellera dès qu'il sera à l'arrêt. Si c'est urgent, la régulation peut le joindre.`
-                : `${peerName} is riding right now, so we have not rung them — they have been told, and will call you back as soon as they stop. If it is urgent, dispatch can reach them.`}
+              {call.callbackNotified
+                ? fr
+                  ? `${peerName} conduit en ce moment, donc nous ne le faisons pas sonner — il a été prévenu et vous rappellera dès qu'il sera à l'arrêt. Si c'est urgent, la régulation peut le joindre.`
+                  : `${peerName} is riding right now, so we have not rung them — they have been told, and will call you back as soon as they stop. If it is urgent, dispatch can reach them.`
+                : fr
+                  ? `${peerName} conduit en ce moment, donc nous ne le faisons pas sonner. Nous n'avons pas pu le prévenir sur son téléphone — la régulation, juste en dessous, peut lui transmettre votre message.`
+                  : `${peerName} is riding right now, so we have not rung them. We could not get a notification to their phone either — dispatch, just below, can pass your message on.`}
             </span>
           </p>
         )}

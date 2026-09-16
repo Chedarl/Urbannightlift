@@ -132,7 +132,14 @@ export function useLiveFare() {
       return { totalXaf: fare.totalXaf, estimated: fare.estimated, lines: fare.lines };
     }
 
-    return { quote, ready: rules !== null && zones !== null };
+    /*
+      The zone table is handed back as well as used.
+      A screen that turns a catalogued merchant into a pickup point needs it —
+      `merchantToLocation` resolves the zone from the coordinates — and the
+      alternative is a third `/api/zones` fetch on a page that has already made
+      two. The row shape is `ZoneData`'s by construction.
+    */
+    return { quote, zones: zones ?? [], ready: rules !== null && zones !== null };
   }, [rules, zones, byId]);
 }
 

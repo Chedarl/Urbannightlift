@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { authoriseCall, denyStatus } from "@/lib/calls/authorise";
-import { callChannelName } from "@/lib/calls/channel";
+import { callChannelName, callSecret } from "@/lib/calls/channel";
 import { mintIceServers } from "@/lib/calls/ice";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +23,18 @@ export const dynamic = "force-dynamic";
  * exactly the case where somebody would most want to route around the
  * dispatcher who put it there.
  *
- * ## The secret is not re-issued here
+ * ## The secret *is* returned here, and the first version was wrong to refuse
  *
- * It was minted at invite and handed to both parties through the channel they
- * are already authorised for. Returning it again from a second endpoint would
- * mean two independent ways to obtain the thing that authenticates every
- * message on the line, and one of them is always the one nobody re-checks.
+ * v50 deliberately withheld it, reasoning that "two ways to obtain the thing
+ * that authenticates every message is one too many". That made a two-party call
+ * impossible: the secret was minted at `invite`, only the **caller** calls
+ * invite, so the answerer could never obtain the value every message must
+ * carry. A `verify-calls` assertion was enforcing the mistake.
+ *
+ * Both endpoints sit behind the same `authoriseCall` and the same
+ * "does this call belong to your order" check, so this is not a second, weaker
+ * door — it is the same door, for the other person. The secret is derived from
+ * the call id (`callSecret`), so it is not stored anywhere to be stolen from.
  */
 export async function POST(
   req: NextRequest,
@@ -73,6 +79,12 @@ export async function POST(
   return NextResponse.json({
     callId: session.id,
     channel: callChannelName(auth.order.id, channelSecret),
+    /*
+      The same value the caller derived. Without it the answerer can neither
+      authenticate what it receives nor sign what it sends, which is to say it
+      cannot take the call at all.
+    */
+    secret: callSecret(session.id, channelSecret),
     party: auth.party,
     iceServers: ice.iceServers,
     relayCapable: ice.relayCapable,

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { MapPin, Search, Map as MapIcon, Crosshair, LayoutGrid, X, Check, ChevronRight, HelpCircle } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { nearestZone, type ZoneTier } from "@/lib/orders/pricing";
 import { encodePlusCode } from "@/lib/locations/plusCode";
+import { landmarksNear } from "@/lib/geo/quartiers";
 import {
   SERVICE_STATUS_META,
   ARRONDISSEMENT_LABEL,
@@ -142,6 +143,16 @@ export function LocationField({
     if (groups.length) return;
     fetch("/api/locations").then((r) => r.json()).then((d) => setGroups(d.groups ?? [])).catch(() => {});
   }, [groups.length]);
+
+  /*
+   * Recomputed as the pin moves, which is the only way it can be right: a
+   * customer who drops a pin, sees the wrong suggestions and drags the map
+   * should get the new quartier's words, not the old one's.
+   */
+  const suggestedLandmarks = useMemo(
+    () => (draft ? landmarksNear(draft.lat, draft.lng) : []),
+    [draft]
+  );
 
   const resolveStatus = useCallback((tier: ZoneTier | null, d: Draft): string => {
     if (d.baseStatus === "BLOCKED" || d.baseStatus === "TEMPORARILY_UNAVAILABLE") return d.baseStatus;
@@ -349,6 +360,40 @@ export function LocationField({
             <div>
               <label className="mb-1 block text-xs text-mist-400">{fr ? "Point de repère le plus proche" : "Nearest landmark"}{needsLandmark && <span className="text-restricted"> *</span>}</label>
               <input value={landmark} onChange={(e) => setLandmark(e.target.value)} className="w-full rounded-xl border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-mist-100" placeholder={fr ? "Ex. En face de la station-service" : "e.g. Opposite the petrol station"} />
+              {/*
+                What people around this pin actually say.
+
+                This box is required for any pin that did not come from our own
+                catalogue, and until now it was a blank field with a generic
+                example in it — somebody in Mendong at 1 AM had to invent, from
+                nothing, the phrase a rider would navigate by. In this city the
+                landmark *is* the address, so the words exist; they were just
+                never written down here.
+
+                Suggestions, never a value: tapping one fills the box, and the
+                customer can edit or ignore it. Nothing claims to know where
+                they are.
+              */}
+              {suggestedLandmarks.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {suggestedLandmarks.map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => setLandmark(l)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                        landmark === l
+                          ? "border-transparent text-ink-950"
+                          : "border-ink-700 bg-ink-800/60 text-mist-300 active:bg-ink-700"
+                      )}
+                      style={landmark === l ? { backgroundColor: accent } : undefined}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs text-mist-400">{fr ? "Indications supplémentaires" : "Additional directions"}</label>

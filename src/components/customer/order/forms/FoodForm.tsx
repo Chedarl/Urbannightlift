@@ -13,6 +13,8 @@ import { MerchantRow } from "@/components/customer/food/MerchantRow";
 import { MerchantMenu } from "@/components/customer/food/MerchantMenu";
 import { CartBar } from "@/components/customer/order/CartBar";
 import { useLiveFare } from "@/lib/orders/useLiveFare";
+import { merchantToLocation } from "@/lib/locations/fromMerchant";
+import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
@@ -93,6 +95,20 @@ export function FoodForm() {
   // The free-text path, used when the catalogue has nothing for them — which is
   // the normal state until merchants have been called and verified.
   const [vendorName, setVendorName] = useState("");
+  /**
+   * Set only when they chose one of *our* restaurants from the picker.
+   *
+   * A business found on the map deliberately leaves this null: it is not a
+   * merchant of ours, and an id here would attach the order to a catalogue row
+   * that does not exist.
+   */
+  const [pickedMerchantId, setPickedMerchantId] = useState<string | null>(null);
+  /**
+   * The Google Place ID of a business found on the map, when that is what they
+   * chose. The only thing about it the order carries: the server looks the rest
+   * up itself rather than trusting a name and a pin from a browser.
+   */
+  const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null);
   const [freeItems, setFreeItems] = useState("");
   const [pickup, setPickup] = useState<SelectedLocation | null>(null);
 
@@ -186,10 +202,52 @@ export function FoodForm() {
    * priced as one. The pickup end is the restaurant, whose zone we know once a
    * merchant is chosen; until then the delivery end alone gives an estimate.
    */
-  const { quote } = useLiveFare();
+  const { quote, zones } = useLiveFare();
+
+  /*
+   * The restaurant the cart came from, as a pickup point.
+   *
+   * This is the defect this file shipped with. On the catalogue path the draft
+   * set `pickupLat`, `pickupLng` and `pickupZoneId` to null — and
+   * `quoteDeliveryFee` measures road distance from exactly those, so the path
+   * we most want people to use was the one priced from a zone estimate, while
+   * the merchant row it came from had coordinates on it. Worse, it was
+   * invisible: the customer saw a plausible number and the rider got a name.
+   *
+   * `merchantToLocation` is the same converter the merchant picker and the
+   * pharmacy list already use, so a restaurant reached by browsing and the same
+   * restaurant reached by searching cannot be priced differently.
+   *
+   * A merchant with no pin yields null, and the form falls back to asking —
+   * which is the free-text behaviour, and honest.
+   */
+  const cartMerchant = useMemo(
+    () => (merchants ?? []).find((m) => m.id === lines[0]?.merchantId) ?? null,
+    [merchants, lines]
+  );
+  const merchantPickup = useMemo<SelectedLocation | null>(() => {
+    const m = cartMerchant;
+    if (!m || m.latitude == null || m.longitude == null) return null;
+    return merchantToLocation(
+      {
+        merchantName: m.name,
+        neighbourhood: m.neighbourhood,
+        address: m.address,
+        landmark: m.landmark,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        phone: m.phone,
+      },
+      zones
+    );
+  }, [cartMerchant, zones]);
+
+  /** The pin that is actually used, whichever path they took to it. */
+  const effectivePickup = browsing ? merchantPickup : pickup;
+
   const fare = useMemo(
-    () => quote({ pickup, delivery, errand: true }),
-    [quote, pickup, delivery]
+    () => quote({ pickup: effectivePickup, delivery, errand: true }),
+    [quote, effectivePickup, delivery]
   );
 
   const missing: string[] = [];
@@ -225,15 +283,23 @@ export function FoodForm() {
       whatsappNumber: phone.trim(),
       preferredLanguage: fr ? "FR" : "EN",
       serviceType: "FOOD_PICKUP",
-      merchantId: shop?.merchantId ?? "",
-      pickupLocation: browsing ? shop!.merchantName : (pickup?.primaryName ?? vendorName.trim()),
-      pickupLandmark: browsing ? "" : (pickup?.landmark ?? ""),
+      /*
+        Either path can now name one of our own restaurants: the catalogue, by
+        putting its dishes in the cart, or the picker on the free-text path. A
+        business found on the map has no id and correctly sends none.
+      */
+      merchantId: shop?.merchantId ?? pickedMerchantId ?? "",
+      // Sent only when no merchant of ours was chosen; the server ignores it
+      // otherwise, because a row we have called always beats one we have not.
+      placeId: pickedPlaceId ?? "",
+      pickupLocation: browsing ? shop!.merchantName : (effectivePickup?.primaryName ?? vendorName.trim()),
+      pickupLandmark: effectivePickup?.landmark ?? "",
       deliveryLocation: delivery?.primaryName ?? "",
       deliveryLandmark: delivery?.landmark ?? "",
-      pickupZoneId: browsing ? "" : (pickup?.zoneId ?? ""),
+      pickupZoneId: effectivePickup?.zoneId ?? "",
       deliveryZoneId: delivery?.zoneId ?? "",
-      pickupLat: browsing ? null : (pickup?.latitude ?? null),
-      pickupLng: browsing ? null : (pickup?.longitude ?? null),
+      pickupLat: effectivePickup?.latitude ?? null,
+      pickupLng: effectivePickup?.longitude ?? null,
       deliveryLat: delivery?.latitude ?? null,
       deliveryLng: delivery?.longitude ?? null,
       itemDescription,
@@ -560,15 +626,51 @@ export function FoodForm() {
           <p className="text-sm font-semibold text-mist-100">
             {fr ? "Ou dites-nous simplement" : "Or just tell us"}
           </p>
-          <label className="text-xs text-mist-500">
-            {fr ? "Le restaurant" : "The restaurant"}
-            <input
-              value={vendorName}
-              onChange={(e) => setVendorName(e.target.value)}
-              placeholder={fr ? "Ex. Chez Maman Josephine" : "e.g. Chez Maman Josephine"}
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-mist-100 placeholder:text-mist-500 focus:border-amber-400 focus:outline-none"
-            />
-          </label>
+          {/*
+            The restaurant, searched rather than typed into a blank box.
+
+            This was a bare `<input>`, and it was the oldest thing left on this
+            screen: the customer typed "Mami Eru restaurant" and the rider left
+            with a name, no pin, no phone number and no certainty the place
+            exists under that spelling. The medicine page has had the picker for
+            versions; food, the busiest service, did not.
+
+            Three tiers now, in the order that says which we trust: restaurants
+            we have called, then businesses found on the map, then the same free
+            text as before, because our list will never cover every spot in
+            Yaoundé and an order refused for that is a lost order.
+          */}
+          <MerchantField
+            category="FOOD"
+            accent={ACCENT}
+            cardAccent="amber"
+            fr={fr}
+            label={fr ? "Le restaurant" : "The restaurant"}
+            placeholder={fr ? "Ex. Chez Maman Josephine" : "e.g. Chez Maman Josephine"}
+            value={vendorName}
+            merchantId={pickedMerchantId}
+            onPick={(m, loc) => {
+              setPickedMerchantId(m.id);
+              setPickedPlaceId(null);
+              setVendorName(m.merchantName);
+              setPickup(loc);
+            }}
+            onDiscovered={(b, loc) => {
+              // Not a merchant of ours, so no id: the order goes out on the
+              // free-text path with a real pin on it, which is exactly what it
+              // is — go to this address and buy this.
+              setPickedMerchantId(null);
+              setPickedPlaceId(b.placeId);
+              setVendorName(b.name);
+              setPickup(loc);
+            }}
+            onFreeText={(name) => {
+              setPickedMerchantId(null);
+              setPickedPlaceId(null);
+              setVendorName(name);
+            }}
+            error={attempted && usingFreeText && !vendorName.trim()}
+          />
           <LocationField
             label={fr ? "Où le récupérer" : "Where to collect it"}
             value={pickup}

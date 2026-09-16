@@ -154,8 +154,20 @@ export function canCall(input: CanCallInput): { ok: boolean; reason: CallDenyRea
  *
  * Rider-initiated calls are not gated this way. A rider who chooses to stop and
  * call is making that decision for themselves, which is theirs to make.
+ *
+ * ## The party is a parameter because that last paragraph was not true
+ *
+ * This function took only a status, and `/api/calls/invite` called it that way
+ * — so a *rider* tapping call mid-delivery was told they had asked the customer
+ * to ring them back. The one person the gate exists to protect was the one it
+ * was applied to, and the docstring directly above had said otherwise since the
+ * day it was written.
+ *
+ * The gate is about not making a phone ring in a moving rider's pocket. A rider
+ * who has already stopped and pressed call is not in that situation.
  */
-export function ringMode(status: OrderStatus): "RING" | "REQUEST_CALLBACK" {
+export function ringMode(status: OrderStatus, party: CallParty): "RING" | "REQUEST_CALLBACK" {
+  if (party === "RIDER") return "RING";
   return status === "RIDER_GOING_TO_PICKUP" || status === "RIDER_GOING_TO_DELIVERY"
     ? "REQUEST_CALLBACK"
     : "RING";

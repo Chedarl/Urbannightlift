@@ -72,6 +72,8 @@ export type CallEndReason =
 
 interface Invite {
   callId: string;
+  /** Whether the rider's phone actually buzzed. Only set on the callback path. */
+  notified?: boolean;
   channel: string;
   secret: string;
   party: SignalParty;
@@ -91,6 +93,15 @@ export interface UseCall {
   relayCapable: boolean;
   /** Set when the rider was notified rather than rung. */
   askedForCallback: boolean;
+  /**
+   * Whether that notification actually reached a device.
+   *
+   * Separate from `askedForCallback` on purpose: "we chose not to ring them"
+   * and "we told them" are different facts, and v50 shipped a screen that
+   * asserted the second while doing neither. `sendPush` returns 0 with no VAPID
+   * keys configured, so this is false in production today.
+   */
+  callbackNotified: boolean;
   /** Seconds since media started flowing. */
   seconds: number;
   start: () => Promise<void>;
@@ -104,6 +115,7 @@ export function useCall(orderCode: string): UseCall {
   const [endReason, setEndReason] = useState<CallEndReason | null>(null);
   const [relayCapable, setRelayCapable] = useState(true);
   const [askedForCallback, setAskedForCallback] = useState(false);
+  const [callbackNotified, setCallbackNotified] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
   const remoteRef = useRef<HTMLAudioElement | null>(null);
@@ -338,6 +350,7 @@ export function useCall(orderCode: string): UseCall {
     if (invite.ringMode === "REQUEST_CALLBACK") {
       releaseMic();
       setAskedForCallback(true);
+      setCallbackNotified(invite.notified === true);
       setState("ended");
       return;
     }
@@ -405,5 +418,15 @@ export function useCall(orderCode: string): UseCall {
   // microphone that must be released.
   useEffect(() => () => teardown(), [teardown]);
 
-  return { state, endReason, relayCapable, askedForCallback, seconds, start, hangUp, remoteRef };
+  return {
+    state,
+    endReason,
+    relayCapable,
+    askedForCallback,
+    callbackNotified,
+    seconds,
+    start,
+    hangUp,
+    remoteRef,
+  };
 }

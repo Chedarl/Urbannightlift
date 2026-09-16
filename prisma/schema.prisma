@@ -600,8 +600,21 @@ model Merchant {
   aliases               String[]
   /// Normalized name + aliases, for the same fuzzy search the locations use.
   searchKey             String           @default("")
-  source                String           @default("admin") // admin | social | signup | osm
+  source                String           @default("admin") // admin | social | signup | osm | places
   osmId                 String?          @unique
+  /// Google Place ID, on a row created from a customer ordering from a business
+  /// we had never called.
+  ///
+  /// Unique, so the second customer to order from the same shop joins the row
+  /// the first one created instead of making a duplicate — "Pharmacie du
+  /// Centre" is several different pharmacies in this city and a name cannot
+  /// tell them apart.
+  ///
+  /// The ID is all we keep of Google's: live detail is fetched and displayed,
+  /// never mirrored here. Their terms forbid the mirror and this product has
+  /// its own reason as well — a catalogue copied in March is a rider sent to a
+  /// business that closed in April.
+  placeId               String?          @unique
   /// When someone last saw this business posting, replying, or trading.
   lastSeenActiveAt      DateTime?
   popularityRank        Int              @default(0)

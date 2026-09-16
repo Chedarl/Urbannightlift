@@ -547,6 +547,7 @@
     },
     "order": {
       "customer": "Customer",
+      "messageCustomer": "Message the customer",
       "pickup": "Pickup",
       "delivery": "Delivery",
       "item": "Item",

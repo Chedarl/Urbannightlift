@@ -19,6 +19,8 @@ import { useTranslation } from "@/lib/i18n";
 import { ComingSoonSheet } from "@/components/customer/ComingSoonSheet";
 import { LaunchOfferBanner } from "@/components/customer/order/LaunchOfferBanner";
 import { getExperience } from "@/lib/services/experiences";
+import { FeaturedSection } from "@/components/customer/order/FeaturedSection";
+import type { FeaturedMerchant } from "@/lib/merchants/featured";
 import type { ServiceType } from "@prisma/client";
 
 // One brand: the icon distinguishes the service, the colour stays violet — no
@@ -51,10 +53,21 @@ export function ServiceSelection({
    * fact about the database and a browser must never be the one to answer it.
    */
   firstOrderFreeCapXaf = 0,
+  featuredFood = [],
+  featuredPharmacy = [],
 }: {
   enabledServices: ServiceType[];
   intakeEnabled?: boolean;
   firstOrderFreeCapXaf?: number;
+  /**
+   * Real businesses from our own catalogue, per service.
+   *
+   * Empty is the normal state until the calling is done, and an empty shelf
+   * renders nothing rather than a placeholder. The tiles below have always
+   * worked and still do.
+   */
+  featuredFood?: FeaturedMerchant[];
+  featuredPharmacy?: FeaturedMerchant[];
 }) {
   const { t, locale } = useTranslation();
   const fr = locale === "fr";
@@ -89,6 +102,44 @@ export function ServiceSelection({
         </div>
       )}
 
+      {/*
+        Who is cooking, and which pharmacy is open — above the taxonomy.
+
+        This page was seven identical rows answering "which of our categories is
+        this?", which is our question and not the customer's. Theirs is answered
+        by a name they recognise, and it was two taps away behind a word like
+        *Food pickup*. The shelves are only rendered for services we actually
+        have businesses in, so this grows as the catalogue does.
+      */}
+      {isLive("FOOD_PICKUP") && (
+        <FeaturedSection
+          title={fr ? "Qui cuisine ce soir" : "Cooking tonight"}
+          href={`/order/new?service=FOOD_PICKUP${suffix}`}
+          accent="amber"
+          fr={fr}
+          merchants={featuredFood}
+          viewAllLabel={fr ? "Tout voir" : "View all"}
+          itemNoun={fr ? "plats" : "dishes"}
+        />
+      )}
+
+      {isLive("MEDICINE_PICKUP") && (
+        <FeaturedSection
+          title={fr ? "Pharmacies ouvertes" : "Pharmacies open"}
+          href={`/order/new?service=MEDICINE_PICKUP${suffix}`}
+          accent="emerald"
+          fr={fr}
+          merchants={featuredPharmacy}
+          viewAllLabel={fr ? "Tout voir" : "View all"}
+          itemNoun={fr ? "produits" : "items"}
+        />
+      )}
+
+      {/* Every service, including the ones with an empty shelf above. One
+          brand here, violet, deliberately — see the note on `services`. */}
+      <p className="animate-fade-up mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-mist-500">
+        {fr ? "Tous les services" : "Everything we do"}
+      </p>
       <div className="animate-fade-up flex flex-col gap-3">
         {services.map(({ type, icon: Icon }) =>
           isLive(type) ? (

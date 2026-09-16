@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft, Package, User, FileText, Smartphone, Shirt, MoreHorizontal, Scale, DollarSign,
   Wine, Lock, Camera, ClipboardList, Banknote, ShieldCheck, Signature, ShieldCheck as ShieldIcon,
+  Store,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { orderSchema, type OrderInput } from "@/lib/validation/orderSchema";
@@ -14,6 +15,7 @@ import { decideAutoPrice } from "@/lib/orders/autoPrice";
 import { quoteDeliveryFee, distanceKm, type ZoneTier } from "@/lib/orders/pricing";
 import { saveDraft } from "@/lib/orders/draft";
 import { LocationField } from "@/components/customer/location/LocationField";
+import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { useIntakePrefill, blank, asSentence } from "@/lib/orders/intakePrefill";
 import { TermsCheckbox } from "@/components/customer/order/fields/TermsCheckbox";
 import { DeliveryTimeField } from "@/components/customer/order/fields/DeliveryTimeField";
@@ -56,6 +58,9 @@ export function ParcelForm() {
   const router = useRouter();
 
   const [pickupSel, setPickupSel] = useState<SelectedLocation | null>(null);
+  /** Opened by the "collecting from a business?" link, and the name once chosen. */
+  const [businessPickup, setBusinessPickup] = useState(false);
+  const [pickupBusiness, setPickupBusiness] = useState("");
   const [deliverySel, setDeliverySel] = useState<SelectedLocation | null>(null);
   // "Deliver here" from a portal saved-place tap (?deliverTo=…) — a real
   // shortcut, distinct from the plain Order tab.
@@ -179,6 +184,20 @@ export function ParcelForm() {
     saveDraft({
       ...data,
       fullName: (sd?.senderName as string)?.trim() || data.fullName?.trim() || (fr ? "Expéditeur" : "Sender"),
+      /*
+        A business named but not pinned still has to reach the rider.
+
+        Picking one from the list or the map sets the pin, and its name is
+        already the pickup location. Typing one by hand gives us a name and no
+        coordinates — which cannot be priced and must not fill the pin — so it
+        rides along in the landmark, where dispatch and the rider both read it.
+        Without this the name sat on the screen and went nowhere, which is the
+        kind of field that looks like it works.
+      */
+      pickupLandmark:
+        pickupBusiness.trim() && !data.pickupLocation?.includes(pickupBusiness.trim())
+          ? [pickupBusiness.trim(), data.pickupLandmark].filter(Boolean).join(" — ")
+          : data.pickupLandmark,
       pickupLat: pickupSel?.latitude ?? null, pickupLng: pickupSel?.longitude ?? null,
       deliveryLat: deliverySel?.latitude ?? null, deliveryLng: deliverySel?.longitude ?? null,
       estimatedFeeXaf: estimatedFee, priceFirm,
@@ -249,6 +268,65 @@ export function ParcelForm() {
             <div className="min-w-0 flex-1">
               <p className={cn(section, "mb-1.5")}>{fr ? "Ramassage" : "Pickup"}</p>
               <LocationField mode="pickup" label={fr ? "Adresse de ramassage" : "Pickup address"} accent={ACCENT} value={pickupSel} error={missing.includes(fr ? "Adresse de ramassage" : "Pickup address")} onChange={(l) => applySel("pickup", l)} suggestion={intake?.pickupSuggestion} />
+
+              {/*
+                "Collecting from a shop?" — behind a link, not in the way.
+
+                Most parcels are collected from a person at an address, and that
+                is the field above. But a real share of them are not: the phone
+                repairer on Avenue Kennedy, the printer at Carrefour Emia, the
+                shop holding something that was paid for. Naming the business
+                gives the rider a door and a phone number instead of a street.
+
+                Kept behind a link because the common case must not pay for the
+                uncommon one, and the picker is a full-screen sheet.
+              */}
+              {!businessPickup ? (
+                <button
+                  type="button"
+                  onClick={() => setBusinessPickup(true)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-violet-300"
+                >
+                  <Store className="h-3.5 w-3.5" />
+                  {fr ? "Vous récupérez chez un commerce ?" : "Collecting from a business?"}
+                </button>
+              ) : (
+                <div className="mt-2">
+                  <MerchantField
+                    category="OTHER"
+                    accent={ACCENT}
+                    cardAccent="violet"
+                    fr={fr}
+                    label={fr ? "Le commerce" : "The business"}
+                    placeholder={fr ? "Ex. Quincaillerie Kennedy" : "e.g. ABC Electronics"}
+                    value={pickupBusiness}
+                    merchantId={null}
+                    onPick={(m, loc) => {
+                      setPickupBusiness(m.merchantName);
+                      setValue("merchantId", m.id);
+                      setValue("placeId", "");
+                      applySel("pickup", loc);
+                    }}
+                    onDiscovered={(b, loc) => {
+                      setPickupBusiness(b.name);
+                      setValue("merchantId", "");
+                      setValue("placeId", b.placeId);
+                      applySel("pickup", loc);
+                    }}
+                    /*
+                      Typed by hand it is only a name, so it is *not* accepted as
+                      a location — the address field above stays in charge. A
+                      word with no coordinates cannot be priced, and filling the
+                      pin from one would mean inventing a fee.
+                    */
+                    onFreeText={(name) => {
+                      setPickupBusiness(name);
+                      setValue("merchantId", "");
+                      setValue("placeId", "");
+                    }}
+                  />
+                </div>
+              )}
 
               <p className={cn(section, "mb-1.5 mt-4")}>{fr ? "Livraison" : "Drop-off"}</p>
               <SavedAddresses current={deliverySel} onPick={(l) => applySel("delivery", l)} accent={ACCENT} fr={fr} />

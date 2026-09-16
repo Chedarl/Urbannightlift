@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { scoreMatch } from "@/lib/locations/normalize";
 import { isPlusCode, decodePlusCode } from "@/lib/locations/plusCode";
 import { placeAutocomplete, hasGooglePlaces } from "@/lib/maps/google";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export interface LocationResult {
   id: string;
@@ -41,6 +42,20 @@ export async function GET(req: NextRequest) {
   // session as the single Place Details call that closes it, so every keystroke
   // inside one token is free.
   const sessionToken = req.nextUrl.searchParams.get("session") ?? "";
+
+  /*
+   * Both outside sources in this route are somebody else's — Google's billed
+   * SKU and OpenStreetMap's free one — and until now anyone could call them
+   * here, unauthenticated and without limit. Every other public form in this
+   * app has been capped since v33; these two were simply missed.
+   *
+   * Over the limit the route does **not** refuse. It keeps answering from our
+   * own catalogue and stops spending outside, because an address field that
+   * returns an error is a broken order, whereas one that returns only the
+   * places we already know is a thinner list. The customer behind a carrier NAT
+   * who inherits somebody else's usage still gets a working form.
+   */
+  const within = (await checkRateLimit(req, "placesSearch")).ok;
 
   const results: LocationResult[] = [];
 
@@ -101,7 +116,7 @@ export async function GET(req: NextRequest) {
   // this city, and the ranking has to say so. Google is here for the streets and
   // businesses OpenStreetMap has never heard of, which in Yaoundé is most of
   // them.
-  const googleUsed = scored.length < 5 && hasGooglePlaces() && sessionToken.length > 0;
+  const googleUsed = within && scored.length < 5 && hasGooglePlaces() && sessionToken.length > 0;
   if (googleUsed) {
     const predictions = await placeAutocomplete(q, sessionToken, fr);
     for (const p of predictions.slice(0, 5)) {
@@ -125,7 +140,7 @@ export async function GET(req: NextRequest) {
   // 4) OpenStreetMap, which now only runs when Google is unavailable — no key,
   //    no session, or a failed call. Keeping it means turning the Google key off
   //    degrades search rather than breaking it.
-  if (scored.length < 5 && results.filter((r) => r.source === "google").length === 0) {
+  if (within && scored.length < 5 && results.filter((r) => r.source === "google").length === 0) {
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 3500);
