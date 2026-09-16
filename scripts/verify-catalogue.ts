@@ -25,7 +25,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { searchBusinesses, hasPlacesKey } from "../src/lib/maps/places";
+import { searchBusinesses, searchNearby, hasPlacesKey } from "../src/lib/maps/places";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -41,6 +41,7 @@ const code = (p: string) =>
 
 const PLACES = "src/lib/maps/places.ts";
 const GATHERER = "scripts/gather-merchants.ts";
+const ROUTE = "src/app/api/places/businesses/route.ts";
 
 console.log("We take facts, and not the things that are not facts");
 {
@@ -58,7 +59,7 @@ console.log("We take facts, and not the things that are not facts");
   );
   check(
     "and the returned shape has nowhere to put an image",
-    !/photo|logo|imageUrl/i.test(places.slice(places.indexOf("interface PlaceBusiness"), places.indexOf("export async function searchBusinesses"))),
+    !/photo|logo|imageUrl/i.test(places.slice(places.indexOf("interface PlaceBusiness"), places.indexOf("interface RawPlace"))),
     "a field that exists will eventually be filled"
   );
 
@@ -114,6 +115,114 @@ console.log("\nThe gatherer cannot put a business in front of a customer by itse
   );
 }
 
+console.log("\nBoth searches take the same facts, through one mask");
+{
+  const places = code(PLACES);
+
+  /*
+   * Counted as definitions, not as headers.
+   *
+   * The first version of this counted `X-Goog-FieldMask` occurrences and
+   * expected one — but the header is sent by both searches, so it failed on
+   * correct code. What must be single is the mask itself; what must be true of
+   * every header is that it is set to that constant rather than to a list
+   * written out beside it.
+   */
+  check(
+    "there is exactly one field mask, defined once",
+    (places.match(/const FIELD_MASK\b/g) ?? []).length === 1,
+    "two masks is how one of them quietly grows a photos field that the other does not have"
+  );
+  check(
+    "and every request sends that one",
+    (places.match(/"X-Goog-FieldMask": FIELD_MASK/g) ?? []).length ===
+      (places.match(/X-Goog-FieldMask/g) ?? []).length,
+    "a mask written inline at a call site is a mask nobody reviews"
+  );
+  check(
+    "nearby search exists and goes through it",
+    /export async function searchNearby/.test(places) && /searchNearby[\s\S]*FIELD_MASK/.test(places)
+  );
+  check(
+    "and through the same Yaoundé bounds",
+    (places.match(/YAOUNDE_BOUNDS/g) ?? []).length >= 3,
+    "a Douala pharmacy in a Yaoundé catalogue is worse than a short catalogue"
+  );
+  check(
+    "a point outside the city is refused before it is billed",
+    places.slice(places.indexOf("export async function searchNearby")).indexOf("YAOUNDE_BOUNDS") <
+      places.slice(places.indexOf("export async function searchNearby")).indexOf("postJson"),
+    "a request that cannot return anything useful still costs what a request costs"
+  );
+  check("the radius is clamped", /MAX_RADIUS_M/.test(places) && /Math\.min\(MAX_RADIUS_M/.test(places));
+  check("and so is the result count", /clampResults/.test(places));
+}
+
+console.log("\nOne door onto discovery, and it is shut to a script");
+{
+  const route = code(ROUTE);
+
+  check(
+    "the route is rate-limited",
+    /checkRateLimit\(req,\s*["']placesSearch["']\)/.test(route),
+    "unlike the two location routes beside it, which went uncapped because a proxy does not look like a form"
+  );
+  check(
+    "the limit is checked before the key is used",
+    route.indexOf("checkRateLimit") < route.indexOf("searchNearby("),
+    "counting a call after making it is an audit log, not a limit"
+  );
+  check(
+    "without a key it says so rather than looking empty",
+    /"no-key"/.test(route),
+    '"nothing is open near you" and "we cannot look right now" are different sentences'
+  );
+  check(
+    "a typed name is a text search, not a radius around a pin",
+    /query[\s\S]{0,80}searchBusinesses\(query\)/.test(route),
+    "answering a search by name with a radius tells somebody their restaurant does not exist because it is three kilometres away"
+  );
+  check(
+    "permanently closed businesses do not reach a customer",
+    /CLOSED_PERMANENTLY/.test(route),
+    "sending a rider to a shuttered building at 2 AM is the expensive way to find out"
+  );
+  check(
+    "every merchant category is mapped, by the compiler",
+    /satisfies Record<MerchantCategory, string\[\]>/.test(route),
+    "a category added to the schema and forgotten here would silently search for nothing"
+  );
+  check(
+    "a pharmacy search includes drugstores",
+    /"drugstore"/.test(route),
+    "the distinction Google draws does not survive contact with a Yaoundé street, and missing half the pharmacies at 2 AM is the moment this product exists for"
+  );
+  check(
+    "the route never claims a result is a partner",
+    !/verified/.test(route) || /not a partner|verified: false/.test(read(ROUTE)),
+    "a found business is somewhere a rider can be sent, not somebody we have an arrangement with"
+  );
+  check(
+    "and it is the only route that reaches the Places module",
+    placesCallers().length === 1,
+    `reached from: ${placesCallers().join(", ") || "nowhere"} — one door is one place to audit`
+  );
+}
+
+/** Every file under `src/app` that imports the Places module. */
+function placesCallers(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (/\.tsx?$/.test(e.name) && /from ["']@\/lib\/maps\/places["']/.test(read(rel))) out.push(rel);
+    }
+  };
+  walk("src/app");
+  return out;
+}
+
 async function degradesWithoutAKey() {
   console.log("\nIt degrades rather than throwing");
   // No key configured is the normal case here, and is the path most likely to
@@ -125,6 +234,11 @@ async function degradesWithoutAKey() {
     "a gatherer that dies halfway leaves a half-written file"
   );
   check("and the key check agrees with itself", typeof hasPlacesKey() === "boolean");
+  check(
+    "nearby search degrades the same way",
+    (await searchNearby(3.8345, 11.4889, ["restaurant"])).length === 0,
+    "this is the state it runs in until the owner creates a key, so it is the state that has to be correct"
+  );
 }
 
 function serverOnlySplitIsDeliberate() {

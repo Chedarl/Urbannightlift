@@ -82,59 +82,39 @@ export interface PlaceBusiness {
   openingHours: string[] | null;
 }
 
+/** Exactly what the field mask asks for, and nothing the mask does not. */
+interface RawPlace {
+  id: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude: number; longitude: number };
+  primaryType?: string;
+  nationalPhoneNumber?: string;
+  businessStatus?: string;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+}
+
 /**
- * Businesses matching a query, inside Yaoundé.
+ * The one field mask, shared by both searches.
  *
- * ## The field mask is the cost control, and it is not optional
- *
- * Places (New) bills by SKU according to which fields you ask for: ids and
- * addresses are the cheap tier, opening hours and phone numbers the next, and
- * photos the most expensive. Asking for `*` is how a catalogue run becomes an
- * unpleasant invoice. The mask here is the smallest set that produces a useful
- * merchant row, and it deliberately omits photos — see `PlaceBusiness`.
- *
- * Returns `[]` rather than throwing on any failure, matching the rest of the
- * maps code: a gatherer that dies halfway leaves a half-written file.
+ * Written once because it is the cost control and the licensing boundary at the
+ * same time, and two copies of it is how one of them quietly grows a
+ * `places.photos` that the other does not have. `verify-catalogue` reads this
+ * file for the word; a second mask would give it a second place to hide.
  */
-export async function searchBusinesses(query: string, maxResults = 20): Promise<PlaceBusiness[]> {
-  const key = serverKey();
-  if (!key) return [];
+const FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.primaryType",
+  "places.nationalPhoneNumber",
+  "places.businessStatus",
+  "places.regularOpeningHours.weekdayDescriptions",
+].join(",");
 
-  const data = await postJson<{
-    places?: {
-      id: string;
-      displayName?: { text?: string };
-      formattedAddress?: string;
-      location?: { latitude: number; longitude: number };
-      primaryType?: string;
-      nationalPhoneNumber?: string;
-      businessStatus?: string;
-      regularOpeningHours?: { weekdayDescriptions?: string[] };
-    }[];
-  }>(
-    "https://places.googleapis.com/v1/places:searchText",
-    {
-      textQuery: query,
-      includedRegionCodes: ["cm"],
-      maxResultCount: Math.min(20, Math.max(1, maxResults)),
-      locationRestriction: { rectangle: YAOUNDE_BOUNDS },
-    },
-    {
-      "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": [
-        "places.id",
-        "places.displayName",
-        "places.formattedAddress",
-        "places.location",
-        "places.primaryType",
-        "places.nationalPhoneNumber",
-        "places.businessStatus",
-        "places.regularOpeningHours.weekdayDescriptions",
-      ].join(","),
-    }
-  );
-
-  return (data?.places ?? [])
+function toBusinesses(raw: RawPlace[] | undefined): PlaceBusiness[] {
+  return (raw ?? [])
     .filter((p) => p.id && p.displayName?.text && p.location)
     .map((p) => ({
       placeId: p.id,
@@ -160,4 +140,104 @@ export async function searchBusinesses(query: string, maxResults = 20): Promise<
         p.longitude >= YAOUNDE_BOUNDS.low.longitude &&
         p.longitude <= YAOUNDE_BOUNDS.high.longitude
     );
+}
+
+/**
+ * Businesses matching a query, inside Yaoundé.
+ *
+ * ## The field mask is the cost control, and it is not optional
+ *
+ * Places (New) bills by SKU according to which fields you ask for: ids and
+ * addresses are the cheap tier, opening hours and phone numbers the next, and
+ * photos the most expensive. Asking for `*` is how a catalogue run becomes an
+ * unpleasant invoice. The mask here is the smallest set that produces a useful
+ * merchant row, and it deliberately omits photos — see `PlaceBusiness`.
+ *
+ * Returns `[]` rather than throwing on any failure, matching the rest of the
+ * maps code: a gatherer that dies halfway leaves a half-written file.
+ */
+export async function searchBusinesses(query: string, maxResults = 20): Promise<PlaceBusiness[]> {
+  const key = serverKey();
+  if (!key) return [];
+
+  const data = await postJson<{ places?: RawPlace[] }>(
+    "https://places.googleapis.com/v1/places:searchText",
+    {
+      textQuery: query,
+      includedRegionCodes: ["cm"],
+      maxResultCount: clampResults(maxResults),
+      locationRestriction: { rectangle: YAOUNDE_BOUNDS },
+    },
+    { "X-Goog-Api-Key": key, "X-Goog-FieldMask": FIELD_MASK }
+  );
+
+  return toBusinesses(data?.places);
+}
+
+/**
+ * How far around a pin to look, in metres.
+ *
+ * A customer standing in Biyem-Assi wanting somewhere to eat means walking or a
+ * short ride, not the far side of the city — and a wider circle costs the same
+ * but returns twenty results from the centre, which is exactly the failure the
+ * gatherer's quartier-by-quartier sweep exists to avoid.
+ */
+const DEFAULT_RADIUS_M = 2_000;
+const MAX_RADIUS_M = 10_000;
+
+function clampResults(n: number): number {
+  return Math.min(20, Math.max(1, Math.trunc(n) || 1));
+}
+
+/**
+ * Businesses of a given kind near a point.
+ *
+ * The other half of discovery, and the half a customer uses: text search
+ * answers "where is Tchop et Yamo", this answers "what is near me". Same field
+ * mask, same bounds check, same degrade-to-empty — see `searchBusinesses` for
+ * why each of those is the way it is.
+ *
+ * `includedTypes` is Google's own taxonomy, so it is passed through rather than
+ * mapped here; the caller decides that a pharmacy search means `pharmacy` and
+ * `drugstore`, because the caller is the one that knows what the customer
+ * asked for. An empty list means every type, which is what a parcel pickup
+ * wants — "the electronics shop by the junction" is not in any one category.
+ */
+export async function searchNearby(
+  latitude: number,
+  longitude: number,
+  includedTypes: string[] = [],
+  radiusM = DEFAULT_RADIUS_M,
+  maxResults = 20
+): Promise<PlaceBusiness[]> {
+  const key = serverKey();
+  if (!key) return [];
+
+  // A point outside the city cannot have anything we deliver from near it, and
+  // asking anyway is a billed request with a guaranteed empty answer.
+  if (
+    latitude < YAOUNDE_BOUNDS.low.latitude ||
+    latitude > YAOUNDE_BOUNDS.high.latitude ||
+    longitude < YAOUNDE_BOUNDS.low.longitude ||
+    longitude > YAOUNDE_BOUNDS.high.longitude
+  ) {
+    return [];
+  }
+
+  const data = await postJson<{ places?: RawPlace[] }>(
+    "https://places.googleapis.com/v1/places:searchNearby",
+    {
+      ...(includedTypes.length ? { includedTypes } : {}),
+      maxResultCount: clampResults(maxResults),
+      locationRestriction: {
+        circle: {
+          center: { latitude, longitude },
+          radius: Math.min(MAX_RADIUS_M, Math.max(50, radiusM)),
+        },
+      },
+    },
+    { "X-Goog-Api-Key": key, "X-Goog-FieldMask": FIELD_MASK }
+  );
+
+  return toBusinesses(data?.places);
 }
