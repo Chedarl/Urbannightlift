@@ -6,6 +6,7 @@ import { getOperatingSettings } from "@/lib/settings";
 import { getCustomerId } from "@/lib/auth/customer";
 import { prisma } from "@/lib/prisma";
 import { eligibleForLaunchOffer } from "@/lib/orders/launchOffer";
+import { featuredMerchants } from "@/lib/merchants/featured";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,20 @@ export default async function ServiceSelectionPage() {
     : 0;
   const capXaf = settings.firstOrderFreeCapXaf ?? 0;
 
+  /*
+    Three real businesses per service for the shelves, read here rather than
+    fetched by the browser: this page is already a server component, the query
+    is two indexed reads, and a client fetch would mean the hub flashing empty
+    on every load on a Yaoundé mobile connection.
+
+    Both come back empty while the catalogue is still being called round, and an
+    empty shelf renders nothing at all.
+  */
+  const [featuredFood, featuredPharmacy] = await Promise.all([
+    featuredMerchants("FOOD"),
+    featuredMerchants("PHARMACY"),
+  ]);
+
   return (
     <>
       <CustomerHeader />
@@ -65,6 +80,8 @@ export default async function ServiceSelectionPage() {
           enabledServices={settings.enabledServices}
           intakeEnabled={intakeConfigured()}
           firstOrderFreeCapXaf={eligibleForLaunchOffer(completedOrders, capXaf) ? capXaf : 0}
+          featuredFood={featuredFood}
+          featuredPharmacy={featuredPharmacy}
         />
       </main>
       <BottomNav signedIn={Boolean(customerId)} />
