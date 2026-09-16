@@ -82,6 +82,20 @@ export interface PlaceBusiness {
   openingHours: string[] | null;
 }
 
+async function getJson<T>(url: string, headers: Record<string, string>): Promise<T | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers, signal: ctrl.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Exactly what the field mask asks for, and nothing the mask does not. */
 interface RawPlace {
   id: string;
@@ -240,4 +254,43 @@ export async function searchNearby(
   );
 
   return toBusinesses(data?.places);
+}
+
+/**
+ * One business, looked up by its Place ID.
+ *
+ * ## Why this exists rather than trusting what the screen already had
+ *
+ * The picker already holds a `PlaceBusiness` when the customer taps it, so
+ * sending that along with the order would save a call. It would also mean the
+ * server creating a catalogue row from a name, an address and a pair of
+ * coordinates supplied by the browser — and a catalogue row is a claim about
+ * somebody else's business, printed on a rider's job sheet and dialled by a
+ * dispatcher. A Place ID is the one part of that a client cannot forge into
+ * something else: it either resolves to a real business or it resolves to
+ * nothing.
+ *
+ * So the ID is what crosses the wire, and the facts are fetched here.
+ *
+ * Details uses bare field names where search uses `places.`-prefixed ones, and
+ * getting that wrong returns a 400 rather than a partial answer, so the mask is
+ * derived from the search one instead of written out a second time.
+ */
+export async function placeDetails(placeId: string): Promise<PlaceBusiness | null> {
+  const key = serverKey();
+  if (!key || !placeId) return null;
+
+  const raw = await getJson<RawPlace>(
+    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+    {
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": FIELD_MASK.split(",").map((f) => f.replace(/^places\./, "")).join(","),
+    }
+  );
+  if (!raw) return null;
+
+  // Reuses the search mapper, so a detail lookup and a search cannot disagree
+  // about what a business is — including the Yaoundé bounds check, which is why
+  // a Place ID for a Douala restaurant returns nothing here.
+  return toBusinesses([raw])[0] ?? null;
 }

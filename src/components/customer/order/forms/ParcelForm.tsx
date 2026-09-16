@@ -303,10 +303,14 @@ export function ParcelForm() {
                     merchantId={null}
                     onPick={(m, loc) => {
                       setPickupBusiness(m.merchantName);
+                      setValue("merchantId", m.id);
+                      setValue("placeId", "");
                       applySel("pickup", loc);
                     }}
                     onDiscovered={(b, loc) => {
                       setPickupBusiness(b.name);
+                      setValue("merchantId", "");
+                      setValue("placeId", b.placeId);
                       applySel("pickup", loc);
                     }}
                     /*
@@ -315,7 +319,11 @@ export function ParcelForm() {
                       word with no coordinates cannot be priced, and filling the
                       pin from one would mean inventing a fee.
                     */
-                    onFreeText={setPickupBusiness}
+                    onFreeText={(name) => {
+                      setPickupBusiness(name);
+                      setValue("merchantId", "");
+                      setValue("placeId", "");
+                    }}
                   />
                 </div>
               )}

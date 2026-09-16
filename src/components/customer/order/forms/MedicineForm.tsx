@@ -165,6 +165,7 @@ export function MedicineForm() {
     setMerchant(m);
     setPharmacyName(m.merchantName);
     setValue("merchantId", m.id);
+    setValue("placeId", "");
     setValue("serviceDetails.pharmacy" as never, m.merchantName as never);
     applySel("pickup", loc);
   }
@@ -236,10 +237,14 @@ export function MedicineForm() {
    * this and somebody typing "Pharmacie du Stade" into a box, and it is the
    * whole of what discovery buys at this stage.
    */
-  function pickFoundPharmacy(b: { name: string }, loc: SelectedLocation) {
+  function pickFoundPharmacy(b: { name: string; placeId: string }, loc: SelectedLocation) {
     setMerchant(null);
     setPharmacyName(b.name);
     setValue("merchantId", "");
+    // The one thing about it the order carries. Everything else is looked up
+    // server-side, because a catalogue row is a claim about somebody else's
+    // pharmacy and a browser must not be able to write one.
+    setValue("placeId", b.placeId);
     setValue("serviceDetails.pharmacy" as never, b.name as never);
     applySel("pickup", loc);
   }
@@ -248,6 +253,7 @@ export function MedicineForm() {
     setMerchant(null);
     setPharmacyName(name);
     setValue("merchantId", "");
+    setValue("placeId", "");
     setValue("serviceDetails.pharmacy" as never, name as never);
   }
 

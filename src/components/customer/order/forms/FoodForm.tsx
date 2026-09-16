@@ -103,6 +103,12 @@ export function FoodForm() {
    * that does not exist.
    */
   const [pickedMerchantId, setPickedMerchantId] = useState<string | null>(null);
+  /**
+   * The Google Place ID of a business found on the map, when that is what they
+   * chose. The only thing about it the order carries: the server looks the rest
+   * up itself rather than trusting a name and a pin from a browser.
+   */
+  const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null);
   const [freeItems, setFreeItems] = useState("");
   const [pickup, setPickup] = useState<SelectedLocation | null>(null);
 
@@ -283,6 +289,9 @@ export function FoodForm() {
         business found on the map has no id and correctly sends none.
       */
       merchantId: shop?.merchantId ?? pickedMerchantId ?? "",
+      // Sent only when no merchant of ours was chosen; the server ignores it
+      // otherwise, because a row we have called always beats one we have not.
+      placeId: pickedPlaceId ?? "",
       pickupLocation: browsing ? shop!.merchantName : (effectivePickup?.primaryName ?? vendorName.trim()),
       pickupLandmark: effectivePickup?.landmark ?? "",
       deliveryLocation: delivery?.primaryName ?? "",
@@ -642,6 +651,7 @@ export function FoodForm() {
             merchantId={pickedMerchantId}
             onPick={(m, loc) => {
               setPickedMerchantId(m.id);
+              setPickedPlaceId(null);
               setVendorName(m.merchantName);
               setPickup(loc);
             }}
@@ -650,11 +660,13 @@ export function FoodForm() {
               // free-text path with a real pin on it, which is exactly what it
               // is — go to this address and buy this.
               setPickedMerchantId(null);
+              setPickedPlaceId(b.placeId);
               setVendorName(b.name);
               setPickup(loc);
             }}
             onFreeText={(name) => {
               setPickedMerchantId(null);
+              setPickedPlaceId(null);
               setVendorName(name);
             }}
             error={attempted && usingFreeText && !vendorName.trim()}

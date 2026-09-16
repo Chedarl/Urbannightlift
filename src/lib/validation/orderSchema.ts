@@ -29,6 +29,19 @@ export const orderSchema = z.object({
     "CONCIERGE_NIGHT",
   ]),
   merchantId: z.string().optional().or(z.literal("")),
+  /**
+   * A Google Place ID, when the customer chose a business we have never called.
+   *
+   * Deliberately the *only* thing about that business the client sends. The
+   * server looks the ID up itself rather than accepting a name, an address and
+   * a pair of coordinates from a browser, because what gets created from them
+   * is a catalogue row — a claim about somebody else's business, printed on a
+   * rider's job sheet and dialled by a dispatcher.
+   *
+   * Length-capped because Place IDs are short opaque strings and there is no
+   * reason to accept a kilobyte of one.
+   */
+  placeId: z.string().trim().max(400).optional().or(z.literal("")),
   pickupLocation: z.string().trim().min(3).max(300),
   pickupLandmark: z.string().trim().max(300).optional().or(z.literal("")),
   deliveryLocation: z.string().trim().min(3).max(300),

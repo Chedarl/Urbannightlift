@@ -209,10 +209,22 @@ console.log("\nA find is never mistaken for a merchant of ours");
     "parcel can name a business at the pickup end",
     /<MerchantField/.test(parcel) && /category="OTHER"/.test(parcel)
   );
+  /*
+   * Asserted as "the handler does not set a location", not as its exact
+   * spelling. The first version matched `onFreeText={setPickupBusiness}` and
+   * broke the moment that handler grew a body — while the rule it was there to
+   * protect was untouched.
+   */
+  const parcelFreeText = parcel.slice(parcel.indexOf("onFreeText={"), parcel.indexOf("onFreeText={") + 260);
   check(
     "a typed parcel business is not accepted as a location",
-    /onFreeText=\{setPickupBusiness\}/.test(parcel),
+    parcel.includes("onFreeText={") && !/applySel/.test(parcelFreeText),
     "a word with no coordinates cannot be priced, and filling the pin from one would mean inventing a fee"
+  );
+  check(
+    "and it clears any business that had been picked before it",
+    /setValue\("placeId", ""\)/.test(parcelFreeText),
+    "typing over a chosen shop must not leave that shop's id attached to the order"
   );
   check(
     "but it still reaches the rider",

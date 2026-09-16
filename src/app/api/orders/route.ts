@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, limitMessage } from "@/lib/security/rateLimit";
 import { customAlphabet } from "nanoid";
 import { prisma } from "@/lib/prisma";
+import { merchantFromPlace, categoryForService } from "@/lib/merchants/fromPlace";
 import { orderSchema } from "@/lib/validation/orderSchema";
 import { estimateDeliveryFee } from "@/lib/orders/pricing";
 import { decideAutoPrice } from "@/lib/orders/autoPrice";
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
 
   const whatsapp = normalizePhone(input.whatsappNumber);
 
-  const [pickupZone, deliveryZone, merchant] = await Promise.all([
+  const [pickupZone, deliveryZone, catalogued] = await Promise.all([
     input.pickupZoneId
       ? prisma.zone.findUnique({ where: { id: input.pickupZoneId } })
       : null,
@@ -128,6 +129,30 @@ export async function POST(req: NextRequest) {
       ? prisma.merchant.findUnique({ where: { id: input.merchantId } })
       : null,
   ]);
+
+  /*
+   * The business the customer found on the map, joining the catalogue.
+   *
+   * Only reached when they did not choose one of ours — a merchant id always
+   * wins, because that row has been called and this one has not. The row is
+   * created `verified: false` and `acceptingOrders: false`, so it appears on no
+   * browse page as a partner; what it gives us is a name, a pin and a number a
+   * dispatcher can ring, which is more than the free-text path ever had.
+   *
+   * Everything about it is fetched server-side from the Place ID. Nothing the
+   * browser said about the business is used, because what gets written is a
+   * claim about somebody else's shop.
+   */
+  const discovered =
+    !catalogued && input.placeId
+      ? await merchantFromPlace(input.placeId, categoryForService(input.serviceType))
+      : null;
+
+  const merchant = catalogued
+    ? catalogued
+    : discovered
+      ? await prisma.merchant.findUnique({ where: { id: discovered.id } })
+      : null;
 
   // When the customer typed a location instead of pinning it we have no
   // coordinates — which leaves the tracking map blank and the fee null. Try to
