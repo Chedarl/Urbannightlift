@@ -73,6 +73,24 @@ function detailRows(data: OrderPdfData): [string, string][] {
   if (sd.reason) rows.push([fr ? "Raison" : "Reason", String(sd.reason)]);
   if (sd.counterRef) rows.push([fr ? "Réf. comptoir" : "Counter ref", String(sd.counterRef)]);
   if (sd.patientNote) rows.push([fr ? "Note patient" : "Patient note", String(sd.patientNote)]);
+  /*
+    The substitution answer, which until now was collected and thrown away.
+    Both the medicine and the grocery form write it, nothing read it, and the
+    rider arrived at a counter without the one instruction that decides what
+    they are allowed to come back with. Printed as the sentence the toggle
+    means rather than as `true`, because a rider reads this out loud.
+
+    `undefined` is left off the sheet entirely: that is an older order that was
+    never asked, and "no" is not the same answer as "not asked".
+  */
+  if (sd.substituteOk !== undefined) {
+    rows.push([
+      fr ? "Substitution" : "Substitution",
+      sd.substituteOk
+        ? fr ? "Générique accepté si la marque manque" : "Generic is fine if the brand is out"
+        : fr ? "Cette marque exactement" : "This exact brand only",
+    ]);
+  }
   return rows;
 }
 
