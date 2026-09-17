@@ -32,7 +32,21 @@ const HEADERS: Record<string, string[]> = {
   notes: ["notes", "note", "comment", "remarque"],
   latitude: ["latitude", "lat"],
   longitude: ["longitude", "lng", "lon"],
+  /*
+    Stated night flags, for a list that carries them as their own columns
+    rather than inside a sentence. Left out, the `hours` column above is parsed
+    instead — which is how the owner's batches arrive, since Google writes the
+    hours as "Open · Closes 10:00 PM" and that is what gets pasted.
+  */
+  nightOpen: ["nightopen", "night open", "night", "nuit"],
+  open24h: ["open24h", "24h", "24 h", "24 hours", "24/7"],
 };
+
+/** "yes", "true", "1", "oui" — anything else in a stated column is a no. */
+function truthy(v: string | undefined): boolean | undefined {
+  if (v == null || v.trim() === "") return undefined;
+  return /^(y|yes|true|1|oui|o)$/i.test(v.trim());
+}
 
 function matchHeader(cell: string): string | null {
   const c = cell.trim().toLowerCase();
@@ -148,6 +162,10 @@ export async function POST(req: NextRequest) {
       latitude: Number.isFinite(lat) && record.latitude ? lat : null,
       longitude: Number.isFinite(lng) && record.longitude ? lng : null,
       openingHours: record.openingHours ?? null,
+      // Undefined rather than false when the column is absent, so
+      // `intakeMerchant` falls through to reading the hours text.
+      nightOpen: truthy(record.nightOpen),
+      open24h: truthy(record.open24h),
       socialUrl: record.socialUrl ?? null,
       notes: record.notes ?? null,
       verified: markVerified,

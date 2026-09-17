@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
 import { yaoundeHour } from "@/lib/orders/tonight";
+import { openAtHour } from "@/lib/merchants/openingHours";
 
 export const dynamic = "force-dynamic";
 
@@ -77,11 +78,11 @@ export interface FoodMerchant {
 export async function GET() {
   const settings = await getOperatingSettings();
   const hour = yaoundeHour();
-  // The same wrap-past-midnight arithmetic the rest of the product uses, so the
-  // browse page and the open/closed badge cannot disagree.
+  // The window, handed to `openAtHour`, which owns the wrap-past-midnight
+  // arithmetic for the whole product — this file used to keep its own copy of
+  // it, which is how a browse page and an open/closed badge come to disagree.
   const start = settings.operatingStartHour;
   const end = settings.operatingEndHour;
-  const isNight = start <= end ? hour >= start && hour < end : hour >= start || hour < end;
 
   const merchants = await prisma.merchant.findMany({
     where: {
@@ -108,6 +109,8 @@ export async function GET() {
       whatsappNumber: true,
       nightOpen: true,
       open24h: true,
+      closesAtHour: true,
+      opensAtHour: true,
       availabilityCheckedAt: true,
       products: {
         where: { available: true },
@@ -140,7 +143,15 @@ export async function GET() {
     longitude: m.longitude,
     landmark: m.landmark,
     phone: m.phone ?? m.whatsappNumber,
-    openNow: m.open24h || (isNight && m.nightOpen),
+    /*
+      Asked of the actual close hour, not of a single bit.
+
+      This read `m.open24h || (isNight && m.nightOpen)`, which is true for the
+      whole 18:00–04:00 window however early a place shuts. With the owner's
+      catalogue arriving — where most boards close between 21:00 and midnight —
+      that would have marked roughly forty-eight shut restaurants open at 1 a.m.
+    */
+    openNow: openAtHour(m, hour, start, end),
     open24h: m.open24h,
     checkedAt: m.availabilityCheckedAt?.toISOString() ?? null,
     // Sold-out items are sent, not filtered out. "They ran out tonight" is

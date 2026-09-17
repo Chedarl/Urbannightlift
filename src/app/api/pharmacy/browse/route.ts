@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOperatingSettings } from "@/lib/settings";
 import { yaoundeHour } from "@/lib/orders/tonight";
-import { isOpenNow, isOnDuty, rankPharmacies } from "@/lib/pharmacy/tonight";
+import { isOnDuty, rankPharmacies } from "@/lib/pharmacy/tonight";
+import { openAtHour } from "@/lib/merchants/openingHours";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,8 @@ export async function GET() {
         logoUrl: true,
         nightOpen: true,
         open24h: true,
+        closesAtHour: true,
+        opensAtHour: true,
         products: {
           // The line that keeps a controlled medicine off a browsing page.
           where: { available: true, otcApproved: true },
@@ -122,7 +125,11 @@ export async function GET() {
     logoUrl: m.logoUrl,
     nightOpen: m.nightOpen,
     open24h: m.open24h,
-    openNow: isOpenNow(m, hour, settings.operatingStartHour, settings.operatingEndHour),
+    // Asked of the stated close hour where there is one, falling back to the
+    // coarse night flag for rows nobody has told us about. `isOpenNow` was the
+    // bit-only version; `openAtHour` owns both branches so this list and the
+    // food list cannot disagree about the same arithmetic.
+    openNow: openAtHour(m, hour, settings.operatingStartHour, settings.operatingEndHour),
     onDutyTonight: onDuty.has(m.id),
     shelf: m.products,
   }));

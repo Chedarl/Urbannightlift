@@ -6,6 +6,7 @@ import { buildSearchKey } from "@/lib/locations/normalize";
 import { nearestZone, distanceKm } from "@/lib/orders/pricing";
 import { detectPlatform } from "@/lib/merchants/social";
 import type { MerchantCategory, Prisma } from "@prisma/client";
+import { readHours } from "@/lib/merchants/openingHours";
 
 /**
  * Taking a merchant into the catalogue, from wherever they came.
@@ -38,6 +39,9 @@ export interface MerchantIntake {
   openingHours?: string | null;
   nightOpen?: boolean;
   open24h?: boolean;
+  /** Stated explicitly; otherwise read out of `openingHours`. */
+  closesAtHour?: number | null;
+  opensAtHour?: number | null;
   socialUrl?: string | null;
   logoUrl?: string | null;
   notes?: string | null;
@@ -106,6 +110,9 @@ export async function intakeMerchant(input: MerchantIntake): Promise<IntakeResul
   const whatsapp = input.whatsappNumber ? normalizePhone(input.whatsappNumber) : "";
   const social = input.socialUrl ? detectPlatform(input.socialUrl) : null;
   const zone = await resolveZone(input.latitude, input.longitude);
+  // Read once, here, so the create and the update branches below cannot drift
+  // apart about what a merchant's board actually said.
+  const hours = readHours(input.openingHours);
 
   const base: Prisma.MerchantUncheckedCreateInput = {
     merchantName: name,
@@ -123,8 +130,22 @@ export async function intakeMerchant(input: MerchantIntake): Promise<IntakeResul
     longitude: input.longitude ?? null,
     zoneId: zone?.id ?? null,
     openingHours: input.openingHours?.trim() || null,
-    nightOpen: input.nightOpen ?? true,
-    open24h: input.open24h ?? false,
+    /*
+      Derived, never assumed.
+
+      This read `input.nightOpen ?? true`, and the paste importer never passes
+      the field — so every business ever imported was recorded as open every
+      night, whatever its board said. At 1 a.m. that is a list of shut
+      restaurants presented as open and a rider sent to a locked door.
+
+      The hours text is now the source of truth, and when it says nothing the
+      answer is closed. A business we cannot vouch for is one the customer does
+      not see at 2 a.m., which is the right direction for the mistake to fall.
+    */
+    nightOpen: input.nightOpen ?? hours.nightOpen,
+    open24h: input.open24h ?? hours.open24h,
+    closesAtHour: input.closesAtHour ?? hours.closesAtHour,
+    opensAtHour: input.opensAtHour ?? hours.opensAtHour,
     socialUrl: social?.url ?? null,
     socialPlatform: social?.platform ?? null,
     logoUrl: input.logoUrl?.trim() || null,

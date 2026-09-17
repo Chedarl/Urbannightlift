@@ -576,6 +576,11 @@ model Merchant {
   /// Open during our trading night — the only availability that matters here.
   nightOpen             Boolean          @default(false)
   open24h               Boolean          @default(false)
+  /// The hour it stops serving, 0-23 with midnight as 0. Null means nobody has
+  /// told us, which `openAtHour` treats differently from a stated midnight
+  /// close: it falls back to `nightOpen` and the trading window.
+  closesAtHour          Int?
+  opensAtHour           Int?
   /// Temporarily off without losing the record (kitchen closed, phone down).
   acceptingOrders       Boolean          @default(true)
   /// When this business last told us what they actually have.
@@ -1463,7 +1468,7 @@ model OperatingSettings {
 
   /// The brand ambassador programme, off until it is rebuilt as marketing
   /// rather than a second referral scheme wearing its name.
-  ambassadorProgrammeEnabled Boolean  @default(false)
+  ambassadorProgrammeEnabled Boolean @default(false)
   zoneNoticeEn               String?
   zoneNoticeFr               String?
   mtnMerchantCode            String? // customer-facing MTN MoMo merchant number
@@ -1479,22 +1484,22 @@ model OperatingSettings {
   /// Every one is a number the business should be able to defend out loud to a
   /// customer at the door, which is why they are separate fields rather than a
   /// JSON blob: a column somebody can read is a column somebody can argue with.
-  fareMinimumXaf      Int   @default(850)
+  fareMinimumXaf             Int     @default(850)
   /// How much distance the minimum already buys. Float — 2.5 km is a real answer.
-  fareIncludedKm      Float @default(2.5)
-  farePerKmXaf        Int   @default(150)
+  fareIncludedKm             Float   @default(2.5)
+  farePerKmXaf               Int     @default(150)
   /// Charged when the rider shops, queues or collects on the customer's behalf.
   /// Yango sells a ride; we sell the errand. Keeping the errand as its own line
   /// is what makes the total defensible next to a ride-hailing fare.
-  fareErrandXaf       Int   @default(500)
+  fareErrandXaf              Int     @default(500)
   /// The real night premium, replacing a vague always-off "busy" multiplier.
   /// After this hour there are fewer riders out and the roads are worse.
-  fareLateNightPercent  Int @default(15)
-  fareLateNightFromHour Int @default(23)
+  fareLateNightPercent       Int     @default(15)
+  fareLateNightFromHour      Int     @default(23)
   /// Zone tiers, as percentages on top. Retained for the comparison row on the
   /// settings screen; they no longer price an order — see fareRedXaf.
-  fareYellowPercent   Int   @default(8)
-  fareRedPercent      Int   @default(20)
+  fareYellowPercent          Int     @default(8)
+  fareRedPercent             Int     @default(20)
 
   /// ── The published price lists ────────────────────────────────────────────
   ///
@@ -1507,24 +1512,24 @@ model OperatingSettings {
   /// every time. `fareRulesFrom` refuses a malformed list outright rather than
   /// repairing it, so a half-saved row falls back to the published defaults
   /// instead of quietly pricing an order at something nobody chose.
-  fareBands           Json?
-  fareErrandBands     Json?
+  fareBands       Json?
+  fareErrandBands Json?
 
   /// What a hard-to-reach zone adds, in francs rather than as a percentage.
   /// A percentage turned a published 2,000 into 2,150, which is a computed
   /// decimal again and invites the argument the bands were drawn to end.
-  fareYellowXaf       Int   @default(0)
-  fareRedXaf          Int   @default(500)
+  fareYellowXaf Int @default(0)
+  fareRedXaf    Int @default(500)
 
   /// ── The launch offer ─────────────────────────────────────────────────────
   ///
   /// The delivery fee waived on a customer's **first** order, up to this cap.
   /// Zero switches it off. The rider is paid in full either way: the waiver is
   /// the business's cost, which is exactly why it is capped rather than open.
-  firstOrderFreeCapXaf Int  @default(1500)
+  firstOrderFreeCapXaf Int @default(1500)
 
-  updatedByUserId            String?
-  updatedAt                  DateTime @updatedAt
+  updatedByUserId String?
+  updatedAt       DateTime @updatedAt
 }
 
 /// Every operational message we sent, and whether it arrived.

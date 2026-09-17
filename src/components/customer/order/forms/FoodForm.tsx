@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UtensilsCrossed, Search, Store, ShoppingBag, Pencil } from "lucide-react";
+import { UtensilsCrossed, Search, Store, ShoppingBag, Pencil, ChevronLeft } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { LocationField } from "@/components/customer/location/LocationField";
 import { saveDraft, type OrderDraft } from "@/lib/orders/draft";
@@ -17,6 +17,10 @@ import { merchantToLocation } from "@/lib/locations/fromMerchant";
 import { MerchantField } from "@/components/customer/merchant/MerchantField";
 import { BoardPhoto } from "@/components/customer/food/BoardPhoto";
 import { titleCase } from "@/lib/merchants/tags";
+import { artworkFor, artworkStyle } from "@/lib/food/artwork";
+import { categoryArt } from "@/lib/food/categoryArt";
+import { DishGlyph } from "@/components/customer/food/DishGlyph";
+import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import type { PaymentMethod } from "@prisma/client";
 import { usePaymentMethods } from "@/lib/payments/usePaymentMethods";
 
@@ -70,7 +74,14 @@ interface CartLine {
   quantity: number;
 }
 
-type Stage = "list" | "menu" | "details";
+/**
+ * `categories` is the entry point: pick the food, then see who sells it.
+ *
+ * It renders only when there is more than one food type to choose between, so
+ * a catalogue with no menus yet — which is production today — opens on the
+ * restaurant list exactly as it did before.
+ */
+type Stage = "categories" | "list" | "menu" | "details";
 
 export function FoodForm() {
   const { locale } = useTranslation();
@@ -79,7 +90,7 @@ export function FoodForm() {
   const fr = locale === "fr";
   const router = useRouter();
 
-  const [stage, setStage] = useState<Stage>("list");
+  const [stage, setStage] = useState<Stage>("categories");
   const [merchants, setMerchants] = useState<FoodMerchant[] | null>(null);
   const [query, setQuery] = useState("");
   /**
@@ -208,6 +219,44 @@ export function FoodForm() {
   }, [merchants]);
 
   const openCount = useMemo(() => (merchants ?? []).filter((m) => m.openNow).length, [merchants]);
+
+  /**
+   * The food types, as tiles rather than as a filter strip.
+   *
+   * The chip row above the list works when there are five restaurants. With the
+   * owner's catalogue arriving — sixty businesses, and growing every time
+   * another batch is verified — a list of names stops being browsable and the
+   * question flips: not "which of these places" but "what do I feel like".
+   * That is the entry point every food app at scale uses, and the one asked for
+   * here.
+   *
+   * Two differences from the chip row it sits above. It carries **how many are
+   * open right now**, because at 1 a.m. that is the only number that matters —
+   * a food type with eleven restaurants and none open is a dead end, and the
+   * tile should say so before it is tapped. And it takes eight rather than six,
+   * since a grid has room a wrapping chip row does not.
+   */
+  const categoryTiles = useMemo(() => {
+    const seen = new Map<string, { total: number; open: number }>();
+    for (const m of merchants ?? []) {
+      const here = new Set<string>();
+      for (const i of m.items) {
+        const c = titleCase((i.category ?? "").trim());
+        if (c && c.length <= 18) here.add(c);
+      }
+      for (const c of here) {
+        const row = seen.get(c) ?? { total: 0, open: 0 };
+        row.total += 1;
+        if (m.openNow) row.open += 1;
+        seen.set(c, row);
+      }
+    }
+    return [...seen.entries()]
+      // Open ones first: the tile a customer can actually act on belongs at the
+      // top of the grid, not wherever the alphabet puts it.
+      .sort((a, b) => b[1].open - a[1].open || b[1].total - a[1].total || a[0].localeCompare(b[0]))
+      .slice(0, 8);
+  }, [merchants]);
 
   const lines = useMemo<CartLine[]>(() => {
     if (!merchants) return [];
@@ -564,6 +613,112 @@ export function FoodForm() {
     );
   }
 
+  /* ─── The food types ────────────────────────────────────────────────────────
+     Falls straight through to the list when there is nothing to choose between
+     — which is production today, where no merchant has products yet. An entry
+     screen offering one tile, or none, is a door to nowhere. */
+  if (stage === "categories" && categoryTiles.length >= 2) {
+    return (
+      <div className="mx-auto max-w-lg px-4 pb-32 pt-4">
+        <header className="mb-4">
+          <p className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] text-amber-300">
+            <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-mist-100">
+            {fr ? "Qu'est-ce qui vous tente ?" : "What do you fancy?"}
+          </h1>
+          <p className="mt-1 text-sm text-mist-400">
+            {openCount > 0
+              ? fr
+                ? `${openCount} ouvert${openCount === 1 ? "" : "s"} en ce moment`
+                : `${openCount} open right now`
+              : fr
+                ? "Rien d'ouvert pour l'instant — dites-nous où aller"
+                : "Nothing open yet — tell us where to go"}
+          </p>
+        </header>
+
+        <div className="grid grid-cols-2 gap-3">
+          {categoryTiles.map(([name, { total, open }]) => {
+            const art = categoryArt(name);
+            const photo = mediaSrc(art.photo);
+            const tile = artworkFor(name, "cover");
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  setDishCategory(name);
+                  // Only pre-filter to open places when some are: a food type
+                  // with nothing open should show its restaurants and let the
+                  // customer decide, not an empty list.
+                  setOpenOnly(open > 0);
+                  setStage("list");
+                }}
+                className="relative flex h-32 flex-col justify-end overflow-hidden rounded-2xl border border-ink-700 p-3 text-left"
+                style={photo ? undefined : artworkStyle(tile)}
+              >
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  art.glyph && (
+                    <span className="absolute right-2 top-2 text-white/45">
+                      <DishGlyph id={art.glyph} size={34} />
+                    </span>
+                  )
+                )}
+                {/* A scrim under the words, so a photograph cannot swallow them. */}
+                <span className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-950/90 to-transparent" />
+                <span className="relative font-display text-base font-bold leading-tight text-mist-100">
+                  {name}
+                </span>
+                <span className="relative mt-0.5 text-xs text-mist-300">
+                  {open > 0
+                    ? fr
+                      ? `${open} ouvert${open === 1 ? "" : "s"} · ${total} au total`
+                      : `${open} open · ${total} total`
+                    : fr
+                      ? `${total} adresse${total === 1 ? "" : "s"} · fermé`
+                      : `${total} place${total === 1 ? "" : "s"} · none open`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Somebody who knows where they want to eat should not have to pick a
+            food type first. */}
+        <button
+          type="button"
+          onClick={() => {
+            setDishCategory(null);
+            setStage("list");
+          }}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-ink-700 py-3 text-sm font-medium text-mist-300"
+        >
+          <Store className="h-4 w-4 text-amber-300" />
+          {fr ? "Voir tous les restaurants" : "See all restaurants"}
+        </button>
+
+        <CartBar
+          fr={fr}
+          accent="amber"
+          glyph={<CartGlyph count={cartCount} />}
+          goodsXaf={goodsEstimateXaf}
+          goodsPartial={anyPriceUnknown}
+          fare={fare}
+          hint={fr ? "Choisissez ce qui vous tente" : "Pick what you fancy"}
+          cta={fr ? "Tout voir" : "See all"}
+          onCta={() => {
+            setDishCategory(null);
+            setStage("list");
+          }}
+        />
+      </div>
+    );
+  }
+
   /* ─── The list ──────────────────────────────────────────────────────────── */
   return (
     <div className="mx-auto max-w-lg px-4 pb-32 pt-4">
@@ -572,8 +727,26 @@ export function FoodForm() {
           <UtensilsCrossed className="h-4 w-4" /> {fr ? "Manger ce soir" : "Food tonight"}
         </p>
         <h1 className="mt-1 font-display text-2xl font-bold text-mist-100">
-          {fr ? "Qu'est-ce qu'on vous apporte ?" : "What are we bringing you?"}
+          {dishCategory ?? (fr ? "Qu'est-ce qu'on vous apporte ?" : "What are we bringing you?")}
         </h1>
+        {/* Only offered when there is a grid to go back to — with no menus in
+            the catalogue the list is the first screen and there is no "back". */}
+        {categoryTiles.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => {
+              setDishCategory(null);
+              setOpenOnly(false);
+              setStage("categories");
+            }}
+            className="mt-2 flex items-center gap-1.5 text-sm font-medium text-amber-300"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {dishCategory
+              ? fr ? "Changer de plat" : "Pick another food"
+              : fr ? "Parcourir par plat" : "Browse by food"}
+          </button>
+        )}
       </header>
 
       {merchants === null ? (
