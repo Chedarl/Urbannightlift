@@ -7,6 +7,8 @@ import { formatXaf } from "@/lib/utils";
 import { freshLabel } from "@/lib/merchants/freshness";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import { artworkFor, artworkStyle, initialsOf } from "@/lib/food/artwork";
+import { dishGlyphFor } from "@/lib/food/dishGlyph";
+import { DishGlyph } from "@/components/customer/food/DishGlyph";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 
 /**
@@ -226,6 +228,7 @@ export function RestaurantCard({
                   // different places does not come out identical — and so one
                   // restaurant's menu reads as a set rather than a jumble.
                   const dishArt = artworkFor(`${merchant.name} ${item.name}`, "tile");
+                  const glyph = dishGlyphFor(item.name, item.category);
                   return (
                     <li
                       key={item.id}
@@ -248,6 +251,13 @@ export function RestaurantCard({
                             alt=""
                             className={`h-full w-full object-cover ${item.soldOut ? "grayscale" : ""}`}
                           />
+                        ) : glyph ? (
+                          // The dish, drawn — a graphic of ours, at a tile size
+                          // where a letter said nothing. Falls through to the
+                          // letter when nothing matches, never to a guess.
+                          <span className="absolute inset-0 flex items-center justify-center text-white/70">
+                            <DishGlyph id={glyph} size={40} />
+                          </span>
                         ) : (
                           // A letter of ours, not somebody else's photograph.
                           <span

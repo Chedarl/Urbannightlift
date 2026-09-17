@@ -7,6 +7,8 @@ import { groupXaf } from "@/lib/utils";
 import { freshLabel } from "@/lib/merchants/freshness";
 import { mediaSrc } from "@/lib/uploads/mediaSrc";
 import { artworkFor, artworkStyle, initialsOf } from "@/lib/food/artwork";
+import { dishGlyphFor } from "@/lib/food/dishGlyph";
+import { DishGlyph } from "@/components/customer/food/DishGlyph";
 import type { FoodMerchant } from "@/app/api/food/browse/route";
 
 /**
@@ -254,6 +256,9 @@ export function MerchantMenu({
               // Seeded with the restaurant too, so the same dish name at two
               // places is not identical and one menu reads as a set.
               const dishArt = artworkFor(`${merchant.name} ${item.name}`, "tile");
+              // The board's own grouping first, then the dish name. Null when
+              // neither says anything we can draw.
+              const glyph = dishGlyphFor(item.name, item.category);
 
               return (
                 <li
@@ -273,6 +278,22 @@ export function MerchantMenu({
                         alt=""
                         className={`h-full w-full object-cover ${item.soldOut ? "grayscale" : ""}`}
                       />
+                    ) : glyph ? (
+                      /*
+                        The dish, drawn.
+
+                        Two initials on a gradient told a customer nothing about
+                        what the dish is — which was the real complaint behind
+                        "the food page needs images". A skewer, a fish, a bottle
+                        says it at a glance, stays a drawing rather than a claim
+                        about this braiseur's food, and is exact at any pixel
+                        density because it is a path. `dishGlyphFor` returns null
+                        rather than guessing, and the letter below is what a
+                        no-match still gets.
+                      */
+                      <span className="absolute inset-0 flex items-center justify-center text-white/70">
+                        <DishGlyph id={glyph} size={26} />
+                      </span>
                     ) : (
                       /*
                         A letter of ours, never somebody else's photograph —
